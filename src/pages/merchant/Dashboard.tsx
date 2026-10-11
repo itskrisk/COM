@@ -99,244 +99,7 @@ const PRESET_GROCERY_IMAGES = [
     { label: 'Sweet Corn Frozen', url: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?q=80&w=600', category: 'Frozen Food' },
 ];
 
-// Initial Catalog fully populated with high-res photography
-const INITIAL_SUPERMARKET_CATALOG: SupermarketProduct[] = [
-    {
-        id: 'sm-1',
-        name: 'Fresh Hass Avocados (Pack of 3)',
-        description: 'Locally sourced creamy Hass avocados from Murang’a farms.',
-        category: 'Fruits & Vegetables',
-        categoryId: 'Fruits & Vegetables',
-        price: 180,
-        promo: true,
-        oldPrice: 240,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1523049673857-eb18f1d7b578?q=80&w=600',
-        stockLevel: 45,
-        unit: 'pack of 3',
-        sku: 'SKU-AVO-01'
-    },
-    {
-        id: 'sm-2',
-        name: 'Broccoli Heads (500g)',
-        description: 'Crisp green farm-fresh broccoli heads, washed and trimmed.',
-        category: 'Fruits & Vegetables',
-        categoryId: 'Fruits & Vegetables',
-        price: 150,
-        promo: false,
-        oldPrice: null,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1459411621453-7b03977f4bfc?q=80&w=600',
-        stockLevel: 28,
-        unit: '500g',
-        sku: 'SKU-BRO-02'
-    },
-    {
-        id: 'sm-3',
-        name: 'Artisan Sourdough Loaf',
-        description: 'Slow-fermented 24hr traditional sourdough baked daily.',
-        category: 'Bakery',
-        categoryId: 'Bakery',
-        price: 280,
-        promo: false,
-        oldPrice: null,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1589367920969-ab8e050bbb04?q=80&w=600',
-        stockLevel: 14,
-        unit: 'loaf',
-        sku: 'SKU-BAK-03'
-    },
-    {
-        id: 'sm-4',
-        name: 'Whole Milk 500ml Pouch',
-        description: 'Pure pasteurized whole milk with 3.5% butterfat.',
-        category: 'Fresh Food',
-        categoryId: 'Fresh Food',
-        price: 65,
-        promo: false,
-        oldPrice: null,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?q=80&w=600',
-        stockLevel: 120,
-        unit: '500ml pouch',
-        sku: 'SKU-MLK-04'
-    },
-    {
-        id: 'sm-5',
-        name: 'Alkaline Mineral Water 5L',
-        description: 'Naturally filtered volcanic alkaline mineral water (pH 8.2).',
-        category: 'Beverages',
-        categoryId: 'Beverages',
-        price: 220,
-        promo: true,
-        oldPrice: 280,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1548839140-29a749e1bc4e?q=80&w=600',
-        stockLevel: 36,
-        unit: '5L bottle',
-        sku: 'SKU-WTR-05'
-    },
-    {
-        id: 'sm-6',
-        name: 'Cold Pressed Orange Juice 1L',
-        description: '100% freshly squeezed sweet Valencia oranges with zero sugar added.',
-        category: 'Beverages',
-        categoryId: 'Beverages',
-        price: 320,
-        promo: false,
-        oldPrice: null,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1613478223719-2ab802602423?q=80&w=600',
-        stockLevel: 18,
-        unit: '1L bottle',
-        sku: 'SKU-JCE-06'
-    },
-    {
-        id: 'sm-7',
-        name: 'Basmati Rice Premium 2kg',
-        description: 'Extra long grain aged aromatic basmati rice.',
-        category: 'Food Cupboard',
-        categoryId: 'Food Cupboard',
-        price: 420,
-        promo: false,
-        oldPrice: null,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?q=80&w=600',
-        stockLevel: 60,
-        unit: '2kg bag',
-        sku: 'SKU-RCE-07'
-    },
-    {
-        id: 'sm-8',
-        name: 'Eco Dishwashing Liquid 750ml',
-        description: 'Plant-powered grease-cutting dish detergent with lemon oil.',
-        category: 'Cleaning & Household',
-        categoryId: 'Cleaning & Household',
-        price: 195,
-        promo: false,
-        oldPrice: null,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1585670210693-e7fdd16b142e?q=80&w=600',
-        stockLevel: 40,
-        unit: '750ml bottle',
-        sku: 'SKU-CLN-08'
-    },
-    {
-        id: 'sm-9',
-        name: 'Frozen Sweet Corn 450g',
-        description: 'Flash-frozen golden sweet corn kernels lock in natural sweetness.',
-        category: 'Frozen Food',
-        categoryId: 'Frozen Food',
-        price: 260,
-        promo: false,
-        oldPrice: null,
-        isAvailable: false,
-        imageUrl: 'https://images.unsplash.com/photo-1551754655-cd27e38d2076?q=80&w=600',
-        stockLevel: 0,
-        unit: '450g pack',
-        sku: 'SKU-CRN-09'
-    },
-    {
-        id: 'sm-10',
-        name: 'Extra Virgin Olive Oil 500ml',
-        description: 'First cold-pressed Mediterranean extra virgin olive oil.',
-        category: 'Food Cupboard',
-        categoryId: 'Food Cupboard',
-        price: 680,
-        promo: true,
-        oldPrice: 850,
-        isAvailable: true,
-        imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?q=80&w=600',
-        stockLevel: 22,
-        unit: '500ml bottle',
-        sku: 'SKU-OIL-10'
-    },
-];
-
-const INITIAL_ORDERS: SupermarketOrder[] = [
-    {
-        id: 'MN-8921',
-        customerName: 'Wanjiku Kamau',
-        customerPhone: '+254 712 345 678',
-        address: 'Westlands, Rhapta Road, Court 4B',
-        placedAt: '5m ago',
-        items: [
-            { name: 'Fresh Hass Avocados (Pack of 3)', quantity: 2, price: 180 },
-            { name: 'Whole Milk 500ml Pouch', quantity: 3, price: 65 },
-            { name: 'Artisan Sourdough Loaf', quantity: 1, price: 280 }
-        ],
-        total: 835,
-        status: 'CREATED'
-    },
-    {
-        id: 'MN-8919',
-        customerName: 'David Omondi',
-        customerPhone: '+254 722 890 123',
-        address: 'Kilimani, Denis Pritt Road, Apt 12',
-        placedAt: '18m ago',
-        items: [
-            { name: 'Basmati Rice Premium 2kg', quantity: 1, price: 420 },
-            { name: 'Alkaline Mineral Water 5L', quantity: 2, price: 220 }
-        ],
-        total: 860,
-        status: 'PACKING'
-    },
-    {
-        id: 'MN-8915',
-        customerName: 'Sarah Jenkins',
-        customerPhone: '+254 733 456 789',
-        address: 'Lavington, James Gichuru Road',
-        placedAt: '35m ago',
-        items: [
-            { name: 'Cold Pressed Orange Juice 1L', quantity: 2, price: 320 },
-            { name: 'Eco Dishwashing Liquid 750ml', quantity: 1, price: 195 }
-        ],
-        total: 835,
-        status: 'READY_FOR_PICKUP',
-        courierName: 'Kelvin Mwangi',
-        courierPhone: '+254 711 998 877',
-        courierVehicle: 'Motorbike (KMD 102Z)'
-    },
-    {
-        id: 'MN-8910',
-        customerName: 'Brian Kiprop',
-        customerPhone: '+254 705 112 233',
-        address: 'CBD, Kimathi Street, Pioneer Plaza',
-        placedAt: '1h ago',
-        items: [
-            { name: 'Extra Virgin Olive Oil 500ml', quantity: 1, price: 680 },
-            { name: 'Artisan Sourdough Loaf', quantity: 2, price: 280 }
-        ],
-        total: 1240,
-        status: 'OUT_FOR_DELIVERY',
-        courierName: 'Peter Otieno',
-        courierPhone: '+254 720 334 455',
-        courierVehicle: 'Bicycle Express'
-    },
-    {
-        id: 'MN-8902',
-        customerName: 'Fatma Ali',
-        customerPhone: '+254 718 445 566',
-        address: 'Parklands, 4th Avenue, Suite 10',
-        placedAt: '2h ago',
-        items: [
-            { name: 'Fresh Hass Avocados (Pack of 3)', quantity: 3, price: 180 },
-            { name: 'Alkaline Mineral Water 5L', quantity: 1, price: 220 }
-        ],
-        total: 760,
-        status: 'COMPLETED',
-        courierName: 'Kelvin Mwangi',
-        courierPhone: '+254 711 998 877',
-        courierVehicle: 'Motorbike (KMD 102Z)'
-    }
-];
-
-const INITIAL_PROMOS: PromoCampaign[] = [
-    { id: 'p-1', code: 'MARKETFRESH', discountPercent: 10, minBasketKES: 1000, isActive: true, expiresAt: '2026-10-31', usageCount: 42 },
-    { id: 'p-2', code: 'PROVISIONS50', discountPercent: 15, minBasketKES: 2500, isActive: true, expiresAt: '2026-11-15', usageCount: 18 },
-    { id: 'p-3', code: 'MUNCHEEZFRUIT', discountPercent: 20, minBasketKES: 800, isActive: false, expiresAt: '2026-09-30', usageCount: 89 },
-];
-
+// Real-time catalog, orders, and promotions are retrieved directly from Supabase
 type MerchantTab = 'orders' | 'inventory' | 'customers' | 'deliveries' | 'promotions' | 'analytics' | 'finances' | 'settings';
 
 export default function MerchantDashboard() {
@@ -362,28 +125,9 @@ export default function MerchantDashboard() {
     const [merchantId, setMerchantId] = useState<string | null>(null);
 
     // Products State (Load from localStorage immediately for zero-latency UX, then sync from Supabase)
-    const [products, setProducts] = useState<SupermarketProduct[]>(() => {
-        try {
-            const saved = localStorage.getItem('muncheez_supermarket_products');
-            if (saved) return JSON.parse(saved);
-        } catch (e) {
-            // fallback
-        }
-        return INITIAL_SUPERMARKET_CATALOG;
-    });
-
-    // Save to localStorage whenever products change so the storefront reflects it immediately
-    useEffect(() => {
-        try {
-            localStorage.setItem('muncheez_supermarket_products', JSON.stringify(products));
-        } catch (e) {
-            console.error('Error persisting products:', e);
-        }
-    }, [products]);
-
-    // Orders State
-    const [orders, setOrders] = useState<SupermarketOrder[]>(INITIAL_ORDERS);
-    const [promos, setPromos] = useState<PromoCampaign[]>(INITIAL_PROMOS);
+    const [products, setProducts] = useState<SupermarketProduct[]>([]);
+    const [orders, setOrders] = useState<SupermarketOrder[]>([]);
+    const [promos, setPromos] = useState<PromoCampaign[]>([]);
 
     // ── SUPABASE DATA LOADING ──────────────────────────────────────────────────
     const loadDashboardData = useCallback(async (mId: string) => {
@@ -430,7 +174,7 @@ export default function MerchantDashboard() {
             }
         } catch (err) {
             console.error('[MerchantDashboard] Failed to load data from Supabase:', err);
-            // Keep mock data as graceful fallback
+            setProducts([]); setOrders([]);
         } finally {
             setIsLoading(false);
         }
@@ -952,7 +696,13 @@ export default function MerchantDashboard() {
 
                         {/* Live Orders Stream */}
                         <div className="border border-neutral-200 divide-y divide-neutral-200">
-                            {orders.map((order) => (
+                            {orders.length === 0 ? (
+                                <div className="p-12 text-center font-mono">
+                                    <Package size={28} className="mx-auto text-neutral-300 mb-2" />
+                                    <span className="text-xs text-neutral-500 uppercase tracking-widest block">No Customer Orders Yet</span>
+                                    <span className="text-[11px] text-neutral-400 mt-1 block">Live orders placed by customers in your sector will stream here in real-time.</span>
+                                </div>
+                            ) : orders.map((order) => (
                                 <div key={order.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:bg-neutral-50/50 transition-colors">
                                     <div className="space-y-2 max-w-xl">
                                         <div className="flex items-center gap-3">
@@ -1118,7 +868,13 @@ export default function MerchantDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-neutral-200 text-xs">
-                                        {filteredProducts.map((prod) => (
+                                        {filteredProducts.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="py-12 text-center text-neutral-400 font-mono">
+                                                    NO PRODUCTS IN INVENTORY. CLICK "ADD SUPERMARKET PRODUCT" TO CREATE YOUR FIRST ITEM.
+                                                </td>
+                                            </tr>
+                                        ) : filteredProducts.map((prod) => (
                                             <tr key={prod.id} className="hover:bg-neutral-50/50 transition-colors">
                                                 <td className="py-3 px-4">
                                                     <div className="flex items-center gap-3">
@@ -1343,7 +1099,13 @@ export default function MerchantDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-200 text-xs">
-                                    {clientele.map((c) => (
+                                    {clientele.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="py-12 text-center text-neutral-400 font-mono">
+                                                NO CLIENTELE HISTORY YET. CUSTOMER ORDERS WILL BUILD YOUR CRM DATABASE AUTOMATICALLY.
+                                            </td>
+                                        </tr>
+                                    ) : clientele.map((c) => (
                                         <tr key={c.phone} className="hover:bg-neutral-50/50 transition-colors">
                                             <td className="py-3.5 px-4 font-medium text-black">{c.name}</td>
                                             <td className="py-3.5 px-4 font-mono text-neutral-600">{c.phone}</td>
@@ -1451,7 +1213,13 @@ export default function MerchantDashboard() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-neutral-200 text-xs">
-                                    {promos.map((p) => (
+                                    {promos.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={6} className="py-12 text-center text-neutral-400 font-mono">
+                                                NO ACTIVE PROMOTIONS. CLICK "CREATE PROMO VOUCHER" TO LAUNCH A DISCOUNT CAMPAIGN.
+                                            </td>
+                                        </tr>
+                                    ) : promos.map((p) => (
                                         <tr key={p.id} className="hover:bg-neutral-50/50 transition-colors">
                                             <td className="py-3.5 px-4 font-mono font-bold text-black">{p.code}</td>
                                             <td className="py-3.5 px-4 font-mono font-medium text-emerald-700">{p.discountPercent}% OFF</td>

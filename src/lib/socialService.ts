@@ -14,52 +14,8 @@ const MOCK_USERS: User[] = [
     { id: 'u5', name: 'Elena', username: 'elena_chef', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena' },
 ];
 
-const INITIAL_FRIENDS: Friend[] = [
-    {
-        ...MOCK_USERS[0],
-        status: 'accepted',
-        maskedAddress: 'zipporah#1',
-        allowGifting: true,
-        allowOrderVisibility: true,
-        lastActive: new Date().toISOString()
-    },
-    {
-        ...MOCK_USERS[1],
-        status: 'accepted',
-        maskedAddress: 'kevin#house',
-        allowGifting: true,
-        allowOrderVisibility: true,
-        lastActive: new Date(Date.now() - 3600000).toISOString()
-    }
-];
-
-const INITIAL_ORDERS: SharedOrder[] = [
-    {
-        id: 'o1',
-        userId: 'u1',
-        userName: 'Zipporah',
-        userAvatar: MOCK_USERS[0].avatar,
-        items: [{ name: 'Margherita Pizza', quantity: 1, price: 1690, store: 'Pizza Palace', image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop' }],
-        timestamp: new Date().toISOString(),
-        total: 1690,
-        image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=800&h=600&fit=crop',
-        reactions: []
-    },
-    {
-        id: 'o2',
-        userId: 'u2',
-        userName: 'Kevin',
-        userAvatar: MOCK_USERS[1].avatar,
-        items: [
-            { name: 'Sushi Combo', quantity: 1, price: 3185, store: 'Tokyo Express', image: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=300&fit=crop' },
-            { name: 'Miso Soup', quantity: 1, price: 520, store: 'Tokyo Express', image: 'https://images.unsplash.com/photo-1562158147-f2b5bb447f9c?w=400&h=300&fit=crop' }
-        ],
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-        total: 3705,
-        image: 'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=800&h=600&fit=crop',
-        reactions: [{ emoji: '🔥', count: 2, userIds: ['u3', 'u4'] }]
-    }
-];
+const INITIAL_FRIENDS: Friend[] = [];
+const INITIAL_ORDERS: SharedOrder[] = [];
 
 export const socialService = {
     getFriends: (): Friend[] => {

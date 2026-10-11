@@ -46,18 +46,11 @@ export default function StoreFront() {
             if (productsResult.data && productsResult.data.length > 0) {
                 setMerchantProducts(productsResult.data);
             } else {
-                // Synchronize with Merchant Dashboard products from localStorage
-                const saved = localStorage.getItem('muncheez_supermarket_products');
-                if (saved) {
-                    setMerchantProducts(JSON.parse(saved));
-                }
+                setMerchantProducts([]);
             }
         } catch (err) {
             console.error('Error loading store:', err);
-            const saved = localStorage.getItem('muncheez_supermarket_products');
-            if (saved) {
-                setMerchantProducts(JSON.parse(saved));
-            }
+            setMerchantProducts([]);
         } finally {
             setLoading(false);
         }

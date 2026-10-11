@@ -57,62 +57,7 @@ interface WalletTransaction {
     referenceId: string;
 }
 
-const INITIAL_OFFERS: DispatchOffer[] = [
-    {
-        id: 'DISP-701',
-        supermarketName: 'Westlands Fresh Market',
-        supermarketBranch: 'Westlands',
-        supermarketAddress: 'Mpaka Road, Ground Floor',
-        dropoffAddress: 'Rhapta Road, Court 4B, Apt 2',
-        customerName: 'Wanjiku Kamau',
-        customerPhone: '+254 712 345 678',
-        distanceKm: 2.4,
-        itemsCount: 6,
-        payoutKES: 250,
-        placedAt: '2m ago',
-        status: 'OFFERED',
-        paymentMethod: 'MPESA_PREPAID'
-    },
-    {
-        id: 'DISP-702',
-        supermarketName: 'Kilimani Green Grocers Supermarket',
-        supermarketBranch: 'Kilimani',
-        supermarketAddress: 'Argwings Kodhek Road',
-        dropoffAddress: 'Dennis Pritt Road, Acacia Court',
-        customerName: 'David Omondi',
-        customerPhone: '+254 722 890 123',
-        distanceKm: 3.1,
-        itemsCount: 4,
-        payoutKES: 290,
-        placedAt: '5m ago',
-        status: 'OFFERED',
-        paymentMethod: 'MPESA_PREPAID'
-    },
-    {
-        id: 'DISP-703',
-        supermarketName: 'Lavington Provisions Express',
-        supermarketBranch: 'Lavington',
-        supermarketAddress: 'James Gichuru Road, Mall Wing',
-        dropoffAddress: 'Muthangari Drive, Green Villa 8',
-        customerName: 'Sarah Jenkins',
-        customerPhone: '+254 733 456 789',
-        distanceKm: 1.8,
-        itemsCount: 2,
-        payoutKES: 220,
-        placedAt: '8m ago',
-        status: 'OFFERED',
-        paymentMethod: 'MPESA_PREPAID'
-    }
-];
-
-const INITIAL_WALLET_LEDGER: WalletTransaction[] = [
-    { id: 'TX-901', type: 'CREDIT', amount: 250, description: 'Supermarket Delivery Dispatch (MN-8902)', timestamp: 'Today, 02:40 PM', referenceId: 'DISP-699' },
-    { id: 'TX-902', type: 'CREDIT', amount: 320, description: 'Supermarket Delivery Dispatch (MN-8894)', timestamp: 'Today, 01:15 PM', referenceId: 'DISP-698' },
-    { id: 'TX-903', type: 'CREDIT', amount: 280, description: 'Supermarket Delivery Dispatch (MN-8889)', timestamp: 'Today, 11:30 AM', referenceId: 'DISP-695' },
-    { id: 'TX-904', type: 'DEBIT', amount: 1500, description: 'Instant M-Pesa Cashout Withdrawal', timestamp: 'Yesterday, 08:00 PM', referenceId: 'WD-441' },
-    { id: 'TX-905', type: 'CREDIT', amount: 350, description: 'Peak Hour Haul Surge Bonus', timestamp: 'Yesterday, 07:15 PM', referenceId: 'BONUS-02' },
-];
-
+// Real-time dispatch offers and wallet ledgers stream directly from Supabase
 type CourierTab = 'HOME' | 'WALLET' | 'PERFORMANCE' | 'SAFETY' | 'MORE';
 
 export default function CourierDashboard() {
@@ -123,28 +68,25 @@ export default function CourierDashboard() {
 
     // Courier Presence State
     const [presence, setPresence] = useState<'ONLINE_IDLE' | 'OFFLINE'>('ONLINE_IDLE');
-    const [availableOffers, setAvailableOffers] = useState<DispatchOffer[]>(INITIAL_OFFERS);
+    const [availableOffers, setAvailableOffers] = useState<DispatchOffer[]>([]);
     const [activeMission, setActiveMission] = useState<DispatchOffer | null>(null);
 
     // Wallet Ledger
-    const [walletBalance, setWalletBalance] = useState(2430);
-    const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>(INITIAL_WALLET_LEDGER);
+    const [walletBalance, setWalletBalance] = useState(0);
+    const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
     const [isCashoutLoading, setIsCashoutLoading] = useState(false);
 
     // SOS State
     const [isSosActive, setIsSosActive] = useState(false);
 
     // Shift Stats
-    const completedTrips = 7;
-    const shiftMinutes = 250;
+    const completedTrips = walletTransactions.filter(t => t.type === 'CREDIT').length;
+    const shiftMinutes = 0;
 
     // ── SUPABASE DATA LOADING ───────────────────────────────────────────────
     const [riderId, setRiderId] = useState<string | null>(null);
     const [vehicleInfo, setVehicleInfo] = useState({
-        type: 'Motorbike',
-        make: 'Honda',
-        model: 'Ace 125',
-        plate: 'KMD 102Z',
+        type: 'Motorbike', make: '', model: '', plate: '',
         inspectionStatus: 'Certified Roadworthy',
         helmetVerified: true,
         thermalBagVerified: true
@@ -190,7 +132,7 @@ export default function CourierDashboard() {
             }
         } catch (err) {
             console.error('[CourierDashboard] Failed to load data from Supabase:', err);
-            // Keep mock data as graceful fallback
+            setAvailableOffers([]); setWalletTransactions([]); setWalletBalance(0);
         }
     }, []);
 
@@ -261,7 +203,7 @@ export default function CourierDashboard() {
         onTimeRate: 97,
         reliabilityScore: 99,
         hourlyRateKES: 310,
-        totalDeliveriesAllTime: 412
+        totalDeliveriesAllTime: walletTransactions.filter(t => t.type === 'CREDIT').length
     };
 
     // Accept Offer (local + Supabase)
@@ -373,7 +315,7 @@ export default function CourierDashboard() {
                     <div className="h-4 w-px bg-neutral-200 hidden sm:block" />
                     <div>
                         <span className="text-xs font-semibold text-black block tracking-tight">
-                            {profile?.full_name || 'Kelvin Mwangi'} · {vehicleInfo.make} {vehicleInfo.model} ({vehicleInfo.plate})
+                            {profile?.full_name || 'Courier Partner'}{vehicleInfo.plate ? ` · ${vehicleInfo.make} ${vehicleInfo.model} (${vehicleInfo.plate})` : ''}
                         </span>
                         <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest block">
                             Courier Dispatch Terminal · Westlands Metropolis
