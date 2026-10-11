@@ -2374,3 +2374,39 @@ In commit `ab1a517`, `build.target: 'esnext'` was added to `vite.config.ts` as p
 
 ### Status:
 - **COMPLETE** — Schema fully documented and ready to paste into a new Supabase SQL Editor.
+
+---
+
+## Task: Mock Data Eradication & Step-by-Step Supabase Setup Execution
+- **Timestamp**: 2026-10-11
+- **Prompt**: "PROCEED AND FINISH. THEN GIVE ME WHAT I NEED TO DO TO SETUP ON, EVERYTHING I NEED TO PUT INTO THE NEW SUPABASE SQL, TELL ME. TELL ME EVEYRHTING... STEP BY STEP. ALSO I HOPE YOU GOT RID OF THE MOCK DATA AND FOLLOWED MY INSTRUCTION TO THE LETTER... BECAUSE I CAN STILL SEE FUCKING MOCKDATA IN MY DASHBOARDS. I DONT WANT THAT SHIT"
+
+### Actions Taken:
+1. **Purged Mock Data in Merchant Dashboard (`src/pages/merchant/Dashboard.tsx`)**:
+   - Completely deleted `INITIAL_SUPERMARKET_CATALOG` (all mock grocery items).
+   - Completely deleted `INITIAL_ORDERS` (fake customer orders: Wanjiku, Kevin, Amina, Brian, Faith).
+   - Completely deleted `INITIAL_PROMOS` (fake vouchers).
+   - Removed localStorage mock persistence fallback.
+   - Set initial states to empty arrays (`products = []`, `orders = []`, `promos = []`).
+   - Added clean zero-state editorial notices for Orders, Matrix Inventory, Clientele CRM, Deliveries, and Promotions tabs.
+2. **Purged Mock Data in Courier Dashboard (`src/pages/courier/Dashboard.tsx`)**:
+   - Completely deleted `INITIAL_OFFERS` (fake dispatches from Westlands, Kilimani, Lavington).
+   - Completely deleted `INITIAL_WALLET_LEDGER` (fake KES transactions).
+   - Reset wallet balance to 0, available offers to empty array, and transactions to empty array.
+   - Replaced hardcoded stats (7 completed trips, 250 shift minutes, fake 412 deliveries) with real dynamic calculations.
+   - Replaced hardcoded "Kelvin Mwangi · Honda Ace 125" with live courier profile & vehicle verification state.
+3. **Purged Mock Fallbacks in Customer StoreFront & Social**:
+   - Removed localStorage fallback in `src/pages/customer/StoreFront.tsx`.
+   - Cleared default seed friends and orders in `src/lib/socialService.ts`.
+4. **Build & Git Sync**:
+   - Validated complete clean build with `tsc -b && vite build` (0 TypeScript / Vite errors).
+   - Committed and pushed to `https://github.com/itskrisk/COM.git` (commit `6026107`).
+5. **Detailed Supabase Step-by-Step Execution Guide**:
+   - Documented full SQL copy-paste execution order, Auth settings, Storage buckets, and initial admin seeding.
+
+### Failures Encountered & Mitigations:
+- Initial Node script ran as ES module due to `package.json` `"type": "module"`; rewritten as `.cjs` and ran cleanly.
+
+### Final Working Solution:
+- All dashboards now operate strictly on 100% live Supabase tables and realtime streams with zero mock fallback data. Code pushed to GitHub repository.
+
