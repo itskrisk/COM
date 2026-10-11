@@ -301,12 +301,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const role = metadata?.role || 'customer';
 
-      // ONE EMAIL = ONE ROLE: Check if this email already has an account
-      const { data: existingUser } = await authService.getUser();
-      if (existingUser?.user) {
-        return { error: 'This email is already registered. Please log in instead, or use a different email for a new account.' };
-      }
-
       const cleanPhone = metadata?.phone?.trim() ? metadata.phone.trim() : undefined;
       const { data, error } = await authService.signUp(email, password, {
         full_name: metadata?.name || email.split('@')[0],

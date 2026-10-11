@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Cookie, X, ShieldCheck } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import CookieModal from './CookieModal';
 
 export default function CookieBanner() {
@@ -10,7 +10,7 @@ export default function CookieBanner() {
     useEffect(() => {
         const consent = localStorage.getItem('muncheez_cookie_preferences');
         if (!consent) {
-            const timer = setTimeout(() => setIsVisible(true), 1200);
+            const timer = setTimeout(() => setIsVisible(true), 1500);
             return () => clearTimeout(timer);
         }
     }, []);
@@ -34,6 +34,18 @@ export default function CookieBanner() {
         setIsVisible(false);
     };
 
+    const handleDeclineNonEssential = () => {
+        const preferences = {
+            essential: true,
+            analytics: false,
+            marketing: false,
+            personalization: false,
+            updatedAt: new Date().toISOString(),
+        };
+        localStorage.setItem('muncheez_cookie_preferences', JSON.stringify(preferences));
+        setIsVisible(false);
+    };
+
     if (!isVisible) return null;
 
     return (
@@ -41,42 +53,46 @@ export default function CookieBanner() {
             <AnimatePresence>
                 {isVisible && (
                     <motion.div
-                        initial={{ opacity: 0, y: 50 }}
+                        initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
-                        transition={{ type: 'spring', stiffness: 250, damping: 25 }}
-                        className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:max-w-md z-[55] bg-black/95 text-white backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-2xl"
+                        exit={{ opacity: 0, y: 20 }}
+                        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                        className="fixed bottom-0 inset-x-0 z-[60] bg-white/95 backdrop-blur-md border-t border-neutral-200 text-neutral-900"
                     >
-                        <div className="flex items-start gap-3 mb-4">
-                            <div className="p-2.5 bg-[#4A90E2]/20 text-[#4A90E2] rounded-2xl shrink-0">
-                                <Cookie size={20} />
+                        <div className="max-w-7xl mx-auto px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 text-[11px] text-neutral-600 font-sans tracking-tight">
+                                <span className="w-1.5 h-1.5 rounded-full bg-neutral-900 shrink-0" />
+                                <span>
+                                    Muncheez uses cookies to deliver a fast, secure shopping experience across Nairobi.{' '}
+                                    <Link
+                                        to="/legal/cookie-policy"
+                                        className="text-neutral-900 underline underline-offset-2 hover:text-neutral-500 transition-colors"
+                                    >
+                                        Learn more
+                                    </Link>
+                                </span>
                             </div>
-                            <div className="flex-1">
-                                <h4 className="text-sm font-bold tracking-tight">We value your privacy</h4>
-                                <p className="text-xs text-white/60 mt-1 leading-relaxed">
-                                    We use essential cookies to maintain security and personalized delivery preferences across Nairobi.
-                                </p>
+
+                            <div className="flex items-center gap-3 text-[11px] font-mono uppercase tracking-wider shrink-0 self-end sm:self-auto">
+                                <button
+                                    onClick={() => setIsModalOpen(true)}
+                                    className="px-3 py-1.5 text-neutral-500 hover:text-neutral-900 transition-colors"
+                                >
+                                    Preferences
+                                </button>
+                                <button
+                                    onClick={handleDeclineNonEssential}
+                                    className="px-3 py-1.5 border border-neutral-300 text-neutral-800 hover:border-neutral-900 hover:text-neutral-900 transition-colors"
+                                >
+                                    Decline
+                                </button>
+                                <button
+                                    onClick={handleAcceptAll}
+                                    className="px-4 py-1.5 bg-neutral-900 text-white hover:bg-neutral-800 transition-colors"
+                                >
+                                    Accept
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setIsVisible(false)}
-                                className="text-white/40 hover:text-white transition-colors"
-                            >
-                                <X size={16} />
-                            </button>
-                        </div>
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleAcceptAll}
-                                className="flex-1 py-2.5 px-4 bg-white text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-[#4A90E2] hover:text-white transition-all shadow-md"
-                            >
-                                Accept All
-                            </button>
-                            <button
-                                onClick={() => setIsModalOpen(true)}
-                                className="py-2.5 px-4 bg-white/10 text-white font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-white/20 transition-all border border-white/10"
-                            >
-                                Customize
-                            </button>
                         </div>
                     </motion.div>
                 )}

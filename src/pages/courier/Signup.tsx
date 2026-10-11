@@ -54,13 +54,10 @@ export default function CourierSignup() {
                     .from('riders')
                     .upsert({
                         id: signupResult.user.id,
-                        name: fullName.trim(),
-                        phone: phone.trim(),
-                        email: email.trim(),
-                        status: 'ONBOARDING_REQUIRED',
+                        status: 'PENDING',
                         is_online: false,
                         rating: 5.0,
-                        total_orders: 0,
+                        total_deliveries: 0,
                         created_at: new Date().toISOString()
                     }, { onConflict: 'id' });
 

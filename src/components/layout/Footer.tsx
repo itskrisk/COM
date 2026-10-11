@@ -3,6 +3,9 @@ import { Instagram, Facebook, Twitter, Linkedin, ArrowRight } from 'lucide-react
 import { Link } from 'react-router-dom';
 import appStoreIcon from "../../assets/app-store-icon.png";
 import googlePlayIcon from "../../assets/google-play-icon.png";
+import googleLogo from "../../assets/logos/google.png";
+import vodaLogo from "../../assets/logos/voda.png";
+import inkLogo from "../../assets/logos/ink.png";
 import CookieModal from '../ui/shared/CookieModal';
 
 export default function Footer() {
@@ -32,6 +35,30 @@ export default function Footer() {
                                 <ArrowRight size={20} />
                             </button>
                         </form>
+                    </div>
+                </div>
+
+                {/* Partners - Ecosystem Integrations */}
+                <div className="py-6 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
+                    <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-white/30">
+                        Ecosystem Partners
+                    </span>
+                    <div className="flex items-center gap-8 sm:gap-12">
+                        <img
+                            src={googleLogo}
+                            alt="Google"
+                            className="h-5 sm:h-6 w-auto object-contain opacity-50 hover:opacity-100 transition-opacity invert"
+                        />
+                        <img
+                            src={vodaLogo}
+                            alt="Vodacom / M-Pesa"
+                            className="h-5 sm:h-6 w-auto object-contain opacity-50 hover:opacity-100 transition-opacity"
+                        />
+                        <img
+                            src={inkLogo}
+                            alt="Ink"
+                            className="h-5 sm:h-6 w-auto object-contain opacity-50 hover:opacity-100 transition-opacity invert"
+                        />
                     </div>
                 </div>
 

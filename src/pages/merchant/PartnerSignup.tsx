@@ -60,12 +60,10 @@ export default function PartnerSignup() {
                     .upsert({
                         id: signupResult.user.id,
                         business_name: businessName.trim(),
-                        owner_name: ownerName.trim(),
                         email: email.trim(),
                         phone: phone.trim(),
-                        business_type: businessType,
-                        status: 'PENDING_APPROVAL',
-                        onboarding_step: 1,
+                        type: businessType,
+                        status: 'PENDING',
                         rating: 5.0,
                         created_at: new Date().toISOString()
                     }, { onConflict: 'id' });
