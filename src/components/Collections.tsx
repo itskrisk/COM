@@ -113,7 +113,7 @@ export default function Collections() {
                                 className={`relative group shrink-0 w-[85vw] sm:w-[350px] lg:w-auto snap-center border-t border-b border-black/20 py-4 ${item.span}`}
                             >
                                 <Link
-                                    to={`/c/stores?v=kitchen&tag=${item.name.toLowerCase().replace(' ', '-')}`}
+                                    to={`/c/stores?v=market&tag=${item.name.toLowerCase().replace(' ', '-')}`}
                                     className="block h-full w-full"
                                 >
                                     <div className="relative h-full overflow-hidden isolate">
