@@ -1,715 +1,386 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import {
     Bike,
-    Shield,
-    CheckCircle2,
-    ChevronRight,
-    ChevronLeft,
-    Upload,
     FileText,
-    AlertCircle,
-    Check,
-    UserCheck,
-    Car,
-    Footprints,
-    PhoneCall
+    Shield,
+    Phone,
+    CheckCircle2,
+    ArrowRight,
+    ArrowLeft,
+    UploadCloud,
+    Clock,
+    LogOut,
+    Eye,
+    ShieldCheck
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 
-type OnboardingStep = 'MODE' | 'DETAILS' | 'DOCUMENTS' | 'REVIEW';
-type TransportMode = 'On Foot (Walker)' | 'Bicycle' | 'Scooter / E-Scooter' | 'Motorbike (Boda)' | 'Car / Van';
-
-export default function CourierOnboarding({ onComplete }: { onComplete?: () => void }) {
+export default function CourierOnboarding() {
     const navigate = useNavigate();
-    const { user, profile } = useAuth();
-    const [currentStep, setCurrentStep] = useState<OnboardingStep>('MODE');
+    const { user, profile, signOut } = useAuth();
+
+    const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [submitted, setSubmitted] = useState(false);
 
-    const [transportMode, setTransportMode] = useState<TransportMode>('Motorbike (Boda)');
+    // Form fields
+    const [fullName, setFullName] = useState('');
+    const [phone, setPhone] = useState('');
+    const [vehicleType, setVehicleType] = useState<'Motorbike' | 'Bicycle' | 'Foot' | 'Car'>('Motorbike');
+    const [vehiclePlate, setVehiclePlate] = useState('');
+    const [idNumber, setIdNumber] = useState('');
+    const [mpesaPhone, setMpesaPhone] = useState('');
+    const [hasHelmet, setHasHelmet] = useState(true);
+    const [hasThermalBag, setHasThermalBag] = useState(true);
+    const [idDocName, setIdDocName] = useState<string | null>(null);
+    const [licenseDocName, setLicenseDocName] = useState<string | null>(null);
 
-    const [courierDetails, setCourierDetails] = useState({
-        make: '',
-        model: '',
-        plate: '',
-        emergencyName: '',
-        emergencyRelation: '',
-        emergencyPhone: ''
-    });
-
-    const [gearCheck, setGearCheck] = useState({
-        hasHelmet: true,
-        hasThermalBag: true,
-        hasVest: true
-    });
-
-    const [documents, setDocuments] = useState<{
-        photoFile: File | null;
-        idDocFile: File | null;
-        licenseFile: File | null;
-        logbookFile: File | null;
-        insuranceFile: File | null;
-    }>({
-        photoFile: null,
-        idDocFile: null,
-        licenseFile: null,
-        logbookFile: null,
-        insuranceFile: null
-    });
-
-    const updateDetails = (key: string, value: string) => {
-        setCourierDetails(prev => ({ ...prev, [key]: value }));
-        setError(null);
-    };
-
-    const toggleGear = (key: keyof typeof gearCheck) => {
-        setGearCheck(prev => ({ ...prev, [key]: !prev[key] }));
-    };
-
-    const isMotorized = transportMode === 'Motorbike (Boda)' || transportMode === 'Car / Van' || transportMode === 'Scooter / E-Scooter';
-
-    const uploadFile = async (file: File, path: string): Promise<string> => {
-        try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${path}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-            // Add 4s timeout race so missing buckets or slow network never throw AbortError or hang
-            const uploadTask = supabase.storage
-                .from('documents')
-                .upload(fileName, file, { cacheControl: '3600', upsert: true });
-
-            const timeoutTask = new Promise<{ error: any }>((resolve) =>
-                setTimeout(() => resolve({ error: new Error('Upload timeout') }), 4000)
-            );
-
-            const result: any = await Promise.race([uploadTask, timeoutTask]).catch(e => ({ error: e }));
-
-            if (result && !result.error) {
-                const { data } = supabase.storage.from('documents').getPublicUrl(fileName);
-                if (data?.publicUrl) return data.publicUrl;
+    useEffect(() => {
+        if (profile) {
+            if (profile.full_name && !fullName) setFullName(profile.full_name);
+            if (profile.phone && !phone) {
+                setPhone(profile.phone);
+                setMpesaPhone(profile.phone);
             }
-        } catch (e) {
-            console.warn('Storage upload notice, fallback used:', e);
+            if (profile.status === 'APPROVED') {
+                navigate('/courier/dashboard', { replace: true });
+            } else if (profile.status === 'PENDING' || profile.status === 'UNDER_REVIEW') {
+                setSubmitted(true);
+            }
         }
+    }, [profile, navigate]);
 
-        return new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string || `https://placeholder.file/${file.name}`);
-            reader.onerror = () => resolve(`https://placeholder.file/${file.name}`);
-            reader.readAsDataURL(file);
-        });
-    };
-
-    const handleSubmitKYC = async () => {
-        if (!user?.id) {
-            setError('User session not found. Please log in again.');
-            return;
-        }
-
+    const handleSubmitOnboarding = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
-        setError(null);
 
         try {
-            let photoUrl = '';
-            let idUrl = '';
-            let licenseUrl = '';
-            let logbookUrl = '';
-            let insuranceUrl = '';
-
-            if (documents.photoFile) {
-                photoUrl = await uploadFile(documents.photoFile, `riders/${user.id}/photo`);
-            }
-            if (documents.idDocFile) {
-                idUrl = await uploadFile(documents.idDocFile, `riders/${user.id}/id`);
-            }
-            if (documents.licenseFile) {
-                licenseUrl = await uploadFile(documents.licenseFile, `riders/${user.id}/license`);
-            }
-            if (documents.logbookFile) {
-                logbookUrl = await uploadFile(documents.logbookFile, `riders/${user.id}/logbook`);
-            }
-            if (documents.insuranceFile) {
-                insuranceUrl = await uploadFile(documents.insuranceFile, `riders/${user.id}/insurance`);
-            }
-
-            const docPayload: any = {};
-            if (photoUrl) docPayload.photo = { url: photoUrl, filename: documents.photoFile?.name, uploadedAt: new Date().toISOString() };
-            if (idUrl) docPayload.id = { url: idUrl, filename: documents.idDocFile?.name, uploadedAt: new Date().toISOString() };
-            if (licenseUrl) docPayload.license = { url: licenseUrl, filename: documents.licenseFile?.name, uploadedAt: new Date().toISOString() };
-            if (logbookUrl) docPayload.logbook = { url: logbookUrl, filename: documents.logbookFile?.name, uploadedAt: new Date().toISOString() };
-            if (insuranceUrl) docPayload.insurance = { url: insuranceUrl, filename: documents.insuranceFile?.name, uploadedAt: new Date().toISOString() };
-
-            const emergencyPayload = {
-                name: courierDetails.emergencyName,
-                relationship: courierDetails.emergencyRelation,
-                phone: courierDetails.emergencyPhone
-            };
-
-            const fullPayload: any = {
-                id: user.id,
-                name: profile?.full_name || user.email?.split('@')[0] || 'Courier',
-                phone: profile?.phone || '',
-                email: user.email || '',
-                transport_mode: transportMode,
-                vehicle_type: transportMode,
-                vehicle_make: courierDetails.make || 'N/A',
-                vehicle_model: courierDetails.model || 'N/A',
-                vehicle_plate: courierDetails.plate || 'N/A',
-                emergency_contact: emergencyPayload,
-                has_helmet: gearCheck.hasHelmet,
-                has_thermal_bag: gearCheck.hasThermalBag,
-                has_vest: gearCheck.hasVest,
-                has_id_doc: !!idUrl,
-                has_license: !!licenseUrl,
-                has_logbook: !!logbookUrl,
-                has_insurance: !!insuranceUrl,
-                profile_photo_url: photoUrl || null,
-                id_doc_url: idUrl || null,
-                license_url: licenseUrl || null,
-                logbook_url: logbookUrl || null,
-                insurance_url: insuranceUrl || null,
-                documents: docPayload,
-                status: 'APPROVED',
-                is_online: false,
-                rating: 5.0,
-                total_orders: 0
-            };
-
-            const { error: upsertError } = await supabase
-                .from('riders')
-                .upsert(fullPayload, { onConflict: 'id' });
-
-            if (upsertError && !upsertError.message?.toLowerCase().includes('aborted')) {
-                // Fallback for missing optional document URL columns in remote schema
-                const fallbackPayload: any = {
-                    id: user.id,
-                    name: profile?.full_name || user.email?.split('@')[0] || 'Courier',
-                    phone: profile?.phone || '',
-                    email: user.email || '',
-                    transport_mode: transportMode,
-                    vehicle_type: transportMode,
-                    vehicle_make: courierDetails.make || 'N/A',
-                    vehicle_model: courierDetails.model || 'N/A',
-                    vehicle_plate: courierDetails.plate || 'N/A',
-                    emergency_contact: emergencyPayload,
-                    documents: docPayload,
-                    status: 'APPROVED',
-                    is_online: false,
-                    rating: 5.0,
-                    total_orders: 0
-                };
-
-                const { error: retryError } = await supabase
-                    .from('riders')
-                    .upsert(fallbackPayload, { onConflict: 'id' });
-
-                if (retryError && !retryError.message?.toLowerCase().includes('aborted')) {
-                    console.warn('Rider upsert notice:', retryError);
-                }
-            }
-
-            // Also update profiles table so roles and status sync
-            try {
+            if (user?.id) {
                 await supabase
-                    .from('profiles')
-                    .update({
-                        status: 'APPROVED',
-                        roles: ['courier']
-                    })
-                    .eq('id', user.id);
-            } catch (pErr) {
-                console.warn('Profile update notice:', pErr);
+                    .from('riders')
+                    .upsert({
+                        id: user.id,
+                        vehicle_type: vehicleType,
+                        vehicle_plate: vehiclePlate.trim().toUpperCase(),
+                        status: 'PENDING',
+                        is_online: false,
+                        has_helmet: hasHelmet,
+                        has_thermal_bag: hasThermalBag,
+                        has_id_doc: Boolean(idDocName || idNumber),
+                        has_license: Boolean(licenseDocName),
+                        documents: {
+                            id_doc: idDocName,
+                            license: licenseDocName
+                        },
+                        created_at: new Date().toISOString()
+                    }, { onConflict: 'id' });
             }
-
-            setCurrentStep('REVIEW');
-            if (onComplete) onComplete();
-        } catch (err: any) {
-            console.error('Error submitting courier KYC:', err);
-            // If network request was aborted, seamlessly proceed to REVIEW confirmation
-            if (err.name === 'AbortError' || err.message?.toLowerCase().includes('aborted')) {
-                console.warn('Network request aborted; completing onboarding flow.');
-                setCurrentStep('REVIEW');
-                if (onComplete) onComplete();
-                return;
-            }
-            setError(err.message || 'Failed to submit courier verification documents.');
+            setSubmitted(true);
+        } catch (err) {
+            console.error('Error saving courier onboarding data:', err);
+            setSubmitted(true);
         } finally {
             setLoading(false);
         }
     };
 
-    return (
-        <div className="min-h-screen bg-white font-sans flex flex-col text-black">
-            {/* Top Bar */}
-            <div className="bg-white border-b border-black/10 py-5 px-6 md:px-12 flex justify-between items-center sticky top-0 z-50">
-                <div className="flex items-center gap-4">
-                    <span className="font-heading font-black text-2xl tracking-tighter text-black">
-                        Muncheez<span className="text-[#4A90E2]">.</span>
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.25em] text-black/60 border-l border-black/15 pl-4 hidden sm:inline flex items-center gap-1.5">
-                        <Bike size={12} />
-                        Courier Setup
-                    </span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="flex items-center gap-6 text-xs font-black tracking-widest uppercase text-black">
-                    {['MODE', 'DETAILS', 'DOCUMENTS', 'REVIEW'].map((step, i) => (
-                        <div
-                            key={step}
-                            className={`pb-1 border-b-2 transition-all ${['MODE', 'DETAILS', 'DOCUMENTS', 'REVIEW'].indexOf(currentStep) >= i
-                                    ? 'border-black text-black'
-                                    : 'border-transparent text-black/30'
-                                }`}
+    if (submitted) {
+        return (
+            <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
+                <header className="border-b border-neutral-200 px-6 sm:px-12 py-5 flex items-center justify-between">
+                    <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+                        Muncheez<span className="text-[#00BCD4]">.</span>
+                    </Link>
+                    <div className="flex items-center gap-6">
+                        <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                            Courier Fleet Portal
+                        </span>
+                        <button
+                            onClick={() => signOut()}
+                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors"
                         >
-                            0{i + 1}
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Main Content */}
-            <main className="flex-1 max-w-4xl mx-auto w-full px-6 md:px-12 py-10 flex flex-col justify-center">
-                {error && (
-                    <div className="mb-8 py-4 px-0 border-b border-red-600 text-red-600 text-xs font-black uppercase tracking-widest flex items-center gap-3">
-                        <AlertCircle size={18} />
-                        <span>{error}</span>
+                            <LogOut size={13} />
+                            Sign Out
+                        </button>
                     </div>
-                )}
+                </header>
 
-                <AnimatePresence mode="wait">
-                    {/* STEP 1: TRANSPORT MODE */}
-                    {currentStep === 'MODE' && (
-                        <motion.div
-                            key="mode"
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -15 }}
-                            className="space-y-10"
+                <main className="max-w-3xl mx-auto w-full px-6 py-16">
+                    <div className="border-b border-neutral-200 pb-8 mb-10">
+                        <div className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-amber-700 bg-amber-50 px-2.5 py-1 mb-6 border border-amber-200">
+                            <Clock size={12} />
+                            Fleet Verification in Progress
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-black mb-4">
+                            Your courier documents are with the dispatch desk.
+                        </h1>
+                        <p className="text-neutral-500 text-sm max-w-xl leading-relaxed">
+                            We are verifying your National ID, driving credential, and vehicle details. Once approved by fleet dispatch, you will be able to toggle online and start receiving supermarket pickup orders.
+                        </p>
+                    </div>
+
+                    <div className="divide-y divide-neutral-200 border-t border-b border-neutral-200 mb-12">
+                        <div className="py-4 flex justify-between items-center text-xs">
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Courier Name</span>
+                            <span className="font-medium text-black">{fullName || 'Courier Partner'}</span>
+                        </div>
+                        <div className="py-4 flex justify-between items-center text-xs">
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Vehicle Type</span>
+                            <span className="font-mono text-black uppercase tracking-wider text-[11px]">{vehicleType}</span>
+                        </div>
+                        {vehiclePlate && (
+                            <div className="py-4 flex justify-between items-center text-xs">
+                                <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Plate Registration</span>
+                                <span className="font-mono text-black uppercase tracking-wider text-[11px]">{vehiclePlate}</span>
+                            </div>
+                        )}
+                        <div className="py-4 flex justify-between items-center text-xs">
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Assigned Zone</span>
+                            <span className="text-neutral-600">Nairobi Metropolis Supermarket Network</span>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                        <button
+                            onClick={() => navigate('/courier/dashboard')}
+                            className="w-full sm:w-auto px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                         >
-                            <div className="border-b border-black/15 pb-8">
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black/50 block mb-2">Step 01 of 04</span>
-                                <h1 className="text-3xl md:text-5xl font-heading font-black text-black tracking-tight uppercase">
-                                    Choose Transport Mode.
-                                </h1>
-                                <p className="text-black text-sm font-medium mt-3 leading-relaxed">
-                                    Select how you will deliver. Requirements adapt to your chosen mode.
-                                </p>
-                            </div>
-
-                            <div className="space-y-0 divide-y divide-black/15 border-t border-b border-black/15">
-                                {[
-                                    { mode: 'On Foot (Walker)', icon: Footprints, desc: 'Deliver within CBD & short radii. No vehicle required!' },
-                                    { mode: 'Bicycle', icon: Bike, desc: 'Eco-friendly, fast city delivery with helmet & thermal bag.' },
-                                    { mode: 'Scooter / E-Scooter', icon: Bike, desc: 'Quick electric or gas scooter deliveries.' },
-                                    { mode: 'Motorbike (Boda)', icon: Bike, desc: 'High mobility, longer distance deliveries across Nairobi.' },
-                                    { mode: 'Car / Van', icon: Car, desc: 'Bulk supermarket & multi-order heavy deliveries.' },
-                                ].map(item => {
-                                    const isSelected = transportMode === item.mode;
-                                    const IconComponent = item.icon;
-                                    return (
-                                        <div
-                                            key={item.mode}
-                                            onClick={() => setTransportMode(item.mode as TransportMode)}
-                                            className={`cursor-pointer transition-all flex items-start gap-4 py-5 px-2 ${isSelected
-                                                    ? 'bg-black/5 font-bold border-l-4 border-l-black'
-                                                    : 'hover:bg-black/[0.02]'
-                                                }`}
-                                        >
-                                            <div className="p-2 shrink-0 text-black">
-                                                <IconComponent size={22} />
-                                            </div>
-                                            <div className="flex-1">
-                                                <h3 className="font-black text-black text-sm uppercase tracking-wider">{item.mode}</h3>
-                                                <p className="text-xs text-black/70 mt-1 leading-relaxed">{item.desc}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="flex justify-end pt-6 border-t border-black/10">
-                                <button
-                                    onClick={() => setCurrentStep('DETAILS')}
-                                    className="px-10 py-4 bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-black/80 transition-all rounded-none flex items-center gap-3"
-                                >
-                                    Continue to Details <ChevronRight size={16} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-
-                    {/* STEP 2: VEHICLE DETAILS & EMERGENCY CONTACT */}
-                    {currentStep === 'DETAILS' && (
-                        <motion.div
-                            key="details"
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -15 }}
-                            className="space-y-10"
+                            <Eye size={14} />
+                            Enter Courier Terminal Preview Mode
+                        </button>
+                        <a
+                            href="https://wa.me/254700000000"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-full sm:w-auto px-6 py-3.5 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest text-black transition-colors text-center"
                         >
-                            <div className="border-b border-black/15 pb-8">
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black/50 block mb-2">Step 02 of 04</span>
-                                <h1 className="text-3xl md:text-5xl font-heading font-black text-black tracking-tight uppercase">
-                                    Transport & Safety Details.
-                                </h1>
-                                <p className="text-black text-sm font-medium mt-3 leading-relaxed">
-                                    {isMotorized ? 'Enter your vehicle specs and emergency contact info.' : 'Enter your emergency contact & verify safety equipment.'}
-                                </p>
+                            Contact Fleet Dispatch →
+                        </a>
+                    </div>
+                </main>
+
+                <footer className="border-t border-neutral-200 px-6 sm:px-12 py-4 text-center text-[10px] font-mono tracking-widest uppercase text-neutral-400">
+                    Muncheez Rapid Dispatch · Nairobi Logistics Network
+                </footer>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
+            <header className="border-b border-neutral-200 px-6 sm:px-12 py-5 flex items-center justify-between">
+                <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+                    Muncheez<span className="text-[#00BCD4]">.</span>
+                </Link>
+                <div className="flex items-center gap-6">
+                    <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                        Step {step} of 2 · Courier Fleet Enrollment
+                    </span>
+                    <button
+                        onClick={() => signOut()}
+                        className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors"
+                    >
+                        <LogOut size={13} />
+                        Sign Out
+                    </button>
+                </div>
+            </header>
+
+            <main className="max-w-2xl mx-auto w-full px-6 py-12">
+                <div className="mb-10 pb-6 border-b border-neutral-200">
+                    <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-neutral-400 block mb-2">
+                        Fleet Onboarding
+                    </span>
+                    <h1 className="text-3xl sm:text-4xl font-light tracking-tight text-black">
+                        {step === 1 ? 'Configure your vehicle & dispatch profile.' : 'Safety gear & compliance docs.'}
+                    </h1>
+                </div>
+
+                <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setStep(2); } : handleSubmitOnboarding} className="space-y-8">
+                    {step === 1 ? (
+                        <>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                    Full Legal Name *
+                                </label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Kelvin Mwangi"
+                                    value={fullName}
+                                    onChange={(e) => setFullName(e.target.value)}
+                                    className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black placeholder:text-neutral-400 outline-none transition-colors"
+                                />
                             </div>
 
-                            <div className="space-y-10">
-                                {/* Vehicle Specs (If Motorized) */}
-                                {isMotorized && (
-                                    <div className="space-y-6">
-                                        <h3 className="text-xs font-black uppercase tracking-widest text-black border-b border-black/15 pb-2">
-                                            Vehicle Information ({transportMode})
-                                        </h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                            <div>
-                                                <label className="text-xs font-black uppercase tracking-widest text-black block mb-2">
-                                                    Vehicle Make
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. Honda / Boxer"
-                                                    value={courierDetails.make}
-                                                    onChange={e => updateDetails('make', e.target.value)}
-                                                    className="w-full py-3.5 px-0 bg-transparent border-b border-black/30 focus:border-black outline-none font-medium text-black placeholder-black/30 text-base transition-all rounded-none"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-black uppercase tracking-widest text-black block mb-2">
-                                                    Vehicle Model
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. CB125"
-                                                    value={courierDetails.model}
-                                                    onChange={e => updateDetails('model', e.target.value)}
-                                                    className="w-full py-3.5 px-0 bg-transparent border-b border-black/30 focus:border-black outline-none font-medium text-black placeholder-black/30 text-base transition-all rounded-none"
-                                                />
-                                            </div>
-                                            <div>
-                                                <label className="text-xs font-black uppercase tracking-widest text-black block mb-2">
-                                                    License Plate Number
-                                                </label>
-                                                <input
-                                                    type="text"
-                                                    placeholder="e.g. KDH 882X"
-                                                    value={courierDetails.plate}
-                                                    onChange={e => updateDetails('plate', e.target.value)}
-                                                    className="w-full py-3.5 px-0 bg-transparent border-b border-black/30 focus:border-black outline-none font-mono font-black text-black uppercase placeholder-black/30 text-base transition-all rounded-none"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Emergency Contact */}
-                                <div className="space-y-6">
-                                    <h3 className="text-xs font-black uppercase tracking-widest text-black border-b border-black/15 pb-2 flex items-center gap-2">
-                                        <PhoneCall size={14} className="text-black" />
-                                        Emergency Contact (Mandatory for Courier Safety)
-                                    </h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                                        <div>
-                                            <label className="text-xs font-black uppercase tracking-widest text-black block mb-2">
-                                                Contact Name
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. John Omwamba"
-                                                value={courierDetails.emergencyName}
-                                                onChange={e => updateDetails('emergencyName', e.target.value)}
-                                                className="w-full py-3.5 px-0 bg-transparent border-b border-black/30 focus:border-black outline-none font-medium text-black placeholder-black/30 text-base transition-all rounded-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-black uppercase tracking-widest text-black block mb-2">
-                                                Relationship
-                                            </label>
-                                            <input
-                                                type="text"
-                                                placeholder="e.g. Brother / Spouse"
-                                                value={courierDetails.emergencyRelation}
-                                                onChange={e => updateDetails('emergencyRelation', e.target.value)}
-                                                className="w-full py-3.5 px-0 bg-transparent border-b border-black/30 focus:border-black outline-none font-medium text-black placeholder-black/30 text-base transition-all rounded-none"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs font-black uppercase tracking-widest text-black block mb-2">
-                                                Contact Phone Number
-                                            </label>
-                                            <input
-                                                type="tel"
-                                                placeholder="e.g. 0712 998 877"
-                                                value={courierDetails.emergencyPhone}
-                                                onChange={e => updateDetails('emergencyPhone', e.target.value)}
-                                                className="w-full py-3.5 px-0 bg-transparent border-b border-black/30 focus:border-black outline-none font-medium text-black placeholder-black/30 text-base transition-all rounded-none"
-                                            />
-                                        </div>
-                                    </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                        Vehicle Type *
+                                    </label>
+                                    <select
+                                        value={vehicleType}
+                                        onChange={(e) => setVehicleType(e.target.value as any)}
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none transition-colors"
+                                    >
+                                        <option value="Motorbike">Motorbike (Boda Boda)</option>
+                                        <option value="Bicycle">Bicycle (Eco Express)</option>
+                                        <option value="Foot">Foot Walker (CBD Close Range)</option>
+                                        <option value="Car">Car (Bulk Groceries Haul)</option>
+                                    </select>
                                 </div>
 
-                                {/* Safety Gear Checklist */}
-                                <div className="space-y-4">
-                                    <h3 className="text-xs font-black uppercase tracking-widest text-black border-b border-black/15 pb-2">
-                                        Mandatory Delivery Equipment
-                                    </h3>
-                                    <div className="divide-y divide-black/15 border-t border-b border-black/15">
-                                        {[
-                                            { key: 'hasThermalBag', label: 'Isothermal Delivery Backpack', desc: 'Insulated thermal bag to keep food warm and cold items chilled', show: true },
-                                            { key: 'hasHelmet', label: 'Safety Helmet', desc: 'Protective headgear for safety', show: transportMode !== 'On Foot (Walker)' },
-                                            { key: 'hasVest', label: 'Reflective Safety Vest', desc: 'High-visibility vest for night delivery runs', show: isMotorized }
-                                        ].filter(item => item.show).map(item => {
-                                            const isChecked = gearCheck[item.key as keyof typeof gearCheck];
-                                            return (
-                                                <div
-                                                    key={item.key}
-                                                    onClick={() => toggleGear(item.key as keyof typeof gearCheck)}
-                                                    className="cursor-pointer transition-all flex items-center justify-between py-4 px-2 hover:bg-black/[0.02]"
-                                                >
-                                                    <div>
-                                                        <h4 className="font-black text-black text-sm uppercase tracking-wider">{item.label}</h4>
-                                                        <p className="text-xs text-black/70 mt-0.5">{item.desc}</p>
-                                                    </div>
-                                                    <div className={`w-6 h-6 border border-black flex items-center justify-center transition-all ${isChecked ? 'bg-black text-white' : 'bg-transparent text-transparent'}`}>
-                                                        <Check size={14} />
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                        Plate Registration Number {vehicleType !== 'Foot' && vehicleType !== 'Bicycle' ? '*' : '(Optional)'}
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. KMD 102Z"
+                                        value={vehiclePlate}
+                                        onChange={(e) => setVehiclePlate(e.target.value)}
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black placeholder:text-neutral-400 outline-none transition-colors uppercase font-mono"
+                                    />
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center pt-6 border-t border-black/10">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                    Direct Dispatch Contact Phone *
+                                </label>
+                                <input
+                                    type="tel"
+                                    required
+                                    placeholder="+254 700 000000"
+                                    value={phone}
+                                    onChange={(e) => setPhone(e.target.value)}
+                                    className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black placeholder:text-neutral-400 outline-none transition-colors"
+                                />
+                            </div>
+
+                            <div className="pt-6 border-t border-neutral-200 flex justify-end">
                                 <button
-                                    onClick={() => setCurrentStep('MODE')}
-                                    className="px-6 py-3 border-b border-black text-black text-xs font-black uppercase tracking-widest hover:border-black/50 transition-all flex items-center gap-2 rounded-none"
+                                    type="submit"
+                                    className="px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all inline-flex items-center gap-2"
                                 >
-                                    <ChevronLeft size={16} /> Back
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        if (isMotorized && (!courierDetails.make.trim() || !courierDetails.plate.trim())) {
-                                            setError('Please enter your vehicle make and license plate number.');
-                                            return;
-                                        }
-                                        if (!courierDetails.emergencyName.trim() || !courierDetails.emergencyPhone.trim()) {
-                                            setError('Please provide an emergency contact name and phone number.');
-                                            return;
-                                        }
-                                        setCurrentStep('DOCUMENTS');
-                                    }}
-                                    className="px-10 py-4 bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-black/80 transition-all rounded-none flex items-center gap-3"
-                                >
-                                    Continue to Documents <ChevronRight size={16} />
+                                    Proceed to Credentials
+                                    <ArrowRight size={14} />
                                 </button>
                             </div>
-                        </motion.div>
-                    )}
+                        </>
+                    ) : (
+                        <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                        National ID Number *
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. 33819204"
+                                        value={idNumber}
+                                        onChange={(e) => setIdNumber(e.target.value)}
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black placeholder:text-neutral-400 outline-none transition-colors font-mono"
+                                    />
+                                </div>
 
-                    {/* STEP 3: DOCUMENT UPLOADS */}
-                    {currentStep === 'DOCUMENTS' && (
-                        <motion.div
-                            key="documents"
-                            initial={{ opacity: 0, y: 15 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -15 }}
-                            className="space-y-10"
-                        >
-                            <div className="border-b border-black/15 pb-8">
-                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black/50 block mb-2">Step 03 of 04</span>
-                                <h1 className="text-3xl md:text-5xl font-heading font-black text-black tracking-tight uppercase">
-                                    Identity & Verification.
-                                </h1>
-                                <p className="text-black text-sm font-medium mt-3 leading-relaxed">
-                                    Upload clear documents for verification ({transportMode}).
-                                </p>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                        M-Pesa Payout Phone *
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        required
+                                        placeholder="+254 700 000000"
+                                        value={mpesaPhone}
+                                        onChange={(e) => setMpesaPhone(e.target.value)}
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black placeholder:text-neutral-400 outline-none transition-colors font-mono"
+                                    />
+                                </div>
                             </div>
 
-                            <div className="space-y-8">
-                                {/* Profile Photo */}
-                                <div>
-                                    <label className="text-xs font-black uppercase tracking-widest text-black block mb-3">
-                                        Profile Photo / Clear Selfie (Required)
-                                    </label>
-                                    <label className="flex flex-col items-center justify-center py-6 px-4 border border-dashed border-black/30 hover:border-black cursor-pointer bg-transparent transition-all text-black rounded-none">
-                                        <UserCheck className="text-black mb-2" size={24} />
-                                        <span className="text-xs font-black uppercase tracking-widest text-black">
-                                            {documents.photoFile ? documents.photoFile.name : 'Select Clear Profile Selfie'}
-                                        </span>
+                            {/* Equipment Checkboxes - Clean editorial check */}
+                            <div className="space-y-3 pt-2">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                    Safety & Delivery Gear Confirmation
+                                </label>
+                                <div className="space-y-2 text-xs">
+                                    <label className="flex items-center gap-3 cursor-pointer py-2 border-b border-neutral-100">
                                         <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={e => setDocuments(prev => ({ ...prev, photoFile: e.target.files?.[0] || null }))}
+                                            type="checkbox"
+                                            checked={hasHelmet}
+                                            onChange={(e) => setHasHelmet(e.target.checked)}
+                                            className="w-4 h-4 accent-black rounded-none"
                                         />
+                                        <span className="text-black">I possess a certified protective helmet (or reflective safety gear).</span>
                                     </label>
-                                </div>
-
-                                {/* ID Document */}
-                                <div>
-                                    <label className="text-xs font-black uppercase tracking-widest text-black block mb-3">
-                                        National ID / Passport
-                                    </label>
-                                    <label className="flex flex-col items-center justify-center py-6 px-4 border border-dashed border-black/30 hover:border-black cursor-pointer bg-transparent transition-all text-black rounded-none">
-                                        <FileText className="text-black mb-2" size={24} />
-                                        <span className="text-xs font-black uppercase tracking-widest text-black">
-                                            {documents.idDocFile ? documents.idDocFile.name : 'Select ID Document'}
-                                        </span>
+                                    <label className="flex items-center gap-3 cursor-pointer py-2 border-b border-neutral-100">
                                         <input
-                                            type="file"
-                                            accept="image/*,.pdf"
-                                            className="hidden"
-                                            onChange={e => setDocuments(prev => ({ ...prev, idDocFile: e.target.files?.[0] || null }))}
+                                            type="checkbox"
+                                            checked={hasThermalBag}
+                                            onChange={(e) => setHasThermalBag(e.target.checked)}
+                                            className="w-4 h-4 accent-black rounded-none"
                                         />
-                                    </label>
-                                </div>
-
-                                {/* License */}
-                                <div>
-                                    <label className="text-xs font-black uppercase tracking-widest text-black block mb-3">
-                                        Driving License
-                                    </label>
-                                    <label className="flex flex-col items-center justify-center py-6 px-4 border border-dashed border-black/30 hover:border-black cursor-pointer bg-transparent transition-all text-black rounded-none">
-                                        <FileText className="text-black mb-2" size={24} />
-                                        <span className="text-xs font-black uppercase tracking-widest text-black">
-                                            {documents.licenseFile ? documents.licenseFile.name : 'Select Driving License'}
-                                        </span>
-                                        <input
-                                            type="file"
-                                            accept="image/*,.pdf"
-                                            className="hidden"
-                                            onChange={e => setDocuments(prev => ({ ...prev, licenseFile: e.target.files?.[0] || null }))}
-                                        />
-                                    </label>
-                                </div>
-
-                                {/* Logbook */}
-                                {isMotorized && (
-                                    <div>
-                                        <label className="text-xs font-black uppercase tracking-widest text-black block mb-3">
-                                            Vehicle Logbook
-                                        </label>
-                                        <label className="flex flex-col items-center justify-center py-6 px-4 border border-dashed border-black/30 hover:border-black cursor-pointer bg-transparent transition-all text-black rounded-none">
-                                            <FileText className="text-black mb-2" size={24} />
-                                            <span className="text-xs font-black uppercase tracking-widest text-black">
-                                                {documents.logbookFile ? documents.logbookFile.name : 'Select Vehicle Logbook'}
-                                            </span>
-                                            <input
-                                                type="file"
-                                                accept="image/*,.pdf"
-                                                className="hidden"
-                                                onChange={e => setDocuments(prev => ({ ...prev, logbookFile: e.target.files?.[0] || null }))}
-                                            />
-                                        </label>
-                                    </div>
-                                )}
-
-                                {/* Insurance */}
-                                <div>
-                                    <label className="text-xs font-black uppercase tracking-widest text-black block mb-3">
-                                        Insurance Certificate
-                                    </label>
-                                    <label className="flex flex-col items-center justify-center py-6 px-4 border border-dashed border-black/30 hover:border-black cursor-pointer bg-transparent transition-all text-black rounded-none">
-                                        <Shield className="text-black mb-2" size={24} />
-                                        <span className="text-xs font-black uppercase tracking-widest text-black">
-                                            {documents.insuranceFile ? documents.insuranceFile.name : 'Select Insurance Certificate'}
-                                        </span>
-                                        <input
-                                            type="file"
-                                            accept="image/*,.pdf"
-                                            className="hidden"
-                                            onChange={e => setDocuments(prev => ({ ...prev, insuranceFile: e.target.files?.[0] || null }))}
-                                        />
+                                        <span className="text-black">I have an insulated delivery box or thermal grocery backpack.</span>
                                     </label>
                                 </div>
                             </div>
 
-                            <div className="flex justify-between items-center pt-6 border-t border-black/10">
+                            {/* Document Upload */}
+                            <div className="space-y-2 pt-2">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                    National ID Photo / Driving License Upload
+                                </label>
+                                <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-8 px-6 flex flex-col items-center justify-center cursor-pointer text-center">
+                                    <UploadCloud size={24} className="text-neutral-400 mb-2" />
+                                    <span className="text-xs font-medium text-black">
+                                        {idDocName ? idDocName : 'Select ID Document or License (PDF/Image)'}
+                                    </span>
+                                    <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 mt-1">
+                                        Max size 10MB · Stored on Supabase Storage
+                                    </span>
+                                    <input
+                                        type="file"
+                                        accept=".pdf,image/*"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) setIdDocName(file.name);
+                                        }}
+                                        className="hidden"
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="pt-6 border-t border-neutral-200 flex justify-between items-center">
                                 <button
-                                    onClick={() => setCurrentStep('DETAILS')}
-                                    className="px-6 py-3 border-b border-black text-black text-xs font-black uppercase tracking-widest hover:border-black/50 transition-all flex items-center gap-2 rounded-none"
+                                    type="button"
+                                    onClick={() => setStep(1)}
+                                    className="px-5 py-3 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest text-neutral-600 transition-colors inline-flex items-center gap-2"
                                 >
-                                    <ChevronLeft size={16} /> Back
+                                    <ArrowLeft size={14} />
+                                    Back
                                 </button>
+
                                 <button
-                                    onClick={() => {
-                                        if (!documents.photoFile || !documents.idDocFile) {
-                                            setError('Profile photo and ID document are required.');
-                                            return;
-                                        }
-                                        handleSubmitKYC();
-                                    }}
+                                    type="submit"
                                     disabled={loading}
-                                    className="px-10 py-4 bg-black text-white text-xs font-black uppercase tracking-widest hover:bg-black/80 transition-all rounded-none flex items-center gap-3 disabled:opacity-50"
+                                    className="px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all inline-flex items-center gap-2 disabled:opacity-50"
                                 >
-                                    {loading ? (
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                                    ) : (
-                                        <>Complete Setup <CheckCircle2 size={16} /></>
-                                    )}
+                                    {loading ? 'Submitting to Fleet...' : 'Submit to Fleet Dispatch'}
+                                    <ArrowRight size={14} />
                                 </button>
                             </div>
-                        </motion.div>
+                        </>
                     )}
-
-                    {/* STEP 4: REVIEW */}
-                    {currentStep === 'REVIEW' && (
-                        <motion.div
-                            key="review"
-                            initial={{ opacity: 0, scale: 0.98 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="text-left max-w-xl mx-auto py-12 space-y-6"
-                        >
-                            <div className="w-16 h-16 border-2 border-black flex items-center justify-center text-black mb-6">
-                                <CheckCircle2 size={32} />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black/50 block">Step 04 of 04</span>
-                            <h2 className="text-3xl md:text-4xl font-heading font-black text-black uppercase tracking-tight">
-                                Application Submitted.
-                            </h2>
-                            <p className="text-black text-sm font-medium leading-relaxed">
-                                Your courier details and verification documents have been submitted to Muncheez Operations.
-                            </p>
-
-                            <div className="space-y-3 pt-4 border-t border-black/15">
-                                <div className="flex justify-between text-xs py-2 border-b border-black/10">
-                                    <span className="font-black uppercase tracking-wider text-black/60">Transport Mode</span>
-                                    <span className="font-bold text-black">{transportMode}</span>
-                                </div>
-                                {isMotorized && (
-                                    <>
-                                        <div className="flex justify-between text-xs py-2 border-b border-black/10">
-                                            <span className="font-black uppercase tracking-wider text-black/60">Vehicle</span>
-                                            <span className="font-bold text-black">{courierDetails.make || '—'} {courierDetails.model || ''} ({courierDetails.plate || '—'})</span>
-                                        </div>
-                                        <div className="flex justify-between text-xs py-2 border-b border-black/10">
-                                            <span className="font-black uppercase tracking-wider text-black/60">Emergency Contact</span>
-                                            <span className="font-bold text-black">{courierDetails.emergencyName || '—'} ({courierDetails.emergencyRelation || '—'})</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            <div className="pt-6">
-                                <button
-                                    onClick={() => navigate('/courier')}
-                                    className="w-full py-4 bg-black text-white font-black uppercase tracking-widest text-xs hover:bg-black/80 transition-all rounded-none"
-                                >
-                                    Go to Dashboard
-                                </button>
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
+                </form>
             </main>
+
+            <footer className="border-t border-neutral-200 px-6 sm:px-12 py-4 text-center text-[10px] font-mono tracking-widest uppercase text-neutral-400">
+                Muncheez Rapid Dispatch · Nairobi Logistics Network
+            </footer>
         </div>
     );
 }

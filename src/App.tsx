@@ -4,8 +4,6 @@ import { CartProvider } from "./context/CartContext";
 
 // Layouts
 import CustomerLayout from "./layouts/CustomerLayout";
-import MerchantLayout from "./layouts/MerchantLayout";
-import CourierLayout from "./layouts/CourierLayout";
 import AdminLayout from "./layouts/AdminLayout";
 
 // Navigation
@@ -24,16 +22,16 @@ import CustomerLogin from "./pages/customer/Login";
 import CustomerSignup from "./pages/customer/Signup";
 
 // Merchant Pages
-import MerchantDashboard from "./pages/merchant/Dashboard";
 import PartnerLogin from "./pages/merchant/PartnerLogin";
 import PartnerSignup from "./pages/merchant/PartnerSignup";
-import Onboarding from "./pages/merchant/Onboarding";
+import MerchantOnboarding from "./pages/merchant/Onboarding";
+import MerchantDashboard from "./pages/merchant/Dashboard";
 
 // Courier/Rider Pages
-import CourierDashboard from "./pages/courier/Dashboard";
 import CourierLogin from "./pages/courier/Login";
 import CourierSignup from "./pages/courier/Signup";
 import CourierOnboarding from "./pages/courier/Onboarding";
+import CourierDashboard from "./pages/courier/Dashboard";
 
 // Admin Pages
 import AdminDashboard from "./pages/admin/Dashboard";
@@ -83,6 +81,7 @@ export default function App() {
                 <Route path="/stores" element={<StoreListing />} />
                 <Route path="/c/stores" element={<StoreListing />} />
                 <Route path="/store/:id" element={<StoreFront />} />
+                <Route path="/c/store/:id" element={<StoreFront />} />
                 <Route path="/checkout" element={<CheckoutView />} />
                 <Route path="/order/:id" element={<OrderStatus />} />
                 <Route path="/social" element={
@@ -93,80 +92,27 @@ export default function App() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
                 <Route path="/verify-email" element={<VerifyEmail />} />
+                <Route path="/auth/verify-email" element={<VerifyEmail />} />
                 <Route path="/auth/callback" element={<AuthCallback />} />
               </Route>
 
               {/* ============================================ */}
-              {/* MERCHANT PARTNER PORTAL                      */}
+              {/* MERCHANT ECOSYSTEM (Supermarket Focus)       */}
               {/* ============================================ */}
               <Route path="/partner/login" element={<PartnerLogin />} />
               <Route path="/partner/signup" element={<PartnerSignup />} />
-              <Route
-                path="/partner"
-                element={
-                  <ProtectedRoute requiredRole="merchant">
-                    <MerchantLayout>
-                      <MerchantDashboard />
-                    </MerchantLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/partner/dashboard"
-                element={
-                  <ProtectedRoute requiredRole="merchant">
-                    <MerchantLayout>
-                      <MerchantDashboard />
-                    </MerchantLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/partner/onboarding"
-                element={
-                  <ProtectedRoute requiredRole="merchant">
-                    <MerchantLayout>
-                      <Onboarding />
-                    </MerchantLayout>
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/partner/onboarding" element={<MerchantOnboarding />} />
+              <Route path="/partner/dashboard" element={<MerchantDashboard />} />
+              <Route path="/partner" element={<Navigate to="/partner/dashboard" replace />} />
 
               {/* ============================================ */}
-              {/* COURIER/RIDER TERMINAL                       */}
+              {/* COURIER/RIDER FLEET ECOSYSTEM                */}
               {/* ============================================ */}
               <Route path="/courier/login" element={<CourierLogin />} />
               <Route path="/courier/signup" element={<CourierSignup />} />
-              <Route
-                path="/courier"
-                element={
-                  <ProtectedRoute requiredRole="courier">
-                    <CourierLayout>
-                      <CourierDashboard />
-                    </CourierLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/courier/dashboard"
-                element={
-                  <ProtectedRoute requiredRole="courier">
-                    <CourierLayout>
-                      <CourierDashboard />
-                    </CourierLayout>
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/courier/onboarding"
-                element={
-                  <ProtectedRoute requiredRole="courier">
-                    <CourierLayout>
-                      <CourierOnboarding />
-                    </CourierLayout>
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/courier/onboarding" element={<CourierOnboarding />} />
+              <Route path="/courier/dashboard" element={<CourierDashboard />} />
+              <Route path="/courier" element={<Navigate to="/courier/dashboard" replace />} />
 
               {/* ============================================ */}
               {/* ADMIN CONSOLE                                 */}

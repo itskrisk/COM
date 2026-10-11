@@ -19,67 +19,11 @@ import { publicApi } from '../../lib/api';
 
 // 1. BRAND PILLARS (Functional FOUNDATIONS)
 const SEGMENT_MAP: Record<string, { title: string; subtitle: string; description: string; categories: string[] }> = {
-    'kitchen': {
-        title: "The Kitchens",
-        subtitle: "Fine Dining to Street Eats",
-        description: "From Westlands' boutique dining to the legendary food carts of the city center. Delivered with soul.",
-        categories: ['All', 'Promotions', 'Fast food', 'Halal', 'Chicken', 'Pizza', 'Local food', 'Burgers', 'Indian']
-    },
     'market': {
         title: "The Market",
         subtitle: "Supermarkets & Mama Mboga",
         description: "Full supermarket hauls and fresh produce from local stalls, handled with the respect they deserve.",
-        categories: ['All', 'Supermarket', 'Mama Mboga', 'Snacks', 'Alcohol']
-    },
-    'bakes': {
-        title: "Bakes & Blooms",
-        subtitle: "Bakeries & Florists",
-        description: "Artisan sourdough, delicate pastries, and the city’s most vibrant floral arrangements.",
-        categories: ['All', 'Bakery', 'Desserts', 'Tea & coffee', 'Breakfast', 'Florist']
-    },
-    'apothecary': {
-        title: "The Apothecary",
-        subtitle: "Health & Hydration",
-        description: "Quick, discreet pharmacy essentials and professional-grade water delivery for your home.",
-        categories: ['All', 'Pharmacy', 'Wellness', 'Water']
-    },
-    'general': {
-        title: "The Collective",
-        subtitle: "Essentials, Elevated.",
-        description: "Nairobi's finest selection across all departments, unified in one experience.",
-        categories: ['All', 'Promotions', 'Fast food', 'Supermarket', 'Pharmacy', 'Bakery', 'Local food']
-    }
-};
-
-// 2. CURATION MOODS (Editorial LAYERS)
-const MOOD_MAP: Record<string, { name: string; tagline: string; image: string; color: string; letter: string }> = {
-    'morning-dew': {
-        name: 'Morning Dew',
-        tagline: 'The Early Rise',
-        image: 'https://images.unsplash.com/photo-1444418185997-1145404873e0?q=80&w=800',
-        color: '#4A90E2',
-        letter: 'M'
-    },
-    'street-kings': {
-        name: 'Street Kings',
-        tagline: 'The Hustle',
-        image: 'https://images.unsplash.com/photo-1550547660-d9450f859349?q=80&w=800',
-        color: '#E63946',
-        letter: 'S'
-    },
-    'kula-fiti': {
-        name: 'Kula Fiti',
-        tagline: 'The Balance',
-        image: 'https://images.unsplash.com/photo-1543339308-43e59d6b73a6?q=80&w=800',
-        color: '#2A9D8F',
-        letter: 'K'
-    },
-    'the-vault': {
-        name: 'the vault',
-        tagline: 'Elite Selection',
-        image: 'https://images.unsplash.com/photo-1569701881643-5671578e39a7?q=80&w=800',
-        color: '#D4AF37',
-        letter: 'V'
+        categories: ['All', 'Supermarket', 'Mama Mboga', 'Snacks', 'Alcohol', 'Promotions']
     }
 };
 
@@ -87,9 +31,9 @@ export default function StoreListing() {
     const navigate = useNavigate();
     const { user, profile, signOut } = useAuth();
     const [searchParams] = useSearchParams();
-    const activeView = searchParams.get('v') || 'general';
+    const activeView = 'market';
     const activeTag = searchParams.get('tag'); // Get the deep-link tag
-    const config = SEGMENT_MAP[activeView] || SEGMENT_MAP.general;
+    const config = SEGMENT_MAP.market;
 
     const [searchQuery, setSearchQuery] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
@@ -118,25 +62,15 @@ export default function StoreListing() {
     const categories = config.categories;
     const isFiltered = searchQuery !== '' || activeCategory !== 'All' || !!activeTag;
 
-    // Scroll Review: Ensure we start at the top when view/tag changes
-    // Scroll Review: Ensure we start at the top when view/tag changes
+    // Scroll Review: Ensure we start at the top when tag changes
     useEffect(() => {
         window.scrollTo(0, 0);
-
-        // SYNC: If incoming tag from Home, set it as Search Query to match internal behavior
         if (activeTag) {
-            const mood = MOOD_MAP[activeTag];
-            if (mood) {
-                setSearchQuery(mood.name);
-            } else {
-                setSearchQuery(activeTag.replace(/-/g, ' '));
-            }
+            setSearchQuery(activeTag.replace(/-/g, ' '));
         } else {
-            // IF NO TAG: We are just changing views (e.g. Kitchen -> Market)
-            // We MUST clear the search query so the user isn't stuck with "Morning Dew" filter in "The Market"
             setSearchQuery('');
         }
-    }, [activeView, activeTag]);
+    }, [activeTag]);
 
     // Unified Market Data (Wired to Supabase)
     const MARKET_STORES = useMemo(() => {
@@ -144,37 +78,33 @@ export default function StoreListing() {
             id: m.id,
             name: m.business_name,
             promo: m.branding?.promo || '',
-            status: 'Open', // TODO: Add operating hours logic
+            status: 'Open',
             rating: m.rating ? `${m.rating}` : '--',
             count: m.review_count ? `(${m.review_count})` : '(0)',
             type: m.type,
-            departments: m.branding?.departments || ['kitchen'],
+            departments: m.branding?.departments || ['market'],
             tags: m.branding?.tags || [],
             actionText: 'Order Now',
-            image: m.cover_url || 'https://images.unsplash.com/photo-1544025162-d76694265947?q=80&w=800',
+            image: m.cover_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800',
             isTopRated: m.rating >= 4.5
         }));
     }, [stores]);
 
     // Filter logic
     const filteredMarketStores = MARKET_STORES.filter((store: any) => {
-        // 1. Check if store belongs to the active view (if not 'general')
-        const matchesView = activeView === 'general' || store.departments.includes(activeView as any);
+        // 1. Check category filter
+        const matchesCategory = activeCategory === 'All'
+            ? true
+            : activeCategory === 'Promotions'
+                ? !!store.promo
+                : (store.type && store.type.toLowerCase() === activeCategory.toLowerCase());
 
-        // 2. Check category filter
-        const matchesCategory = activeCategory === 'All' || activeCategory === 'Promotions'
-            ? (activeCategory === 'Promotions' ? !!store.promo : true)
-            : store.type === activeCategory;
-
-        // 3. Check search query
+        // 2. Check search query
         const lowerCaseSearchQuery = searchQuery.toLowerCase();
         const matchesSearch = store.name.toLowerCase().includes(lowerCaseSearchQuery) ||
             (store.tags && store.tags.some((tag: string) => tag.toLowerCase().includes(lowerCaseSearchQuery)));
 
-        // 4. Check deep-link tag (if present)
-        // NOTE: We now handle this via setSearchQuery effect above, so we don't need strict tag filtering here
-        // This ensures "Morning Dew" in URL behaves exactly like typing "Morning Dew" or clicking the button
-        return matchesView && matchesCategory && matchesSearch;
+        return matchesCategory && matchesSearch;
     });
 
     // --- Sub-Component: StoreCard ---
@@ -365,13 +295,12 @@ export default function StoreListing() {
                                 <X size={28} strokeWidth={1.5} />
                             </button>
 
-                            {/* Category Links with Monospace Numbers */}
+                            {/* Navigation Links */}
                             <div className="flex flex-col gap-6 mt-6">
                                 {[
-                                    { label: 'The Kitchens', path: '/c/stores?v=kitchen' },
                                     { label: 'The Market', path: '/c/stores?v=market' },
-                                    { label: 'Bakes & Blooms', path: '/c/stores?v=bakes' },
-                                    { label: 'The Apothecary', path: '/c/stores?v=apothecary' }
+                                    { label: 'Home', path: '/' },
+                                    { label: 'Our Story', path: '/our-story' }
                                 ].map((link, i) => (
                                     <motion.button
                                         key={link.label}
@@ -435,63 +364,7 @@ export default function StoreListing() {
                             {config.description}
                         </p>
                     </div>
-
-                    {/* 2. Integrated Horizontal Switcher - Only visible on segmented views */}
-                    {activeView !== 'general' && activeView !== '' && (
-                        <div
-                            style={{ WebkitTapHighlightColor: 'transparent' }}
-                            className="flex items-center gap-8 mt-12 py-4 border-b border-white/5 overflow-x-auto no-scrollbar touch-pan-x"
-                        >
-                            {['general', 'kitchen', 'market', 'bakes', 'apothecary'].map(id => {
-                                const segment = SEGMENT_MAP[id];
-                                const isActive = activeView === id || (id === 'general' && activeView === '');
-                                return (
-                                    <button
-                                        key={id}
-                                        onClick={() => navigate(id === 'general' ? '/c/stores' : `/c/stores?v=${id}`)}
-                                        style={{ WebkitTapHighlightColor: 'transparent' }}
-                                        className={`text-[9px] font-black uppercase tracking-[0.4em] transition-all whitespace-nowrap relative py-2 outline-none ${isActive ? 'text-[#D4AF37]' : 'text-white/20 hover:text-white/60'}`}
-                                    >
-                                        {id === 'general' ? 'The Collective' : segment.title}
-                                        {isActive && (
-                                            <motion.div
-                                                layoutId="activePillar"
-                                                className="absolute -bottom-[1px] left-0 right-0 h-[2px] bg-[#D4AF37]"
-                                            />
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-                    )}
                 </div>
-
-                {/* MOOD SLIDER (Minimalist Discovery Tags) */}
-                {activeView === 'kitchen' && (
-                    <div className="hidden lg:block max-w-7xl mx-auto relative z-20 pb-16">
-                        <div className="flex items-center gap-4 flex-wrap">
-                            <span className="text-[8px] font-black uppercase tracking-[0.5em] text-white/20 mr-4">Kitchen Discoveries:</span>
-                            {Object.entries(MOOD_MAP).map(([id, mood]) => (
-                                <button
-                                    key={id}
-                                    onClick={() => setSearchQuery(mood.name)}
-                                    className={`px-6 py-2 rounded-full border border-white/5 bg-white/5 hover:border-white/20 transition-all group relative overflow-hidden`}
-                                >
-                                    <div className="flex items-center gap-3 relative z-10">
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">
-                                            {mood.name}
-                                        </span>
-                                        <ArrowRight size={10} className="text-white/20 group-hover:text-[#D4AF37] transition-colors" />
-                                    </div>
-                                    <div
-                                        className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity"
-                                        style={{ backgroundColor: mood.color }}
-                                    />
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                )}
 
                 <BottomCurve fill="#D4AF37" />
             </section>
@@ -533,51 +406,13 @@ export default function StoreListing() {
                     </div>
 
                     {/* Store Grid */}
-                    {activeView === 'general' && searchQuery === '' && activeCategory === 'All' ? (
-                        <div className="space-y-32">
-                            {['kitchen', 'market', 'bakes', 'apothecary'].map((dept: string) => {
-                                const deptStores = MARKET_STORES.filter((s: any) => s.departments.includes(dept as any));
-                                if (deptStores.length === 0) return null;
-                                const segmentConfig = SEGMENT_MAP[dept];
-
-                                return (
-                                    <div key={dept} className="space-y-12">
-                                        <div className="flex items-end justify-between border-b border-black/10 pb-8">
-                                            <div>
-                                                <span className="text-[10px] font-black uppercase tracking-[0.5em] text-black/20 mb-3 block">{segmentConfig.subtitle}</span>
-                                                <h2 className="text-4xl md:text-6xl font-heading font-black tracking-tighter">{segmentConfig.title}</h2>
-                                            </div>
-                                            <button
-                                                onClick={() => navigate(`/c/stores?v=${dept}`)}
-                                                className="group flex items-center gap-4 py-2 relative"
-                                            >
-                                                <span className="text-[10px] font-black uppercase tracking-[0.4em] text-black/60 group-hover:text-black transition-colors">
-                                                    Discover Selection
-                                                </span>
-                                                <div className="relative w-8 h-8 rounded-full border border-black/10 flex items-center justify-center group-hover:bg-black group-hover:border-black transition-all">
-                                                    <ArrowRight size={12} className="group-hover:text-white transition-colors" />
-                                                </div>
-                                                <div className="absolute bottom-0 left-0 w-full h-[1px] bg-black/5 origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
-                                            </button>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-                                            {deptStores.slice(0, 4).map((store: any, idx: number) => (
-                                                <StoreCard key={store.id} store={store} idx={idx} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
-                            <AnimatePresence mode='popLayout'>
-                                {filteredMarketStores.map((store: any, idx: number) => (
-                                    <StoreCard key={store.id} store={store} idx={idx} />
-                                ))}
-                            </AnimatePresence>
-                        </div>
-                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+                        <AnimatePresence mode='popLayout'>
+                            {filteredMarketStores.map((store: any, idx: number) => (
+                                <StoreCard key={store.id} store={store} idx={idx} />
+                            ))}
+                        </AnimatePresence>
+                    </div>
 
                     {filteredMarketStores.length === 0 && (
                         <div className="text-center py-32">

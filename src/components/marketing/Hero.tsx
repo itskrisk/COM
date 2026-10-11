@@ -1,168 +1,115 @@
-import { motion } from 'framer-motion';
-import { Search, ArrowRight } from 'lucide-react';
-import { useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Search } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import LocationModal from './LocationModal';
-import heroImg from '../../assets/images/hero.jpg';
-import heroDesktopImg from '../../assets/images/herofordesktop.jpg';
+import hero1Img from '../../assets/images/heroo1.jpg';
+import hero2Img from '../../assets/images/heroo2.jpg';
 
 export default function Hero() {
-    const ref = useRef(null);
     const navigate = useNavigate();
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-    const EASE = [0.16, 1, 0.3, 1] as const;
+    const [isPadOrMobile, setIsPadOrMobile] = useState(false);
 
-    const fadeScale = {
-        initial: { opacity: 0, scale: 0.95 },
-        animate: { opacity: 1, scale: 1, transition: { duration: 1, ease: EASE } }
-    };
+    useEffect(() => {
+        const checkDevice = () => {
+            const hasTouch = (navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+            const isTabletOrPhoneUA = /iPad|iPhone|iPod|Android/i.test(navigator.userAgent) ||
+                (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-    const handleLocationSelect = (loc: string) => {
-        // In a real app, we'd save this to context/localStorage
-        console.log('Location selected:', loc);
-        navigate('/c/stores');
-    };
+            // True for all phones, tablets, and iPads (including iPad Pro 13" in portrait & landscape)
+            if ((hasTouch && isTabletOrPhoneUA) || window.innerWidth < 1024) {
+                setIsPadOrMobile(true);
+            } else {
+                setIsPadOrMobile(false);
+            }
+        };
+
+        checkDevice();
+        window.addEventListener('resize', checkDevice);
+        return () => window.removeEventListener('resize', checkDevice);
+    }, []);
 
     return (
         <>
-            <section ref={ref} className="relative h-screen supports-[height:100dvh]:h-[100dvh] md:min-h-[600px] flex items-center justify-center bg-black overflow-hidden">
+            <style>{`
+                /* Ensure touch-screen tablets and iPads never get the desktop image */
+                @media (hover: none) and (pointer: coarse) {
+                    .desktop-hero-img { display: none !important; }
+                    .mobile-pad-hero-img { display: block !important; }
+                }
+            `}</style>
 
-                {/* Cinematic Background Layer - Static */}
+            <section className="relative h-screen supports-[height:100dvh]:h-[100dvh] min-h-[580px] flex items-end bg-black text-white overflow-hidden pb-16 md:pb-20 px-8 md:px-16">
+                {/* Background Imagery - Full bleed, fully filled under navbar */}
                 <div className="absolute inset-0 z-0">
-                    <div className="w-full h-full">
-                        {/* Dark layers for readability in specific corners */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-transparent to-black/60 z-10" />
-                        {/* Mobile Background */}
-                        <img
-                            src={heroImg}
-                            alt="Premium Gourmet Delivery Mobile"
-                            className="block md:hidden w-full h-full object-cover object-center scale-105"
-                            loading="eager"
-                        />
-                        {/* Desktop Background */}
-                        <img
-                            src={heroDesktopImg}
-                            alt="Premium Gourmet Delivery Desktop"
-                            className="hidden md:block w-full h-full object-cover object-center scale-105"
-                            loading="eager"
-                        />
-                    </div>
+                    {/* Mobile & Tablet (All phones, tablets, and iPads): heroo1.jpg */}
+                    <img
+                        src={hero1Img}
+                        alt="Muncheez Supermarkets"
+                        className={`mobile-pad-hero-img ${isPadOrMobile ? 'block' : 'block lg:hidden'} w-full h-full object-cover object-center`}
+                        loading="eager"
+                    />
+
+                    {/* Desktop Only: heroo2.jpg - fully fills the screen edge-to-edge */}
+                    <img
+                        src={hero2Img}
+                        alt="Muncheez Supermarkets"
+                        className={`desktop-hero-img ${isPadOrMobile ? 'hidden' : 'hidden lg:block'} w-full h-full object-cover object-center`}
+                        loading="eager"
+                    />
+
+                    {/* Seamless baseline vignette ensuring text readability without obscuring photography */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/30 z-10" />
                 </div>
 
-                {/* Cinematic Noise Texture */}
-                <div className="absolute inset-0 z-[5] opacity-[0.015] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
+                {/* Minimal Luxury Content - Unboxed & Clean */}
+                <div className="relative z-20 w-full max-w-xl space-y-6">
+                    <div className="space-y-2">
+                        <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#D4AF37] block">
+                            Muncheez
+                        </span>
+                        <h1 className="text-3xl md:text-4xl font-heading font-light tracking-tight text-white leading-tight">
+                            Everything you crave, delivered.
+                        </h1>
+                    </div>
 
-                {/* 
-                DESKTOP LAYOUT (Default - Centered)
-                Hidden on Mobile. 
-            */}
-                <div className="hidden md:flex container relative z-20 px-8 flex-col items-center text-center max-w-5xl">
-                    <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 1, delay: 0.2 }}
-                        className="text-7xl md:text-8xl lg:text-9xl font-heading font-extralight tracking-tight text-white leading-[0.85] mb-12"
-                    >
-                        Cravings, Delivered<span className="text-[#4A90E2]">.</span>
-                    </motion.h1>
-
-                    <motion.p
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ duration: 2, delay: 0.4 }}
-                        className="text-lg text-white/60 font-light tracking-wide mb-16 max-w-xl mx-auto italic font-serif leading-relaxed"
-                    >
-                        Food is where we start. Urban logistics is where we scale.<br className="hidden md:block" /> Bringing Nairobi’s finest merchants straight to your door.
-                    </motion.p>
-
-                    {/* Desktop Search - Slimmer (Trigger) */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 1.5, delay: 0.6, ease: EASE }}
-                        className="w-full max-w-sm relative group cursor-pointer"
+                    {/* Transparent Bottom-Line Search Trigger */}
+                    <div
                         onClick={() => setIsLocationModalOpen(true)}
+                        className="group cursor-pointer border-b border-white/30 hover:border-white transition-colors pb-3 flex items-center justify-between max-w-md pt-1"
                     >
-                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30 group-hover:text-[#4A90E2] transition-colors" />
-                        <div className="w-full pl-11 pr-11 py-3.5 bg-white/5 border border-white/10 backdrop-blur-sm text-white/50 rounded-full hover:bg-white/10 hover:border-white/20 transition-all text-sm select-none">
-                            Enter delivery address
+                        <div className="flex items-center gap-3">
+                            <Search size={15} className="text-white/40 group-hover:text-[#D4AF37] transition-colors" />
+                            <span className="text-sm font-light text-white/50 group-hover:text-white transition-colors">
+                                Enter delivery address...
+                            </span>
                         </div>
-                        <button className="absolute right-1.5 top-1/2 -translate-y-1/2 p-2 text-white/40 group-hover:text-white transition-colors">
-                            <ArrowRight size={18} />
-                        </button>
-                    </motion.div>
-                </div>
-
-
-                {/* 
-                MOBILE LAYOUT (Corner Tension - Optimized for Small Screens)
-                Top-Right: Brand Editorial
-                Bottom-Left: Action & Utility
-            */}
-                <div className="md:hidden absolute inset-0 p-6 flex flex-col justify-between pt-24 pb-12 supports-[height:100dvh]:pb-24">
-
-                    {/* Top Right Zone */}
-                    <div className="flex flex-col items-end">
-                        <motion.div
-                            variants={fadeScale}
-                            initial="initial"
-                            animate="animate"
-                            className="text-right"
-                        >
-                            <span className="block text-[8px] font-bold text-[#D4AF37] uppercase tracking-[0.3em] mb-2">Selection 01</span>
-                            <h2 className="text-3xl font-serif italic font-light text-white leading-tight">
-                                The <br /> Nairobi <br /> <span className="font-sans font-bold not-italic text-4xl tracking-tighter">SELECTION.</span>
-                            </h2>
-                        </motion.div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/60 group-hover:text-white transition-colors flex items-center gap-1.5">
+                            Locate <ArrowRight size={12} />
+                        </span>
                     </div>
 
-                    {/* Bottom Left Zone */}
-                    <div className="flex flex-col items-start w-full">
-                        <motion.p
-                            variants={fadeScale}
-                            initial="initial"
-                            animate="animate"
-                            transition={{ delay: 0.2 }}
-                            className="text-[10px] text-white/50 font-bold uppercase tracking-[0.3em] mb-4"
+                    {/* Direct Explore Link */}
+                    <div className="pt-2">
+                        <Link
+                            to="/c/stores?v=market"
+                            className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white hover:text-[#D4AF37] border-b border-white hover:border-[#D4AF37] pb-1 transition-colors"
                         >
-                            254 Delivered.
-                        </motion.p>
-
-                        <motion.div
-                            variants={fadeScale}
-                            initial="initial"
-                            animate="animate"
-                            transition={{ delay: 0.4 }}
-                            className="w-full flex flex-col gap-3"
-                        >
-                            <div
-                                className="relative group w-full cursor-pointer"
-                                onClick={() => setIsLocationModalOpen(true)}
-                            >
-                                <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40" />
-                                <div className="w-full bg-white/5 border border-white/10 text-white/30 pl-10 pr-4 py-3 rounded-xl backdrop-blur-md group-hover:bg-white/10 transition-all text-sm h-12 flex items-center">
-                                    Enter address
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => setIsLocationModalOpen(true)}
-                                className="w-full bg-white text-black font-bold h-12 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-transform text-sm"
-                            >
-                                Order Now
-                                <ArrowRight size={14} />
-                            </button>
-                        </motion.div>
+                            Explore All Stores
+                            <ArrowRight size={12} />
+                        </Link>
                     </div>
-
                 </div>
-
             </section>
 
-            {/* Global Location Modal */}
+            {/* Location Modal */}
             <LocationModal
                 isOpen={isLocationModalOpen}
                 onClose={() => setIsLocationModalOpen(false)}
-                onSelectLocation={handleLocationSelect}
+                onSelectLocation={() => {
+                    setIsLocationModalOpen(false);
+                    navigate('/c/stores?v=market');
+                }}
             />
         </>
     );

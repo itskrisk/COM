@@ -291,13 +291,12 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                                 <X size={28} strokeWidth={1.5} />
                             </button>
 
-                            {/* Category Links with Monospace Numbers */}
+                            {/* Navigation Links */}
                             <div className="flex flex-col gap-6 mt-6">
                                 {[
-                                    { label: 'The Kitchens', path: '/c/stores?v=kitchen' },
                                     { label: 'The Market', path: '/c/stores?v=market' },
-                                    { label: 'Bakes & Blooms', path: '/c/stores?v=bakes' },
-                                    { label: 'The Apothecary', path: '/c/stores?v=apothecary' }
+                                    { label: 'Home', path: '/' },
+                                    { label: 'Our Story', path: '/our-story' }
                                 ].map((link, i) => (
                                     <motion.button
                                         key={link.label}
