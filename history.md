@@ -2410,3 +2410,17 @@ In commit `ab1a517`, `build.target: 'esnext'` was added to `vite.config.ts` as p
 ### Final Working Solution:
 - All dashboards now operate strictly on 100% live Supabase tables and realtime streams with zero mock fallback data. Code pushed to GitHub repository.
 
+---
+
+## Task: Safaricom Domain Automation & Vercel Linking
+- **Timestamp**: 2026-10-11
+- **Prompt**: Automated DNS script for muncheez.co.ke on Safaricom Domains portal pointing to Vercel (ns1.vercel-dns.com, ns2.vercel-dns.com).
+- **Actions Taken**:
+  1. Built and tested automated headless connection script against `https://domains.safaricom.co.ke/index.php?rp=/login`.
+  2. Created two turnkey automators:
+     - [`scripts/update_safaricom_dns.js`](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/scripts/update_safaricom_dns.js) (Node.js native)
+     - [`scripts/update_safaricom_dns.py`](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/scripts/update_safaricom_dns.py) (Python)
+  3. Identified login issue with the provided credentials (`Login Details Incorrect. Please try again.` from Safaricom WHMCS authentication endpoint).
+- **Status**: Complete automation scripts ready. Awaiting password confirmation or manual 60-second portal entry.
+
+
