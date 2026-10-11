@@ -2421,7 +2421,7 @@ In commit `ab1a517`, `build.target: 'esnext'` was added to `vite.config.ts` as p
      - [`scripts/update_safaricom_dns.js`](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/scripts/update_safaricom_dns.js) (Node.js native)
      - [`scripts/update_safaricom_dns.py`](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/scripts/update_safaricom_dns.py) (Python)
   3. Identified login issue with the provided credentials (`Login Details Incorrect. Please try again.` from Safaricom WHMCS authentication endpoint).
-- **Status**: COMPLETE. Authenticated successfully with updated password, located domain `muncheez.co.ke` (ID: 10017805), and configured custom nameservers to `ns1.vercel-dns.com` and `ns2.vercel-dns.com`. Vercel DNS propagation active.
+- **Status**: COMPLETE. Authenticated successfully with updated password, located domain `muncheez.co.ke` (ID: 10017805), and configured custom nameservers to `ns1.vercel-dns.com` and `ns2.vercel-dns.com`. Verified with KeNIC registry (Updated Date: 2026-10-11T20:07:45Z). Triggered fresh update confirmation on Safaricom portal ("Changes Saved Successfully!").
 
 
 
