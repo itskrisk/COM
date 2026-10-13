@@ -358,7 +358,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                             animate={{ opacity: 1, scale: 1, y: 0 }}
                             exit={{ opacity: 0, scale: 0.95, y: 15 }}
                             transition={{ type: "spring", stiffness: 320, damping: 28 }}
-                            className="relative w-full max-w-md bg-[#FDFBF7] rounded-3xl overflow-hidden shadow-2xl border border-black/10 flex flex-col max-h-[85vh] h-[620px]"
+                            className="relative w-full max-w-md bg-white shadow-2xl border border-black/10 flex flex-col max-h-[85vh] h-[680px]"
                         >
                             {/* Header Bar */}
                             <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 bg-white shrink-0 z-10">
@@ -436,57 +436,49 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-2 px-1">
                                                     Quick Access
                                                 </span>
-                                                <div className="grid grid-cols-2 gap-2.5">
-                                                    <button
-                                                        onClick={() => setView('orders')}
-                                                        className="flex items-center gap-3 p-3.5 bg-white rounded-2xl border border-black/5 hover:border-[#4A90E2]/40 hover:shadow-md transition-all group text-left"
-                                                    >
-                                                        <div className="p-2.5 rounded-xl bg-[#4A90E2]/10 text-[#4A90E2] group-hover:bg-[#4A90E2] group-hover:text-white transition-colors">
+                                                <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
+                                                    <button onClick={() => setView('orders')} className="w-full flex items-center gap-4 py-4 hover:bg-gray-50 transition-colors group text-left">
+                                                        <div className="p-2.5 rounded-full bg-[#4A90E2]/10 text-[#4A90E2] group-hover:bg-[#4A90E2] group-hover:text-white transition-colors shrink-0">
                                                             <ShoppingBag size={18} />
                                                         </div>
-                                                        <div>
+                                                        <div className="flex-1 min-w-0">
                                                             <div className="text-xs font-bold text-gray-900">My Orders</div>
                                                             <div className="text-[10px] text-gray-400 font-medium">{myOrders.length} orders</div>
                                                         </div>
+                                                        <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-0.5 transition-transform shrink-0" />
                                                     </button>
 
-                                                    <button
-                                                        onClick={() => setView('addresses')}
-                                                        className="flex items-center gap-3 p-3.5 bg-white rounded-2xl border border-black/5 hover:border-[#4A90E2]/40 hover:shadow-md transition-all group text-left"
-                                                    >
-                                                        <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
+                                                    <button onClick={() => setView('addresses')} className="w-full flex items-center gap-4 py-4 hover:bg-gray-50 transition-colors group text-left">
+                                                        <div className="p-2.5 rounded-full bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-colors shrink-0">
                                                             <MapPin size={18} />
                                                         </div>
-                                                        <div>
+                                                        <div className="flex-1 min-w-0">
                                                             <div className="text-xs font-bold text-gray-900">Addresses</div>
                                                             <div className="text-[10px] text-gray-400 font-medium">{supabaseAddresses.length} saved</div>
                                                         </div>
+                                                        <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-0.5 transition-transform shrink-0" />
                                                     </button>
 
-                                                    <button
-                                                        onClick={() => setView('payments')}
-                                                        className="flex items-center gap-3 p-3.5 bg-white rounded-2xl border border-black/5 hover:border-[#4A90E2]/40 hover:shadow-md transition-all group text-left"
-                                                    >
-                                                        <div className="p-2.5 rounded-xl bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors">
+                                                    <button onClick={() => setView('payments')} className="w-full flex items-center gap-4 py-4 hover:bg-gray-50 transition-colors group text-left">
+                                                        <div className="p-2.5 rounded-full bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors shrink-0">
                                                             <CreditCard size={18} />
                                                         </div>
-                                                        <div>
+                                                        <div className="flex-1 min-w-0">
                                                             <div className="text-xs font-bold text-gray-900">Payments</div>
                                                             <div className="text-[10px] text-gray-400 font-medium">M-Pesa</div>
                                                         </div>
+                                                        <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-0.5 transition-transform shrink-0" />
                                                     </button>
 
-                                                    <button
-                                                        onClick={() => setView('favorites')}
-                                                        className="flex items-center gap-3 p-3.5 bg-white rounded-2xl border border-black/5 hover:border-[#4A90E2]/40 hover:shadow-md transition-all group text-left"
-                                                    >
-                                                        <div className="p-2.5 rounded-xl bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors">
+                                                    <button onClick={() => setView('favorites')} className="w-full flex items-center gap-4 py-4 hover:bg-gray-50 transition-colors group text-left">
+                                                        <div className="p-2.5 rounded-full bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-colors shrink-0">
                                                             <Heart size={18} />
                                                         </div>
-                                                        <div>
+                                                        <div className="flex-1 min-w-0">
                                                             <div className="text-xs font-bold text-gray-900">Favorites</div>
                                                             <div className="text-[10px] text-gray-400 font-medium">{supabaseFavorites.length} saved</div>
                                                         </div>
+                                                        <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-0.5 transition-transform shrink-0" />
                                                     </button>
                                                 </div>
                                             </div>
@@ -498,7 +490,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-2 px-1">
                                                         Account
                                                     </span>
-                                                    <div className="bg-white rounded-2xl border border-black/5 divide-y divide-gray-100 overflow-hidden">
+                                                    <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                         <button onClick={() => setView('profile')} className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition-colors text-left group">
                                                             <div className="flex items-center gap-3">
                                                                 <User size={16} className="text-gray-400 group-hover:text-[#4A90E2]" />
@@ -538,7 +530,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-2 px-1">
                                                         Preferences
                                                     </span>
-                                                    <div className="bg-white rounded-2xl border border-black/5 divide-y divide-gray-100 overflow-hidden">
+                                                    <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                         <button onClick={() => setView('location')} className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition-colors text-left group">
                                                             <div className="flex items-center gap-3">
                                                                 <Compass size={16} className="text-gray-400 group-hover:text-[#4A90E2]" />
@@ -562,7 +554,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-2 px-1">
                                                         Support
                                                     </span>
-                                                    <div className="bg-white rounded-2xl border border-black/5 divide-y divide-gray-100 overflow-hidden">
+                                                    <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                         <button onClick={() => setView('support')} className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition-colors text-left group">
                                                             <div className="flex items-center gap-3">
                                                                 <HelpCircle size={16} className="text-gray-400 group-hover:text-[#4A90E2]" />
@@ -586,7 +578,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400 block mb-2 px-1">
                                                         Account Actions
                                                     </span>
-                                                    <div className="bg-white rounded-2xl border border-black/5 divide-y divide-gray-100 overflow-hidden">
+                                                    <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                         <button onClick={handleLogout} className="w-full flex items-center justify-between p-3.5 hover:bg-red-50 transition-colors text-left group">
                                                             <div className="flex items-center gap-3">
                                                                 <LogOut size={16} className="text-red-500" />
@@ -611,36 +603,36 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                         <motion.div key="profile" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">My Profile</h3>
 
-                                            <form onSubmit={handleSaveProfile} className="space-y-3">
-                                                <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
+                                            <form onSubmit={handleSaveProfile} className="space-y-7">
+                                                <div className="space-y-7">
                                                     <div>
-                                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Full Name</label>
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Full Name</label>
                                                         <input
                                                             type="text"
                                                             value={fullName}
                                                             onChange={(e) => setFullName(e.target.value)}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
+                                                            className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors"
                                                             placeholder="Your Name"
                                                         />
                                                     </div>
 
                                                     <div>
-                                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Email Address (Read Only)</label>
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Email Address (Read Only)</label>
                                                         <input
                                                             type="text"
                                                             disabled
                                                             value={user.email || ''}
-                                                            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-500 cursor-not-allowed"
+                                                            className="w-full bg-transparent border-b border-gray-100 px-0 py-2.5 text-xs font-bold text-gray-400 cursor-not-allowed"
                                                         />
                                                     </div>
 
                                                     <div>
-                                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Phone Number</label>
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Phone Number</label>
                                                         <input
                                                             type="text"
                                                             value={phone}
                                                             onChange={(e) => setPhone(e.target.value)}
-                                                            className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
+                                                            className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors"
                                                             placeholder="+254 700 000 000"
                                                         />
                                                     </div>
@@ -649,7 +641,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                 <button
                                                     type="submit"
                                                     disabled={isSaving}
-                                                    className="w-full py-3.5 bg-black text-white rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 shadow-md"
+                                                    className="w-full py-4 bg-black text-white rounded-full text-xs font-bold uppercase tracking-widest hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                                                 >
                                                     <Save size={14} />
                                                     {isSaving ? 'Saving...' : 'Save Profile Changes'}
@@ -663,15 +655,15 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                         <motion.div key="orders" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">My Orders</h3>
                                             {myOrders.length === 0 ? (
-                                                <div className="text-center py-12 bg-white rounded-2xl border border-black/5 p-6">
+                                                <div className="text-center py-12 border-t border-b border-gray-100">
                                                     <ShoppingBag size={40} className="mx-auto mb-3 text-gray-300" />
                                                     <p className="font-bold text-sm text-gray-500">No active or past orders</p>
                                                     <p className="text-xs text-gray-400 mt-1">Explore restaurants and shops to place your first order!</p>
                                                 </div>
                                             ) : (
-                                                <div className="space-y-3">
+                                                <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                     {myOrders.map((order) => (
-                                                        <div key={order.id} className="bg-white p-4 rounded-2xl border border-black/5 space-y-3 shadow-sm">
+                                                        <div key={order.id} className="py-5 space-y-3">
                                                             <div className="flex justify-between items-start">
                                                                 <div>
                                                                     <span className="text-[10px] font-black bg-gray-100 text-gray-600 px-2 py-0.5 rounded uppercase tracking-wider">
@@ -688,7 +680,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                                 </span>
                                                             </div>
 
-                                                            <div className="flex justify-between items-center text-xs border-t border-gray-100 pt-3">
+                                                            <div className="flex justify-between items-center text-xs pt-1">
                                                                 <span className="text-gray-400 font-medium">{new Date(order.created_at).toLocaleDateString()}</span>
                                                                 <span className="font-black text-[#4A90E2]">KES {Number(order.total).toLocaleString()}</span>
                                                             </div>
@@ -696,14 +688,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                             <div className="flex gap-2 pt-1">
                                                                 <button
                                                                     onClick={() => handleReorder(order.items)}
-                                                                    className="flex-1 py-2 bg-black/5 hover:bg-black/10 text-black text-xs font-bold uppercase tracking-wider rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                                                                    className="flex-1 py-2.5 bg-black/5 hover:bg-black/10 text-black text-xs font-bold uppercase tracking-wider rounded-full transition-colors flex items-center justify-center gap-1.5"
                                                                 >
                                                                     <RefreshCw size={12} />
                                                                     Reorder
                                                                 </button>
                                                                 <button
                                                                     onClick={() => { onClose(); navigate(`/order/${order.id}`); }}
-                                                                    className="flex-1 py-2 bg-[#4A90E2] text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-[#357ABD] transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                                                                    className="flex-1 py-2.5 bg-[#4A90E2] text-white text-xs font-bold uppercase tracking-wider rounded-full hover:bg-[#357ABD] transition-colors flex items-center justify-center gap-1.5"
                                                                 >
                                                                     Track Status
                                                                 </button>
@@ -722,7 +714,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                 <h3 className="font-heading font-black text-lg text-gray-900">Saved Addresses</h3>
                                                 <button
                                                     onClick={() => setIsAddingAddr(!isAddingAddr)}
-                                                    className="px-3 py-1.5 bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gray-800 transition-colors flex items-center gap-1"
+                                                    className="px-3 py-1.5 bg-black text-white text-xs font-bold uppercase tracking-wider rounded-full hover:bg-gray-800 transition-colors flex items-center gap-1"
                                                 >
                                                     <Plus size={14} />
                                                     Add
@@ -731,14 +723,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
 
                                             {/* Add Address Form */}
                                             {isAddingAddr && (
-                                                <form onSubmit={handleAddAddress} className="bg-white p-4 rounded-2xl border border-[#4A90E2]/30 space-y-3 shadow-md">
+                                                <form onSubmit={handleAddAddress} className="border-t border-b border-[#4A90E2]/30 py-5 space-y-5">
                                                     <div className="flex gap-2">
                                                         {['Home', 'Work', 'Other'].map(lbl => (
                                                             <button
                                                                 key={lbl}
                                                                 type="button"
                                                                 onClick={() => setNewAddrLabel(lbl)}
-                                                                className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${newAddrLabel === lbl ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}
+                                                                className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${newAddrLabel === lbl ? 'bg-black text-white' : 'bg-gray-100 text-gray-600'}`}
                                                             >
                                                                 {lbl}
                                                             </button>
@@ -750,33 +742,33 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                         placeholder="Full Address / Building Name"
                                                         value={newAddrText}
                                                         onChange={e => setNewAddrText(e.target.value)}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
+                                                        className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors"
                                                     />
                                                     <input
                                                         type="text"
                                                         placeholder="Apt / Door Number (e.g. 4B)"
                                                         value={newAddrDoor}
                                                         onChange={e => setNewAddrDoor(e.target.value)}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
+                                                        className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors"
                                                     />
                                                     <input
                                                         type="text"
                                                         placeholder="Delivery Notes (e.g. Leave with gate guard)"
                                                         value={newAddrNotes}
                                                         onChange={e => setNewAddrNotes(e.target.value)}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
+                                                        className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors"
                                                     />
                                                     <div className="flex gap-2 pt-1">
-                                                        <button type="submit" className="flex-1 py-2 bg-[#4A90E2] text-white text-xs font-bold uppercase tracking-wider rounded-xl">Save Address</button>
-                                                        <button type="button" onClick={() => setIsAddingAddr(false)} className="px-3 py-2 border text-xs font-bold rounded-xl">Cancel</button>
+                                                        <button type="submit" className="flex-1 py-3 bg-[#4A90E2] text-white text-xs font-bold uppercase tracking-wider rounded-full hover:bg-[#357ABD] transition-colors">Save Address</button>
+                                                        <button type="button" onClick={() => setIsAddingAddr(false)} className="px-4 py-3 border border-gray-200 text-xs font-bold rounded-full hover:border-gray-400 transition-colors">Cancel</button>
                                                     </div>
                                                 </form>
                                             )}
 
                                             {/* Addresses List */}
-                                            <div className="space-y-3">
+                                            <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                 {supabaseAddresses.map((addr: any) => (
-                                                    <div key={addr.id} className={`bg-white p-4 rounded-2xl border space-y-2 ${addr.isDefault ? 'border-[#4A90E2] ring-1 ring-[#4A90E2]/30' : 'border-black/5'}`}>
+                                                    <div key={addr.id} className={`py-5 space-y-2 ${addr.isDefault ? 'border-l-2 border-l-[#4A90E2] pl-4' : ''}`}>
                                                         <div className="flex justify-between items-center">
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-xs font-black uppercase tracking-wider text-gray-900">{addr.label}</span>
@@ -807,48 +799,50 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                         <motion.div key="payments" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Payment Methods</h3>
 
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block">Default Payment Option</label>
-                                                <div className="space-y-2">
-                                                    {[
-                                                        { id: 'MPESA', name: 'M-Pesa STK Push', desc: 'Instant mobile payment' },
-                                                        { id: 'CASH', name: 'Cash on Delivery', desc: 'Pay rider directly upon receipt' },
-                                                        { id: 'CARD', name: 'Debit / Credit Card', desc: 'Visa & Mastercard supported' }
-                                                    ].map(pm => (
-                                                        <button
-                                                            key={pm.id}
-                                                            type="button"
-                                                            onClick={() => setDefaultPayment(pm.id)}
-                                                            className={`w-full p-3 rounded-xl border flex items-center justify-between transition-all text-left ${defaultPayment === pm.id ? 'border-[#4A90E2] bg-[#4A90E2]/5' : 'border-gray-100 hover:border-gray-300'}`}
-                                                        >
-                                                            <div>
-                                                                <div className="text-xs font-bold text-gray-900">{pm.name}</div>
-                                                                <div className="text-[10px] text-gray-400">{pm.desc}</div>
-                                                            </div>
-                                                            {defaultPayment === pm.id && <Check size={16} className="text-[#4A90E2]" />}
-                                                        </button>
-                                                    ))}
+                                            <div className="space-y-6">
+                                                <div>
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Default Payment Option</label>
+                                                    <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
+                                                        {[
+                                                            { id: 'MPESA', name: 'M-Pesa STK Push', desc: 'Instant mobile payment' },
+                                                            { id: 'CASH', name: 'Cash on Delivery', desc: 'Pay rider directly upon receipt' },
+                                                            { id: 'CARD', name: 'Debit / Credit Card', desc: 'Visa & Mastercard supported' }
+                                                        ].map(pm => (
+                                                            <button
+                                                                key={pm.id}
+                                                                type="button"
+                                                                onClick={() => setDefaultPayment(pm.id)}
+                                                                className={`w-full py-4 flex items-center justify-between transition-all text-left ${defaultPayment === pm.id ? 'border-l-2 border-l-[#4A90E2] pl-3 bg-[#4A90E2]/5' : 'hover:bg-gray-50'}`}
+                                                            >
+                                                                <div>
+                                                                    <div className="text-xs font-bold text-gray-900">{pm.name}</div>
+                                                                    <div className="text-[10px] text-gray-400">{pm.desc}</div>
+                                                                </div>
+                                                                {defaultPayment === pm.id && <Check size={16} className="text-[#4A90E2]" />}
+                                                            </button>
+                                                        ))}
+                                                    </div>
                                                 </div>
-                                            </div>
 
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
-                                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block">M-Pesa Phone Number</label>
-                                                <div className="relative">
-                                                    <Smartphone size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                                                    <input
-                                                        type="text"
-                                                        value={mpesaNumber}
-                                                        onChange={e => setMpesaNumber(e.target.value)}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
-                                                        placeholder="+254 700 000 000"
-                                                    />
+                                                <div className="space-y-5">
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block">M-Pesa Phone Number</label>
+                                                    <div className="flex items-center gap-3 border-b border-gray-200 focus-within:border-[#4A90E2] transition-colors">
+                                                        <Smartphone size={16} className="text-gray-400 shrink-0" />
+                                                        <input
+                                                            type="text"
+                                                            value={mpesaNumber}
+                                                            onChange={e => setMpesaNumber(e.target.value)}
+                                                            className="w-full bg-transparent py-2.5 text-xs font-bold text-gray-900 focus:outline-none"
+                                                            placeholder="+254 700 000 000"
+                                                        />
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setFeedback({ type: 'success', text: 'M-Pesa phone number updated' })}
+                                                        className="w-full py-4 bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                                                    >
+                                                        Save M-Pesa Number
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => setFeedback({ type: 'success', text: 'M-Pesa phone number updated' })}
-                                                    className="w-full py-2.5 bg-black text-white rounded-xl text-xs font-bold uppercase tracking-wider"
-                                                >
-                                                    Save M-Pesa Number
-                                                </button>
                                             </div>
                                         </motion.div>
                                     )}
@@ -857,9 +851,9 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {view === 'favorites' && (
                                         <motion.div key="favorites" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Favorites</h3>
-                                            <div className="space-y-3">
+                                            <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                 {supabaseFavorites.map((fav: any) => (
-                                                    <div key={fav.id} className="bg-white p-4 rounded-2xl border border-black/5 flex justify-between items-center shadow-sm">
+                                                    <div key={fav.id} className="py-4 flex justify-between items-center">
                                                         <div>
                                                             <h4 className="font-bold text-xs text-gray-900">{fav.name}</h4>
                                                             <p className="text-[10px] text-gray-400 font-medium">{fav.category} • Rating: {fav.rating}</p>
@@ -867,7 +861,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                         <div className="flex items-center gap-2">
                                                             <button
                                                                 onClick={() => { onClose(); navigate(fav.path); }}
-                                                                className="px-3 py-1.5 bg-[#4A90E2] text-white text-xs font-bold rounded-xl uppercase tracking-wider"
+                                                                className="px-3 py-1.5 bg-[#4A90E2] text-white text-xs font-bold rounded-full uppercase tracking-wider hover:bg-[#357ABD] transition-colors"
                                                             >
                                                                 Visit
                                                             </button>
@@ -888,14 +882,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {view === 'notifications' && (
                                         <motion.div key="notifications" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Notifications</h3>
-                                            <div className="bg-white rounded-2xl border border-black/5 divide-y divide-gray-100">
+                                            <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
                                                 {[
                                                     { key: 'orderStatus', title: 'Order Status Updates', desc: 'Real-time alerts when kitchen accepts order' },
                                                     { key: 'riderAlerts', title: 'Rider Location Alerts', desc: 'SMS updates when courier is nearby' },
                                                     { key: 'promotions', title: 'Promotions & Offers', desc: 'Exclusive weekly discounts & vouchers' },
                                                     { key: 'marketing', title: 'Marketing Newsletter', desc: 'New restaurant launches in Nairobi' }
                                                 ].map(item => (
-                                                    <div key={item.key} className="p-4 flex items-center justify-between">
+                                                    <div key={item.key} className="py-4 flex items-center justify-between">
                                                         <div className="pr-4">
                                                             <div className="text-xs font-bold text-gray-900">{item.title}</div>
                                                             <div className="text-[10px] text-gray-400">{item.desc}</div>
@@ -916,34 +910,36 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {view === 'security' && (
                                         <motion.div key="security" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Security</h3>
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
-                                                <div className="text-xs font-bold text-gray-900">Password Management</div>
-                                                <p className="text-[10px] text-gray-500 leading-relaxed">
-                                                    Trigger a secure password reset link sent directly to <strong>{user.email}</strong>.
-                                                </p>
-                                                <button
-                                                    onClick={handleResetPassword}
-                                                    className="w-full py-2.5 border border-black text-black rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-colors"
-                                                >
-                                                    Send Password Reset Email
-                                                </button>
-                                            </div>
-
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
-                                                <div className="text-xs font-bold text-gray-900">Active Login Sessions</div>
-                                                <div className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-xs">
-                                                    <div>
-                                                        <div className="font-bold text-gray-800">Current Web Session</div>
-                                                        <div className="text-[10px] text-gray-400">Windows Chrome • Active Now</div>
-                                                    </div>
-                                                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                            <div className="space-y-6">
+                                                <div className="space-y-4">
+                                                    <div className="text-xs font-bold text-gray-900">Password Management</div>
+                                                    <p className="text-[10px] text-gray-500 leading-relaxed">
+                                                        Trigger a secure password reset link sent directly to <strong>{user.email}</strong>.
+                                                    </p>
+                                                    <button
+                                                        onClick={handleResetPassword}
+                                                        className="w-full py-3.5 border border-black text-black rounded-full text-xs font-bold uppercase tracking-wider hover:bg-black hover:text-white transition-colors"
+                                                    >
+                                                        Send Password Reset Email
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => setFeedback({ type: 'success', text: 'Logged out of all other active browser sessions' })}
-                                                    className="w-full py-2.5 bg-red-50 text-red-600 rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
-                                                >
-                                                    Sign Out Other Devices
-                                                </button>
+
+                                                <div className="space-y-4">
+                                                    <div className="text-xs font-bold text-gray-900">Active Login Sessions</div>
+                                                    <div className="py-3 border-y border-gray-100 flex items-center justify-between text-xs">
+                                                        <div>
+                                                            <div className="font-bold text-gray-800">Current Web Session</div>
+                                                            <div className="text-[10px] text-gray-400">Windows Chrome • Active Now</div>
+                                                        </div>
+                                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setFeedback({ type: 'success', text: 'Logged out of all other active browser sessions' })}
+                                                        className="w-full py-3.5 bg-red-50 text-red-600 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
+                                                    >
+                                                        Sign Out Other Devices
+                                                    </button>
+                                                </div>
                                             </div>
                                         </motion.div>
                                     )}
@@ -952,14 +948,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {view === 'privacy' && (
                                         <motion.div key="privacy" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Privacy & Data</h3>
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
+                                            <div className="space-y-4">
                                                 <div className="text-xs font-bold text-gray-900">Data Archive Request</div>
                                                 <p className="text-[10px] text-gray-500 leading-relaxed">
                                                     Download a full copy of your personal data, order history, and saved addresses in JSON format.
                                                 </p>
                                                 <button
                                                     onClick={handleDownloadUserData}
-                                                    className="w-full py-2.5 bg-black text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2"
+                                                    className="w-full py-4 bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 hover:bg-gray-800 transition-colors"
                                                 >
                                                     <Download size={14} />
                                                     Download My Personal Data
@@ -972,13 +968,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {view === 'location' && (
                                         <motion.div key="location" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Location Preferences</h3>
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
+                                            <div className="space-y-7">
                                                 <div>
-                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Default Neighborhood</label>
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Default Neighborhood</label>
                                                     <select
                                                         value={neighborhood}
                                                         onChange={e => setNeighborhood(e.target.value)}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
+                                                        className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors"
                                                     >
                                                         {['Lavington', 'Kilimani', 'Westlands', 'Kileleshwa', 'Karen', 'Nairobi CBD', 'Runda', 'Gigiri'].map(loc => (
                                                             <option key={loc} value={loc}>{loc}</option>
@@ -987,19 +983,19 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Global Delivery Instructions</label>
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Global Delivery Instructions</label>
                                                     <textarea
                                                         rows={3}
                                                         value={deliveryNotes}
                                                         onChange={e => setDeliveryNotes(e.target.value)}
                                                         placeholder="e.g. Leave with gate security / Ring doorbell"
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-black"
+                                                        className="w-full bg-transparent border-b border-gray-200 px-0 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors resize-none"
                                                     />
                                                 </div>
 
                                                 <button
                                                     onClick={handleSaveLocation}
-                                                    className="w-full py-2.5 bg-black text-white rounded-xl text-xs font-bold uppercase tracking-wider"
+                                                    className="w-full py-4 bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
                                                 >
                                                     Save Location Preferences
                                                 </button>
@@ -1011,13 +1007,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {view === 'support' && (
                                         <motion.div key="support" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Help & Support</h3>
-                                            <form onSubmit={handleSupportSubmit} className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
+                                            <form onSubmit={handleSupportSubmit} className="space-y-6">
                                                 <div>
-                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Issue Category</label>
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Issue Category</label>
                                                     <select
                                                         value={supportCategory}
                                                         onChange={e => setSupportCategory(e.target.value)}
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900"
+                                                        className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors"
                                                     >
                                                         <option value="Order Issue">Order Issue / Missing Item</option>
                                                         <option value="Payment Problem">Payment Problem / M-Pesa</option>
@@ -1027,18 +1023,18 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                 </div>
 
                                                 <div>
-                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">Details</label>
+                                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Details</label>
                                                     <textarea
                                                         required
                                                         rows={3}
                                                         value={supportDetails}
                                                         onChange={e => setSupportDetails(e.target.value)}
                                                         placeholder="Describe your inquiry or order problem..."
-                                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900"
+                                                        className="w-full bg-transparent border-b border-gray-200 px-0 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-[#4A90E2] transition-colors resize-none"
                                                     />
                                                 </div>
 
-                                                <button type="submit" className="w-full py-2.5 bg-[#4A90E2] text-white rounded-xl text-xs font-bold uppercase tracking-wider">
+                                                <button type="submit" className="w-full py-4 bg-[#4A90E2] text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-[#357ABD] transition-colors">
                                                     Submit Ticket
                                                 </button>
                                             </form>
@@ -1054,13 +1050,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                     <button
                                                         key={t}
                                                         onClick={() => setPolicyTab(t)}
-                                                        className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider capitalize whitespace-nowrap ${policyTab === t ? 'bg-black text-white' : 'bg-white text-gray-600 border'}`}
+                                                        className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider capitalize whitespace-nowrap ${policyTab === t ? 'bg-black text-white' : 'bg-white text-gray-600 border'}`}
                                                     >
                                                         {t}
                                                     </button>
                                                 ))}
                                             </div>
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 text-xs text-gray-600 space-y-2 leading-relaxed max-h-60 overflow-y-auto">
+                                            <div className="py-4 border-t border-b border-gray-100 text-xs text-gray-600 space-y-2 leading-relaxed max-h-60 overflow-y-auto">
                                                 {policyTab === 'terms' && <p>By using Muncheez, you agree to comply with our delivery network rules and fair use customer policies across Nairobi.</p>}
                                                 {policyTab === 'privacy' && <p>We safeguard your location and personal contact data in compliance with Kenya Data Protection Act regulations.</p>}
                                                 {policyTab === 'refund' && <p>Orders cancelled prior to kitchen preparation are refunded instantly to your original payment method within 2 hours.</p>}
@@ -1072,17 +1068,17 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {/* VIEW 13: DELETE ACCOUNT */}
                                     {view === 'delete-account' && (
                                         <motion.div key="delete-account" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
-                                            <div className="p-4 bg-red-50 rounded-2xl border border-red-200 text-red-700 space-y-2">
+                                            <div className="py-4 border-t border-b border-red-200 text-red-700 space-y-2">
                                                 <div className="flex items-center gap-2 font-black text-xs uppercase tracking-wider text-red-800">
                                                     <AlertTriangle size={16} />
-                                                    Danger Zone — Delete Account
+                                                    Danger Zone: Delete Account
                                                 </div>
                                                 <p className="text-[10px] leading-relaxed">
                                                     Permanently delete your profile, saved addresses, order history, and favorites. This action cannot be undone.
                                                 </p>
                                             </div>
 
-                                            <div className="bg-white p-4 rounded-2xl border border-black/5 space-y-3">
+                                            <div className="space-y-4">
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block">
                                                     Type "DELETE" to confirm
                                                 </label>
@@ -1091,12 +1087,12 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                     value={deleteConfirmText}
                                                     onChange={e => setDeleteConfirmText(e.target.value)}
                                                     placeholder="DELETE"
-                                                    className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-xs font-bold text-gray-900 focus:outline-none focus:border-red-500"
+                                                    className="w-full bg-transparent border-b border-gray-200 px-0 py-2.5 text-xs font-bold text-gray-900 focus:outline-none focus:border-red-600 transition-colors"
                                                 />
                                                 <button
                                                     onClick={handleDeleteAccount}
                                                     disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isSaving}
-                                                    className="w-full py-3 bg-red-600 text-white rounded-xl text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-opacity"
+                                                    className="w-full py-4 bg-red-600 text-white rounded-full text-xs font-bold uppercase tracking-widest disabled:opacity-40 transition-opacity hover:bg-red-700"
                                                 >
                                                     Permanently Delete Account
                                                 </button>

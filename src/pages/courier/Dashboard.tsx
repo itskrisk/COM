@@ -84,26 +84,39 @@ export default function CourierDashboard() {
     const [riderOperatingZone, setRiderOperatingZone] = useState('');
     const [riderEmergencyContact, setRiderEmergencyContact] = useState('');
 
-    // Approval gate check on mount
-    useEffect(() => {
-        if (!profile?.id) return;
-        const isApprovedLocally = localStorage.getItem('muncheez_rider_approved_' + profile.id) === 'true';
-        if (profile.status === 'APPROVED' || isApprovedLocally) {
+    // ── APPROVAL GATE ──────────────────────────────────────────────
+    // Full terminal access is granted only after Fleet Dispatch approval.
+    // Pending riders see a waiting screen; rejected riders see a notice.
+    const [accessGate, setAccessGate] = useState<'checking' | 'open' | 'pending' | 'rejected'>('checking');
+
+    const runAccessCheck = useCallback(() => {
+        if (!profile?.id) {
+            setAccessGate('open');
             return;
         }
-        riderService.getRider(profile.id).then(({ data }) => {
-            if (!data || data.status !== 'APPROVED') {
-                navigate('/rider/onboarding', { replace: true });
-            } else {
-                if (data.vehicle_type) setRiderVehicleType(data.vehicle_type);
-                if (data.vehicle_plate) setRiderPlate(data.vehicle_plate);
-            }
-        }).catch(() => {
-            if (profile.status === 'PENDING') {
-                navigate('/rider/onboarding', { replace: true });
-            }
-        });
-    }, [profile?.id, profile?.status, navigate]);
+        const isApprovedLocally = localStorage.getItem('muncheez_rider_approved_' + profile.id) === 'true';
+        if (profile.status === 'APPROVED' || isApprovedLocally) {
+            setAccessGate('open');
+            return;
+        }
+        riderService.getRider(profile.id)
+            .then(({ data }) => {
+                if (data && data.status === 'APPROVED') {
+                    setAccessGate('open');
+                    if (data.vehicle_type) setRiderVehicleType(data.vehicle_type);
+                    if (data.vehicle_plate) setRiderPlate(data.vehicle_plate);
+                } else if (data && data.status === 'REJECTED') {
+                    setAccessGate('rejected');
+                } else {
+                    setAccessGate('pending');
+                }
+            })
+            .catch(() => setAccessGate('pending'));
+    }, [profile?.id, profile?.status]);
+
+    useEffect(() => {
+        runAccessCheck();
+    }, [runAccessCheck]);
 
     const handleLogout = async () => {
         try {
@@ -387,6 +400,73 @@ export default function CourierDashboard() {
             setIsSosActive(false);
         }, 2000);
     };
+
+    if (accessGate === 'checking') {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (accessGate === 'pending' || accessGate === 'rejected') {
+        const isRejected = accessGate === 'rejected';
+        return (
+            <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
+                <header className="border-b border-neutral-200 px-6 sm:px-10 py-4 flex items-center justify-between">
+                    <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+                        Muncheez<span className="text-[#4A90E2]">.</span>
+                    </Link>
+                    <button
+                        onClick={async () => { await signOut(); navigate('/rider/signup', { replace: true }); }}
+                        className="text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </header>
+                <main className="flex-1 flex items-center justify-center px-6 py-16">
+                    <div className="max-w-xl w-full text-center">
+                        <div className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 mb-8 border border-amber-200 bg-amber-50 text-amber-700">
+                            <Clock size={12} />
+                            {isRejected ? 'Application Not Approved' : 'Fleet Verification in Progress'}
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-black mb-4">
+                            {isRejected
+                                ? 'Your rider application was not approved.'
+                                : 'Your documents are with the dispatch desk.'}
+                        </h1>
+                        <p className="text-neutral-500 text-sm leading-relaxed mb-10">
+                            {isRejected
+                                ? 'The Muncheez Admin Console has reviewed your rider application and it was not approved at this time. Contact fleet dispatch for details.'
+                                : 'We are verifying your National ID, driving credential, and vehicle details. Your terminal, online toggle, and live dispatches unlock the moment Fleet Dispatch approves you.'}
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            {!isRejected && (
+                                <button
+                                    onClick={runAccessCheck}
+                                    className="w-full sm:w-auto px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all inline-flex items-center gap-2"
+                                >
+                                    <ShieldCheck size={14} />
+                                    Check Approval Status
+                                </button>
+                            )}
+                            <a
+                                href="https://wa.me/254700000000"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full sm:w-auto px-6 py-3.5 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest text-black transition-colors text-center"
+                            >
+                                Contact Fleet Dispatch
+                            </a>
+                        </div>
+                    </div>
+                </main>
+                <footer className="border-t border-neutral-200 px-6 sm:px-10 py-4 text-center text-[10px] font-mono tracking-widest uppercase text-neutral-400">
+                    Muncheez Rider Terminal
+                </footer>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">

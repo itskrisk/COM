@@ -233,6 +233,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: 'Login failed. No user data returned.' };
       }
 
+      // EMAIL CONFIRMATION GATE: one CANNOT log in until the email is confirmed.
+      // If Supabase issued a session for an unconfirmed account, clear it and block login.
+      if (!data.user.email_confirmed_at) {
+        try {
+          await authService.signOut();
+        } catch (e) {
+          console.warn('[AuthContext] Signout after unconfirmed login failed:', e);
+        }
+        localStorage.removeItem('accessToken');
+        setToken(null);
+        setUser(null);
+        setProfile(null);
+        return { error: 'Email not confirmed. Please check your inbox and confirm your email address before logging in.' };
+      }
+
       if (data.session) {
         localStorage.setItem('accessToken', data.session.access_token);
         setToken(data.session.access_token);

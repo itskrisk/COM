@@ -37,20 +37,57 @@ export default function CourierOnboarding() {
     const [idDocName, setIdDocName] = useState<string | null>(null);
     const [licenseDocName, setLicenseDocName] = useState<string | null>(null);
 
+    // GATES (event order): signed up -> email confirmed -> logged in -> onboarding ONCE -> admin approval
     useEffect(() => {
+        if (!user) {
+            navigate('/rider/signup', { replace: true });
+            return;
+        }
+
+        if (!user.emailVerified) {
+            navigate('/auth/verify', {
+                replace: true,
+                state: {
+                    email: user.email,
+                    portal: 'courier',
+                    redirect: '/rider/login',
+                    message: 'Please confirm your email before continuing to onboarding.'
+                }
+            });
+            return;
+        }
+
         if (profile) {
             if (profile.full_name && !fullName) setFullName(profile.full_name);
             if (profile.phone && !phone) {
                 setPhone(profile.phone);
                 setMpesaPhone(profile.phone);
             }
-            if (profile.status === 'APPROVED') {
-                navigate('/rider/dashboard', { replace: true });
-            } else if (profile.status === 'PENDING' || profile.status === 'UNDER_REVIEW') {
-                setSubmitted(true);
-            }
         }
-    }, [profile, navigate]);
+
+        if (user?.id) {
+            (async () => {
+                try {
+                    const { data } = await supabase
+                        .from('riders')
+                        .select('status, onboarding_completed')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (data?.status === 'APPROVED') {
+                        navigate('/rider/dashboard', { replace: true });
+                    } else if (data && data.onboarding_completed) {
+                        // ONCE-ONLY: onboarding already submitted, only the waiting screen remains
+                        setSubmitted(true);
+                    }
+                } catch {
+                    if (profile?.status === 'PENDING' || profile?.status === 'UNDER_REVIEW') {
+                        setSubmitted(true);
+                    }
+                }
+            })();
+        }
+    }, [profile, navigate, user, fullName, phone]);
 
     const handleSubmitOnboarding = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -65,6 +102,7 @@ export default function CourierOnboarding() {
                         vehicle_type: vehicleType,
                         vehicle_plate: vehiclePlate.trim().toUpperCase(),
                         status: 'PENDING',
+                        onboarding_completed: true,
                         is_online: false,
                         has_helmet: hasHelmet,
                         has_thermal_bag: hasThermalBag,

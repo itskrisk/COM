@@ -1,6 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, ArrowRight, Lock } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 
@@ -86,64 +86,107 @@ export default function AdminLogin() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-gray-900">
-            <div className="w-full max-w-sm">
-                <div className="flex justify-center mb-8">
-                    <div className="w-16 h-16 rounded-2xl bg-black text-white flex items-center justify-center shadow-xl shadow-black/10">
-                        <ShieldCheck size={32} />
+        <div className="min-h-screen bg-white flex overflow-hidden">
+            {/* Left Side: Editorial Image (Desktop Only) */}
+            <div className="hidden lg:block lg:w-1/2 relative">
+                <img
+                    src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2000"
+                    alt="Muncheez Operations"
+                    className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-black/20" />
+                <div className="absolute bottom-20 left-20 z-10 max-w-lg">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/60 mb-6 block">Restricted Access</span>
+                    <h2 className="text-6xl font-heading font-light text-white leading-[1.1] tracking-tight mb-8">
+                        Command <br />
+                        <span className="italic opacity-50">Center</span>.
+                    </h2>
+                    <p className="text-lg text-white/70 font-light leading-relaxed">
+                        Approvals, merchants, riders, orders, and platform intelligence in one terminal.
+                    </p>
+                </div>
+            </div>
+
+            {/* Right Side: Auth Form */}
+            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative overflow-y-auto">
+                <div className="mb-12 relative">
+                    <Link
+                        to="/"
+                        className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A90E2] mb-8 hover:opacity-70 transition-all group"
+                    >
+                        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                        Back to Selection
+                    </Link>
+                    <div className="flex items-center justify-between mb-8">
+                        <span className="font-heading font-bold text-3xl tracking-tighter text-gray-900">
+                            Muncheez<span className="text-[#4A90E2]">.</span>
+                        </span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">Admin Console</span>
                     </div>
+                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Admin Sign In.</h1>
+                    <p className="text-sm text-gray-500">Restricted to Muncheez operations staff.</p>
                 </div>
 
-                <h1 className="text-2xl font-black text-center mb-2 tracking-tighter">
-                    Admin Portal<span className="text-[#D4AF37]">.</span>
-                </h1>
-                <p className="text-center text-gray-400 mb-10 font-medium text-sm">Secure Access Only</p>
+                {error && (
+                    <div className="mb-6 border-b border-red-500 pb-3">
+                        <p className="text-xs text-red-600 font-medium font-mono">{error}</p>
+                    </div>
+                )}
 
-                <form onSubmit={handleLogin} className="space-y-4 bg-white p-8 rounded-3xl shadow-sm border border-gray-100">
-                    {error && (
-                        <div className="bg-red-50 text-red-600 p-4 rounded-xl text-xs font-bold uppercase tracking-widest border border-red-100">
-                            {error}
-                        </div>
-                    )}
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Username or Email</label>
+                <form onSubmit={handleLogin} className="space-y-8 max-w-md w-full">
+                    <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                            Admin Email
+                        </label>
                         <input
+                            id="admin-email"
                             name="email"
-                            type="text"
+                            type="email"
+                            required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
-                            placeholder="admin or admin@muncheez.co.ke"
+                            className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                            placeholder="admin@muncheez.co.ke"
                         />
                     </div>
 
-                    <div className="space-y-1">
-                        <label className="text-xs font-bold uppercase tracking-widest text-gray-400 ml-1">Password</label>
-                        <div className="relative">
-                            <Lock className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
-                            <input
-                                name="password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-4 text-gray-900 placeholder-gray-300 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
-                                placeholder="••••••••"
-                            />
-                        </div>
+                    <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                            Password
+                        </label>
+                        <input
+                            id="admin-password"
+                            name="password"
+                            type="password"
+                            required
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                            placeholder="••••••••"
+                        />
                     </div>
 
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-black text-white font-black uppercase tracking-widest py-4 rounded-xl hover:bg-gray-800 transition-all active:scale-95 flex items-center justify-center gap-2 group mt-4"
+                        className="group w-full flex justify-between items-center py-5 px-8 rounded-2xl text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-500 uppercase tracking-widest shadow-xl shadow-gray-200"
                     >
-                        {isLoading ? 'Authenticating...' : 'Access Dashboard'}
-                        {!isLoading && <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />}
+                        {isLoading ? (
+                            <>
+                                <span>Authenticating...</span>
+                                <Loader2 size={18} className="animate-spin" />
+                            </>
+                        ) : (
+                            <>
+                                <span>Access Console</span>
+                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                            </>
+                        )}
                     </button>
                 </form>
 
-                <p className="text-center text-xs text-gray-400 mt-6">
-                    Master Admin: <strong>admin</strong> / <strong>admin123</strong>
+                <p className="text-[10px] text-gray-400 mt-12 font-mono uppercase tracking-widest">
+                    Master Admin: admin / admin123
                 </p>
             </div>
         </div>
