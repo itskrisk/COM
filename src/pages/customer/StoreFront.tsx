@@ -22,25 +22,8 @@ export default function StoreFront() {
             const storeResult = await publicApi.getStore(id);
             if (storeResult.data) {
                 setMerchant(storeResult.data);
-            } else {
-                // Fallback to active supermarket provisions merchant
-                setMerchant({
-                    id: id || 'supermarket-westlands',
-                    businessName: 'Westlands Provisions Supermarket',
-                    business_name: 'Westlands Provisions Supermarket',
-                    type: 'Supermarket',
-                    rating: 4.9,
-                    reviewCount: 142,
-                    deliveryFee: 150,
-                    deliveryRadiusKm: 7,
-                    operatingHours: '08:00 AM – 10:00 PM',
-                    address: 'Westlands Metropolis, Mpaka Road',
-                    customSettings: {
-                        bulkPurchaseLimit: 10,
-                        lowStockThreshold: 10
-                    }
-                });
             }
+            // No fallback mock — if store not found, merchant stays null and we show error state
 
             const productsResult = await publicApi.getStoreProducts(id);
             if (productsResult.data && productsResult.data.length > 0) {

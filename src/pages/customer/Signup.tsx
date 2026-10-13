@@ -72,67 +72,13 @@ export default function Signup() {
         }
     };
 
-    // Active Session Guard — Clean Editorial Design (No Card Boxes)
+    // Redirect if already authenticated as customer
     if (!authLoading && user) {
         const roles = profile?.roles || (profile?.role ? [profile.role] : []);
-        const hasCustomerRole = roles.includes('customer');
-
-        if (hasCustomerRole) {
+        if (roles.includes('customer')) {
             navigate('/stores', { replace: true });
             return null;
         }
-
-        const currentRole = roles[0] || profile?.role || 'user';
-        const portalMap: Record<string, { label: string; path: string }> = {
-            merchant: { label: 'Merchant Portal', path: '/partner' },
-            courier: { label: 'Courier Terminal', path: '/courier' },
-            admin: { label: 'Admin Console', path: '/admin' },
-        };
-        const currentPortal = portalMap[currentRole];
-
-        return (
-            <div className="min-h-screen bg-white flex items-center justify-center p-8">
-                <div className="max-w-md w-full border-b border-black/10 pb-8">
-                    <Link to="/" className="inline-block mb-8">
-                        <span className="font-heading font-bold text-3xl tracking-tighter text-gray-900">
-                            Muncheez<span className="text-[#4A90E2]">.</span>
-                        </span>
-                    </Link>
-                    <h1 className="text-3xl font-heading font-light text-gray-900 tracking-tight mb-3">Add Customer Access</h1>
-                    <p className="text-sm text-gray-500 mb-2">
-                        Logged in as <strong className="text-gray-900">{user.email}</strong>
-                    </p>
-                    <p className="text-xs text-gray-400 mb-8 leading-relaxed">
-                        Your account has the <strong className="capitalize text-gray-700">{currentRole}</strong> role. You can add Customer access to your account or switch to your existing portal.
-                    </p>
-                    <div className="flex flex-col gap-4">
-                        <button
-                            onClick={handleSignup}
-                            disabled={loading || addingRole}
-                            className="group w-full flex justify-between items-center py-5 px-8 rounded-2xl text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-400 uppercase tracking-widest transition-all"
-                        >
-                            <span>{addingRole ? 'Adding Access...' : 'Add Customer Access'}</span>
-                            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                        </button>
-                        {currentPortal && (
-                            <Link
-                                to={currentPortal.path}
-                                className="w-full text-center py-4 border-b border-gray-200 text-xs font-bold uppercase tracking-widest text-gray-900 hover:text-[#4A90E2] transition-colors"
-                            >
-                                Go to {currentPortal.label} →
-                            </Link>
-                        )}
-                        <button
-                            onClick={async () => { await signOut(); }}
-                            className="w-full text-center py-3 text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 transition-colors flex items-center gap-2 justify-center"
-                        >
-                            <LogOut size={14} />
-                            Sign Out
-                        </button>
-                    </div>
-                </div>
-            </div>
-        );
     }
 
     return (
@@ -190,16 +136,7 @@ export default function Signup() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
-                    {portalHint && (
-                        <div className="mb-6 border-b border-amber-400 pb-4">
-                            <p className="text-xs text-amber-700 font-medium mb-2">{portalHint.message}</p>
-                            <Link to={portalHint.link} className="text-[10px] font-bold uppercase tracking-widest text-black underline underline-offset-2 hover:text-black/50 transition-colors">
-                                {portalHint.label} →
-                            </Link>
-                        </div>
-                    )}
-
-                    {error && !portalHint && (
+                    {error && (
                         <div className="mb-6 border-b border-red-500 pb-3">
                             <p className="text-xs text-red-600 font-medium">{error}</p>
                         </div>

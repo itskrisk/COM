@@ -65,13 +65,6 @@ export default function AppDownload() {
 
                 </div>
             </div>
-
-            {/* Bottom Curve (Transition to Footer) */}
-            <div className="absolute bottom-[-1px] left-0 w-full leading-[0] z-10">
-                <svg viewBox="0 0 1440 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-[60px] block" preserveAspectRatio="none">
-                    <path fill="#000000" fillOpacity="1" d="M0,80L48,71C96,62,192,45,288,47C384,49,480,70,576,73C672,77,768,63,864,58C960,53,1056,57,1152,62C1248,67,1344,75,1392,78L1440,82L1440,100L1392,100C1344,100,1248,100,1152,100C1056,100,960,100,864,100C768,100,672,100,576,100C480,100,384,100,288,100C192,100,96,100,48,100L0,100Z"></path>
-                </svg>
-            </div>
         </section>
     );
 }

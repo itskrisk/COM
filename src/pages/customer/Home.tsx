@@ -6,6 +6,7 @@ import HowItWorks from "../../components/marketing/HowItWorks";
 import Stats from "../../components/marketing/Stats";
 import Testimonials from "../../components/marketing/Testimonials";
 import AppDownload from "../../components/marketing/AppDownload";
+import PartnerTicker from "../../components/marketing/PartnerTicker";
 import Footer from "../../components/layout/Footer";
 
 export default function Home() {
@@ -87,6 +88,8 @@ export default function Home() {
             </section>
 
             <AppDownload />
+
+            <PartnerTicker />
 
             <Footer />
         </main>

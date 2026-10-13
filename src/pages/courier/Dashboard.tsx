@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { dispatchService, walletService, riderService } from '../../lib/supabaseService';
 import {
     Bike,
@@ -28,8 +28,10 @@ import {
     User,
     ArrowDownLeft,
     ArrowUpRight as ArrowUpRightIcon,
-    RefreshCw
+    RefreshCw,
+    Save
 } from 'lucide-react';
+
 import { useAuth } from '../../context/AuthContext';
 
 interface DispatchOffer {
@@ -58,9 +60,10 @@ interface WalletTransaction {
 }
 
 // Real-time dispatch offers and wallet ledgers stream directly from Supabase
-type CourierTab = 'HOME' | 'WALLET' | 'PERFORMANCE' | 'SAFETY' | 'MORE';
+type CourierTab = 'HOME' | 'WALLET' | 'PERFORMANCE' | 'SAFETY' | 'MORE' | 'SETTINGS';
 
 export default function CourierDashboard() {
+    const navigate = useNavigate();
     const { profile, signOut } = useAuth();
 
     // Tab state
@@ -70,6 +73,75 @@ export default function CourierDashboard() {
     const [presence, setPresence] = useState<'ONLINE_IDLE' | 'OFFLINE'>('ONLINE_IDLE');
     const [availableOffers, setAvailableOffers] = useState<DispatchOffer[]>([]);
     const [activeMission, setActiveMission] = useState<DispatchOffer | null>(null);
+
+    // Rider Settings State (Editable — populated from Supabase)
+    const [riderName, setRiderName] = useState(profile?.full_name || '');
+    const [riderPhone, setRiderPhone] = useState(profile?.phone || '');
+    const [riderVehicleType, setRiderVehicleType] = useState('');
+    const [riderVehicleMake, setRiderVehicleMake] = useState('');
+    const [riderVehicleModel, setRiderVehicleModel] = useState('');
+    const [riderPlate, setRiderPlate] = useState('');
+    const [riderOperatingZone, setRiderOperatingZone] = useState('');
+    const [riderEmergencyContact, setRiderEmergencyContact] = useState('');
+
+    // Approval gate check on mount
+    useEffect(() => {
+        if (!profile?.id) return;
+        const isApprovedLocally = localStorage.getItem('muncheez_rider_approved_' + profile.id) === 'true';
+        if (profile.status === 'APPROVED' || isApprovedLocally) {
+            return;
+        }
+        riderService.getRider(profile.id).then(({ data }) => {
+            if (!data || data.status !== 'APPROVED') {
+                navigate('/courier/onboarding', { replace: true });
+            } else {
+                if (data.vehicle_type) setRiderVehicleType(data.vehicle_type);
+                if (data.vehicle_plate) setRiderPlate(data.vehicle_plate);
+            }
+        }).catch(() => {
+            if (profile.status === 'PENDING') {
+                navigate('/courier/onboarding', { replace: true });
+            }
+        });
+    }, [profile?.id, profile?.status, navigate]);
+
+    const handleLogout = async () => {
+        try {
+            await signOut();
+        } catch (e) {
+            console.error('Courier logout error:', e);
+        } finally {
+            navigate('/courier/signup');
+        }
+    };
+
+    const handleSaveRiderSettings = async () => {
+        try {
+            const payload = {
+                vehicle_type: riderVehicleType,
+                vehicle_make: riderVehicleMake,
+                vehicle_model: riderVehicleModel,
+                vehicle_plate: riderPlate.trim().toUpperCase(),
+                operating_zone: riderOperatingZone,
+                emergency_contact: riderEmergencyContact
+            };
+            localStorage.setItem('muncheez_rider_settings', JSON.stringify(payload));
+            if (riderId) {
+                await riderService.updateRider(riderId, payload as any);
+            }
+            setVehicleInfo(prev => ({
+                ...prev,
+                type: riderVehicleType,
+                make: riderVehicleMake,
+                model: riderVehicleModel,
+                plate: riderPlate.trim().toUpperCase()
+            }));
+            alert('Rider profile and vehicle details updated successfully!');
+        } catch (e) {
+            console.error('Save rider settings error:', e);
+            alert('Rider settings saved locally.');
+        }
+    };
 
     // Wallet Ledger
     const [walletBalance, setWalletBalance] = useState(0);
@@ -86,10 +158,10 @@ export default function CourierDashboard() {
     // ── SUPABASE DATA LOADING ───────────────────────────────────────────────
     const [riderId, setRiderId] = useState<string | null>(null);
     const [vehicleInfo, setVehicleInfo] = useState({
-        type: 'Motorbike', make: '', model: '', plate: '',
-        inspectionStatus: 'Certified Roadworthy',
-        helmetVerified: true,
-        thermalBagVerified: true
+        type: '', make: '', model: '', plate: '',
+        inspectionStatus: 'Pending Verification',
+        helmetVerified: false,
+        thermalBagVerified: false
     });
 
     const loadCourierData = useCallback(async (rId: string) => {
@@ -136,13 +208,19 @@ export default function CourierDashboard() {
         }
     }, []);
 
-    // Load rider profile then fetch dashboard data
     useEffect(() => {
         if (!profile?.id) return;
         riderService.getRider(profile.id).then(({ data }) => {
             if (data) {
                 const id = data.id || profile.id;
                 setRiderId(id);
+                // Sync rider info from Supabase
+                if (data.vehicle_type) setRiderVehicleType(data.vehicle_type);
+                if (data.vehicle_make) setRiderVehicleMake(data.vehicle_make);
+                if (data.vehicle_model) setRiderVehicleModel(data.vehicle_model);
+                if (data.vehicle_plate) setRiderPlate(data.vehicle_plate);
+                if ((data as any).operating_zone) setRiderOperatingZone((data as any).operating_zone);
+                if ((data as any).emergency_contact) setRiderEmergencyContact((data as any).emergency_contact);
                 if (data.vehicle_type || data.vehicle_make) {
                     setVehicleInfo(prev => ({
                         ...prev,
@@ -150,6 +228,9 @@ export default function CourierDashboard() {
                         make: data.vehicle_make || prev.make,
                         model: data.vehicle_model || prev.model,
                         plate: data.vehicle_plate || prev.plate,
+                        helmetVerified: (data as any).helmet_verified ?? prev.helmetVerified,
+                        thermalBagVerified: (data as any).thermal_bag_verified ?? prev.thermalBagVerified,
+                        inspectionStatus: (data as any).inspection_status || prev.inspectionStatus,
                     }));
                 }
                 // Sync online/offline status from DB
@@ -194,16 +275,19 @@ export default function CourierDashboard() {
             .catch(console.error);
     }, [presence, riderId]);
 
-    // Performance Metrics (from PerformanceEngine in COMEAROUND/courier/Dashboard.tsx)
+    // Performance Metrics — derived from real wallet/transaction data
+    const realCompletedDeliveries = walletTransactions.filter(t => t.type === 'CREDIT').length;
     const performanceStats = {
-        tier: 'Gold Tier · High Priority Dispatch',
-        rating: 4.96,
-        acceptanceRate: 98,
-        completionRate: 100,
-        onTimeRate: 97,
-        reliabilityScore: 99,
-        hourlyRateKES: 310,
-        totalDeliveriesAllTime: walletTransactions.filter(t => t.type === 'CREDIT').length
+        tier: realCompletedDeliveries >= 100 ? 'Gold Tier · High Priority Dispatch'
+             : realCompletedDeliveries >= 20 ? 'Silver Tier · Standard Dispatch'
+             : 'New Partner · Building History',
+        rating: (profile as any)?.rating || 0,
+        acceptanceRate: 0, // TODO: compute from dispatch_offers accepted/offered ratio when data available
+        completionRate: 0, // TODO: compute from completed vs accepted orders when data available
+        onTimeRate: 0,
+        reliabilityScore: 0,
+        hourlyRateKES: realCompletedDeliveries >= 100 ? 310 : 250,
+        totalDeliveriesAllTime: realCompletedDeliveries
     };
 
     // Accept Offer (local + Supabase)
@@ -338,16 +422,16 @@ export default function CourierDashboard() {
                     </button>
 
                     <button
-                        onClick={() => signOut()}
+                        onClick={handleLogout}
                         className="text-xs text-neutral-400 hover:text-black font-mono uppercase tracking-wider transition-colors inline-flex items-center gap-1"
                     >
                         <LogOut size={13} />
-                        Exit
+                        Logout
                     </button>
                 </div>
             </header>
 
-            {/* Navigation Tabs (All 5 Courier Workspaces from COMEAROUND) */}
+            {/* Navigation Tabs (All Courier Workspaces) */}
             <div className="border-b border-neutral-200 px-6 sm:px-10 flex gap-8 overflow-x-auto scrollbar-none text-xs font-mono uppercase tracking-widest">
                 <button
                     onClick={() => setActiveTab('HOME')}
@@ -388,6 +472,14 @@ export default function CourierDashboard() {
                     }`}
                 >
                     Vehicle & Profile
+                </button>
+                <button
+                    onClick={() => setActiveTab('SETTINGS')}
+                    className={`py-3.5 border-b-2 whitespace-nowrap transition-all ${
+                        activeTab === 'SETTINGS' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
+                    }`}
+                >
+                    Rider Settings
                 </button>
             </div>
 
@@ -795,6 +887,181 @@ export default function CourierDashboard() {
                                     <span className="text-black">Westlands, Kilimani, Lavington Metropolis</span>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* 6. RIDER SETTINGS TAB */}
+                {activeTab === 'SETTINGS' && (
+
+                    <div className="border border-neutral-200 p-8 space-y-10 max-w-4xl">
+                        <div className="border-b border-neutral-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-base font-mono uppercase tracking-widest font-bold text-black">
+                                    Courier Profile & Vehicle Settings
+                                </h3>
+                                <p className="text-xs text-neutral-400 mt-1">
+                                    Manage your courier identity, vehicle specifications, and operational dispatch zones.
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleSaveRiderSettings}
+                                className="px-6 py-2.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-2 self-start sm:self-auto"
+                            >
+                                <Save size={13} />
+                                Save Rider Settings
+                            </button>
+                        </div>
+
+                        {/* SECTION 1: RIDER IDENTITY */}
+                        <div className="space-y-6">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block border-b border-neutral-100 pb-2">
+                                01 · Personal Information
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Rider Full Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={riderName}
+                                        onChange={(e) => setRiderName(e.target.value)}
+                                        placeholder="Full legal name"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-medium"
+                                    />
+                                    <span className="text-[10px] text-neutral-400 block">
+                                        Shown on customer delivery tracking screens and supermarket pickup receipts.
+                                    </span>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Primary Contact Phone
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        value={riderPhone}
+                                        onChange={(e) => setRiderPhone(e.target.value)}
+                                        placeholder="+254 700 000000"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SECTION 2: VEHICLE SPECIFICATIONS */}
+                        <div className="space-y-6">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block border-b border-neutral-100 pb-2">
+                                02 · Vehicle Fleet Specifications
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Vehicle Type
+                                    </label>
+                                    <select
+                                        value={riderVehicleType}
+                                        onChange={(e) => setRiderVehicleType(e.target.value)}
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    >
+                                        <option value="Motorbike">Motorbike (Boda Boda Fleet)</option>
+                                        <option value="Bicycle">Bicycle (Eco Express)</option>
+                                        <option value="Electric Scooter">Electric Scooter</option>
+                                        <option value="Car">Van / Car (Bulk Hauls)</option>
+                                    </select>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Registration Plate Number
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={riderPlate}
+                                        onChange={(e) => setRiderPlate(e.target.value.toUpperCase())}
+                                        placeholder="e.g. KDM 482Y"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono uppercase font-bold"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Vehicle Make
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={riderVehicleMake}
+                                        onChange={(e) => setRiderVehicleMake(e.target.value)}
+                                        placeholder="e.g. Honda / Boxer / TVS"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Vehicle Model
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={riderVehicleModel}
+                                        onChange={(e) => setRiderVehicleModel(e.target.value)}
+                                        placeholder="e.g. Ace 125"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SECTION 3: OPERATIONAL ZONE & EMERGENCY */}
+                        <div className="space-y-6">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block border-b border-neutral-100 pb-2">
+                                03 · Dispatch Radius & Safety Contacts
+                            </span>
+
+                            <div className="space-y-1.5 text-xs">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                    Preferred Operational Sector / Zone
+                                </label>
+                                <input
+                                    type="text"
+                                    value={riderOperatingZone}
+                                    onChange={(e) => setRiderOperatingZone(e.target.value)}
+                                    placeholder="e.g. Westlands, Kilimani, Lavington, Riverside"
+                                    className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-medium"
+                                />
+                                <span className="text-[10px] text-neutral-400 block">
+                                    Primary urban zone prioritized by dispatch algorithms for supermarket hauls.
+                                </span>
+                            </div>
+
+                            <div className="space-y-1.5 text-xs">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                    Emergency Roadside Contact (Next of Kin / Support)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={riderEmergencyContact}
+                                    onChange={(e) => setRiderEmergencyContact(e.target.value)}
+                                    placeholder="Name and Phone number"
+                                    className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-medium"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Action Row */}
+                        <div className="pt-6 border-t border-neutral-200 flex justify-end">
+                            <button
+                                onClick={handleSaveRiderSettings}
+                                className="w-full sm:w-auto px-8 py-3 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Save size={13} />
+                                Save Rider Settings
+                            </button>
                         </div>
                     </div>
                 )}

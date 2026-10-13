@@ -414,17 +414,20 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                             exit={{ opacity: 0, x: -15 }}
                                             className="space-y-6"
                                         >
-                                            {/* User Profile Header */}
-                                            <div className="flex items-center gap-4 bg-white p-4 rounded-2xl border border-black/5 shadow-sm">
-                                                <div className="w-14 h-14 rounded-full bg-[#4A90E2] text-white flex items-center justify-center shadow-md shrink-0">
-                                                    <span className="text-xl font-black">{initial}</span>
+                                            {/* User Profile Header — Apple-style editorial */}
+                                            <div className="flex items-center gap-4 pb-5 border-b border-black/5">
+                                                <div className="w-12 h-12 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center shrink-0">
+                                                    <span className="text-sm font-medium tracking-tight leading-none select-none">
+                                                        {profile?.full_name
+                                                            ? profile.full_name.split(' ').slice(0, 2).map((n: string) => n.charAt(0)).join('').toUpperCase()
+                                                            : initial}
+                                                    </span>
                                                 </div>
                                                 <div className="flex-1 overflow-hidden">
-                                                    <h3 className="font-heading font-black text-base text-gray-900 truncate">
+                                                    <h3 className="font-sans font-semibold text-sm text-gray-900 truncate tracking-tight">
                                                         {profile?.full_name || 'Customer Account'}
                                                     </h3>
-                                                    <p className="text-xs text-gray-500 truncate">{user.email}</p>
-                                                    <span className="inline-block mt-1 text-[10px] font-bold text-gray-400 uppercase tracking-widest">Customer</span>
+                                                    <p className="text-[11px] text-gray-400 truncate mt-0.5">{user.email}</p>
                                                 </div>
                                             </div>
 

@@ -234,16 +234,17 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                     </div>
                     <div className="flex items-center gap-3">
                         <div className="relative w-10 h-10 bg-white text-black rounded-lg flex items-center justify-center shadow-lg"><ShoppingBag size={18} />{itemCount > 0 && <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white">{itemCount}</span>}</div>
-                        <div
+                        <button
                             onClick={() => setIsProfileOpen(true)}
-                            className="flex w-10 h-10 bg-white/10 text-white rounded-lg items-center justify-center border border-white/10 cursor-pointer hover:bg-white/20 transition-all hover:scale-105 active:scale-95"
+                            aria-label="Open account"
+                            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
                         >
-                            {profile?.full_name ? (
-                                <span className="text-xs font-black">{profile.full_name.charAt(0).toUpperCase()}</span>
-                            ) : (
-                                <User size={18} className="opacity-70" />
-                            )}
-                        </div>
+                            <span className="text-[11px] font-semibold tracking-tight text-white/90 leading-none select-none">
+                                {profile?.full_name
+                                    ? profile.full_name.split(' ').slice(0, 2).map((n: string) => n.charAt(0)).join('').toUpperCase()
+                                    : <User size={15} className="text-white/70" />}
+                            </span>
+                        </button>
                     </div>
                 </div>
 
@@ -524,8 +525,6 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                         </main>
                     </div>
                 </div>
-
-                <BottomCurve fill="#000000" />
             </section>
 
             <Footer />

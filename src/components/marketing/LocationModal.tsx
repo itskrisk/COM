@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Navigation, Search, X, Home, Briefcase } from 'lucide-react';
+import { Search, X, MapPin, Check } from 'lucide-react';
 import { useState } from 'react';
 
 interface LocationModalProps {
@@ -8,14 +8,29 @@ interface LocationModalProps {
     onSelectLocation: (location: string) => void;
 }
 
-export default function LocationModal({ isOpen, onClose, onSelectLocation }: LocationModalProps) {
-    const [searchQuery, setSearchQuery] = useState('');
+const NAIROBI_ZONES = [
+    'Westlands, Nairobi',
+    'Kilimani & Hurlingham',
+    'Riverside Drive',
+    'Kileleshwa & Lavington',
+    'Karen & Langata',
+    'Nairobi CBD',
+    'Parklands & Highridge',
+    'Upper Hill & Community'
+];
 
-    // Mock Saved Addresses
-    const SAVED_PLACES = [
-        { id: '1', name: 'Home', address: 'Riverside Drive, Nairobi', icon: Home },
-        { id: '2', name: 'Work', address: 'Delta Towers, Westlands', icon: Briefcase },
-    ];
+export default function LocationModal({ isOpen, onClose, onSelectLocation }: LocationModalProps) {
+    const [addressText, setAddressText] = useState(
+        () => localStorage.getItem('muncheez_delivery_address') || ''
+    );
+
+    const handleConfirm = (location: string) => {
+        const trimmed = location.trim();
+        if (!trimmed) return;
+        localStorage.setItem('muncheez_delivery_address', trimmed);
+        onSelectLocation(trimmed);
+        onClose();
+    };
 
     return (
         <AnimatePresence>
@@ -27,84 +42,91 @@ export default function LocationModal({ isOpen, onClose, onSelectLocation }: Loc
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[200]"
+                        className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[200]"
                     />
 
-                    {/* Modal Wrapper (Flex Centering to avoid Transform conflicts) */}
-                    <div className="fixed inset-0 z-[201] flex items-center justify-center pointer-events-none">
+                    {/* Modal Wrapper */}
+                    <div className="fixed inset-0 z-[201] flex items-center justify-center pointer-events-none p-4">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                            className="w-[90%] max-w-[400px] bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100 pointer-events-auto"
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 15 }}
+                            className="w-full max-w-md bg-white border border-gray-200 shadow-2xl pointer-events-auto"
                         >
-                            <div className="p-6">
+                            <div className="p-6 md:p-8">
                                 {/* Header */}
-                                <div className="flex items-center justify-between mb-6">
-                                    <h2 className="text-xl font-heading font-bold text-gray-900 tracking-tight">
-                                        Delivery Address
-                                    </h2>
+                                <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+                                    <div>
+                                        <span className="text-[10px] font-mono uppercase tracking-[0.25em] text-[#067EEF] block mb-1">
+                                            Text Location Service
+                                        </span>
+                                        <h2 className="text-xl font-heading font-bold text-gray-900 tracking-tight">
+                                            Enter Delivery Address
+                                        </h2>
+                                    </div>
                                     <button
                                         onClick={onClose}
-                                        className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
+                                        className="p-1 text-gray-400 hover:text-black transition-colors"
                                     >
-                                        <X size={16} className="text-gray-500" />
+                                        <X size={20} />
                                     </button>
                                 </div>
 
-                                {/* Search Input */}
-                                <div className="relative group mb-6">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-                                    <input
-                                        type="text"
-                                        placeholder="Search street, city, district..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 pl-10 pr-4 text-gray-900 placeholder:text-gray-400 outline-none focus:border-[#D4AF37] focus:bg-white transition-all text-sm font-medium"
-                                        autoFocus
-                                    />
-                                </div>
+                                <p className="text-xs text-gray-500 my-4 leading-relaxed font-light">
+                                    Type your street, building, apartment, or landmark. This address is dispatched directly to the merchant and rider.
+                                </p>
 
-                                {/* Current Location Action */}
-                                <button
-                                    onClick={() => onSelectLocation('Current Location')}
-                                    className="w-full flex items-center gap-4 p-3 rounded-xl bg-[#E8F5E9] hover:bg-[#C8E6C9] transition-all group mb-6"
+                                {/* Direct Address Input */}
+                                <form
+                                    onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handleConfirm(addressText);
+                                    }}
+                                    className="space-y-4"
                                 >
-                                    <div className="w-8 h-8 rounded-full bg-[#00A082] flex items-center justify-center text-white shadow-sm">
-                                        <Navigation size={14} className="fill-current" />
+                                    <div className="relative">
+                                        <MapPin className="absolute left-0 top-3 text-gray-400" size={18} />
+                                        <input
+                                            type="text"
+                                            placeholder="e.g., Riverside Drive, Apt 4B, Westlands"
+                                            value={addressText}
+                                            onChange={(e) => setAddressText(e.target.value)}
+                                            className="w-full bg-transparent border-b-2 border-gray-200 py-2.5 pl-7 pr-3 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-[#067EEF] transition-colors font-medium"
+                                            autoFocus
+                                        />
                                     </div>
-                                    <div className="text-left">
-                                        <span className="block text-sm font-bold text-[#00A082]">Use Current Location</span>
-                                        <span className="block text-[10px] text-gray-500 font-medium">Enable GPS for precision</span>
-                                    </div>
-                                </button>
 
-                                {/* Saved Places */}
-                                {SAVED_PLACES.length > 0 && (
-                                    <div className="space-y-3">
-                                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 pl-2">Saved Addresses</span>
-                                        <div className="grid gap-1">
-                                            {SAVED_PLACES.map((place) => (
-                                                <button
-                                                    key={place.id}
-                                                    onClick={() => onSelectLocation(place.address)}
-                                                    className="flex items-center gap-4 p-3 rounded-xl hover:bg-gray-50 transition-colors text-left group"
-                                                >
-                                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 group-hover:bg-white group-hover:shadow-sm transition-all">
-                                                        <place.icon size={14} />
-                                                    </div>
-                                                    <div>
-                                                        <span className="block text-sm font-bold text-gray-900">{place.name}</span>
-                                                        <span className="block text-xs text-gray-500 font-medium">{place.address}</span>
-                                                    </div>
-                                                    <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        {/* Pencil Icon or similar for edit */}
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
+                                    <button
+                                        type="submit"
+                                        disabled={!addressText.trim()}
+                                        className="w-full py-3 bg-black hover:bg-[#067EEF] disabled:bg-gray-200 disabled:text-gray-400 text-white text-xs font-mono uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Check size={14} />
+                                        <span>Confirm Address</span>
+                                    </button>
+                                </form>
+
+                                {/* Quick Nairobi Zones */}
+                                <div className="mt-6 pt-5 border-t border-gray-100">
+                                    <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-gray-400 block mb-3">
+                                        Or Quick Select Delivery Zone
+                                    </span>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {NAIROBI_ZONES.map((zone) => (
+                                            <button
+                                                key={zone}
+                                                type="button"
+                                                onClick={() => {
+                                                    setAddressText(zone);
+                                                    handleConfirm(zone);
+                                                }}
+                                                className="text-left text-xs py-2 px-3 border border-gray-200 hover:border-[#067EEF] hover:text-[#067EEF] text-gray-700 transition-colors font-medium truncate"
+                                            >
+                                                {zone}
+                                            </button>
+                                        ))}
                                     </div>
-                                )}
+                                </div>
                             </div>
                         </motion.div>
                     </div>
@@ -113,3 +135,4 @@ export default function LocationModal({ isOpen, onClose, onSelectLocation }: Loc
         </AnimatePresence>
     );
 }
+

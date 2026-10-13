@@ -73,17 +73,23 @@ export default function PartnerSignup() {
                 }
             }
 
+            if (signupResult.user && (signupResult as any).session) {
+                navigate('/partner/onboarding');
+                return;
+            }
+
             navigate('/auth/verify-email', {
-                state: { email: email.trim(), message: 'Account created! Please check your email to verify your account before logging in.' }
+                state: {
+                    email: email.trim(),
+                    portal: 'merchant',
+                    redirect: '/partner/onboarding',
+                    message: 'Account created! Please check your email to verify your account, then complete onboarding.'
+                }
             });
         } catch (err: any) {
             let message = err.message || 'An error occurred during signup.';
             if (message.toLowerCase().includes('already registered') || message.toLowerCase().includes('already exists') || message.toLowerCase().includes('email in use')) {
-                setPortalHint({
-                    message: 'An account with this email already exists.',
-                    link: '/partner/login',
-                    label: 'Sign in to Merchant Portal'
-                });
+                setError("An account with this email already exists. Please sign in.");
             } else if (message.toLowerCase().includes('rate limit')) {
                 setError("Email rate limit reached. Please wait a moment before trying again, or use a different email.");
             } else {
@@ -150,19 +156,9 @@ export default function PartnerSignup() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
-                    {/* Inline warnings */}
-                    {portalHint && (
-                        <div className="mb-6 border-b border-amber-400 pb-4">
-                            <p className="text-xs text-amber-700 font-medium mb-2">{portalHint.message}</p>
-                            <Link to={portalHint.link} className="text-[10px] font-bold uppercase tracking-widest text-black underline underline-offset-2 hover:text-black/50 transition-colors">
-                                {portalHint.label} →
-                            </Link>
-                        </div>
-                    )}
-
-                    {error && !portalHint && (
+                    {error && (
                         <div className="mb-6 border-b border-red-500 pb-3">
-                            <p className="text-xs text-red-600 font-medium">{error}</p>
+                            <p className="text-xs text-red-600 font-medium font-mono">{error}</p>
                         </div>
                     )}
 

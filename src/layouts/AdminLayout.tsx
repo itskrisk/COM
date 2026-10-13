@@ -18,7 +18,8 @@ import {
     ChevronDown,
     Menu,
     X,
-    Sparkles
+    Sparkles,
+    Briefcase
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -37,6 +38,7 @@ export default function AdminLayout() {
         { icon: LayoutDashboard, label: "Overview", path: "/admin" },
         { icon: CheckCircle2, label: "Approvals", path: "/admin/approvals" },
         { icon: Sparkles, label: "VIP Waitlist", path: "/admin/waitlist" },
+        { icon: Briefcase, label: "Careers", path: "/admin/careers" },
         { icon: ShoppingBag, label: "Orders", path: "/admin/orders" },
         { icon: Store, label: "Merchants", path: "/admin/merchants" },
         { icon: Bike, label: "Riders", path: "/admin/riders" },

@@ -47,6 +47,7 @@ import AdminApprovals from "./pages/admin/Approvals";
 import AdminSettings from "./pages/admin/Settings";
 import AdminSupport from "./pages/admin/Support";
 import AdminWaitlist from "./pages/admin/Waitlist";
+import AdminCareers from "./pages/admin/Careers";
 
 // Auth Pages
 import AuthCallback from "./pages/auth/AuthCallback";
@@ -57,8 +58,16 @@ import VerifyEmail from "./pages/auth/VerifyEmail";
 // Common Pages
 import ComingSoon from "./pages/common/ComingSoon";
 import OurStory from "./pages/common/OurStory";
+import Careers from "./pages/common/Careers";
+import JobApplicationPage from "./pages/common/JobApplicationPage";
 import LegalPage from "./pages/common/LegalPage";
 import OurTeam from "./pages/common/OurTeam";
+import Newsroom from "./pages/common/Newsroom";
+import PressReleases from "./pages/common/PressReleases";
+import MediaKit from "./pages/common/MediaKit";
+import CorporateInfo from "./pages/common/CorporateInfo";
+import InvestorRelations from "./pages/common/InvestorRelations";
+import WaitlistPage from "./pages/common/WaitlistPage";
 import CookieBanner from "./components/ui/shared/CookieBanner";
 
 export default function App() {
@@ -66,7 +75,7 @@ export default function App() {
     <Router>
       <AuthProvider>
         <CartProvider>
-          <div className="font-sans antialiased text-white bg-[#4A90E2]">
+          <div className="font-sans antialiased">
             <Routes>
               {/* ============================================ */}
               {/* CUSTOMER APP (Main Muncheez Frontend)        */}
@@ -208,6 +217,14 @@ export default function App() {
                   }
                 />
                 <Route
+                  path="/admin/careers"
+                  element={
+                    <ProtectedRoute requiredRole="admin">
+                      <AdminCareers />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/admin/settings"
                   element={
                     <ProtectedRoute requiredRole="admin">
@@ -231,6 +248,15 @@ export default function App() {
               <Route path="/coming-soon" element={<ComingSoon />} />
               <Route path="/our-story" element={<OurStory />} />
               <Route path="/our-team" element={<OurTeam />} />
+              <Route path="/newsroom" element={<Newsroom />} />
+              <Route path="/newsroom/press-releases" element={<PressReleases />} />
+              <Route path="/newsroom/media-kit" element={<MediaKit />} />
+              <Route path="/newsroom/corporate" element={<CorporateInfo />} />
+              <Route path="/investors" element={<InvestorRelations />} />
+              <Route path="/waitlist" element={<WaitlistPage />} />
+              <Route path="/careers" element={<Careers />} />
+              <Route path="/careers/apply/:id" element={<JobApplicationPage />} />
+              <Route path="/careers/apply" element={<JobApplicationPage />} />
               <Route path="/legal/:type" element={<LegalPage />} />
 
               {/* ============================================ */}

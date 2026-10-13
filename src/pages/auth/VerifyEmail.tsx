@@ -5,6 +5,20 @@ export default function VerifyEmail() {
     const navigate = useNavigate();
     const location = useLocation();
     const email = location.state?.email || 'your email';
+    const portal = location.state?.portal || 'customer';
+    const redirectPath = location.state?.redirect || (
+        portal === 'merchant' ? '/partner/onboarding' :
+        portal === 'courier' ? '/courier/onboarding' :
+        '/login'
+    );
+
+    const loginPath = portal === 'merchant' ? '/partner/login' :
+                      portal === 'courier' ? '/courier/login' :
+                      '/login';
+
+    const portalLabel = portal === 'merchant' ? 'Partner Portal' :
+                        portal === 'courier' ? 'Rider Terminal' :
+                        'Customer Login';
 
     return (
         <div className="min-h-screen bg-white flex overflow-hidden">
@@ -27,11 +41,11 @@ export default function VerifyEmail() {
             <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative">
                 <div className="mb-12 relative">
                     <button
-                        onClick={() => navigate('/login')}
+                        onClick={() => navigate(loginPath)}
                         className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A90E2] mb-8 hover:opacity-70 transition-all group"
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                        Back to Login
+                        Back to {portalLabel}
                     </button>
                     <div className="flex items-center justify-between mb-8">
                         <Link to="/" className="inline-block">
@@ -40,32 +54,35 @@ export default function VerifyEmail() {
                             </span>
                         </Link>
                     </div>
-                    <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-8">
-                        <Mail className="text-[#4A90E2]" size={32} />
+                    <div className="w-14 h-14 bg-blue-50 flex items-center justify-center mb-8">
+                        <Mail className="text-[#4A90E2]" size={28} />
                     </div>
                     <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Check your inbox.</h1>
-                    <p className="text-sm text-gray-500 max-w-sm mb-8">
+                    <p className="text-sm text-gray-500 max-w-sm mb-8 leading-relaxed">
                         We've sent a verification link to <span className="font-bold text-gray-900">{email}</span>.
-                        Please click the link to confirm your account and start ordering.
+                        Please click the link in your email to verify your address, then continue to your {portalLabel.toLowerCase()}.
                     </p>
 
-                    <div className="space-y-4">
-                        <div className="p-4 bg-blue-50/50 rounded-xl border border-blue-100 flex items-start gap-3">
-                            <div className="w-1.5 h-1.5 rounded-full bg-[#4A90E2] mt-1.5" />
-                            <p className="text-xs font-medium text-blue-900 leading-relaxed">
-                                You cannot log in until your email is verified. This ensures the safety of our collective.
-                            </p>
-                        </div>
+                    <div className="border-t border-b border-gray-100 py-4 my-6">
+                        <p className="text-xs font-mono text-gray-500 uppercase tracking-wider">
+                            Once confirmed, you will proceed directly to document onboarding and approval.
+                        </p>
                     </div>
                 </div>
 
-                <div className="mt-8">
+                <div className="space-y-3 max-w-md">
                     <button
-                        onClick={() => navigate('/login')}
-                        className="group w-full max-w-md flex justify-between items-center py-5 px-8 rounded-2xl text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] transition-all duration-500 uppercase tracking-widest shadow-xl shadow-gray-200"
+                        onClick={() => navigate(redirectPath)}
+                        className="w-full flex justify-between items-center py-4 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#4A90E2] transition-colors"
                     >
-                        <span>Go to Login</span>
-                        <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                        <span>Continue to Onboarding</span>
+                        <ArrowRight size={16} />
+                    </button>
+                    <button
+                        onClick={() => navigate(loginPath)}
+                        className="w-full text-center py-3 text-xs font-mono uppercase tracking-wider text-gray-500 hover:text-black border-b border-transparent hover:border-black transition-colors"
+                    >
+                        Return to {portalLabel}
                     </button>
                 </div>
             </div>

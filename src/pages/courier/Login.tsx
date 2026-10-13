@@ -13,26 +13,17 @@ export default function CourierLogin() {
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [portalHint, setPortalHint] = useState<{ message: string; link: string; label: string } | null>(null);
 
-    // Auto-redirect or role mismatch check
+    // Auto-redirect based on approval status
     useEffect(() => {
         if (!authLoading && user && profile) {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
             if (roles.includes('courier')) {
-                navigate('/courier', { replace: true });
-            } else if (roles.includes('merchant')) {
-                setPortalHint({
-                    message: 'This email is registered as a merchant account.',
-                    link: '/partner/login',
-                    label: 'Go to Merchant Portal'
-                });
-            } else if (roles.includes('customer')) {
-                setPortalHint({
-                    message: 'This email is registered as a customer account.',
-                    link: '/login',
-                    label: 'Go to Customer Sign In'
-                });
+                if (profile.status === 'APPROVED') {
+                    navigate('/courier/dashboard', { replace: true });
+                } else {
+                    navigate('/courier/onboarding', { replace: true });
+                }
             }
         }
     }, [authLoading, user, profile, navigate]);
@@ -40,7 +31,6 @@ export default function CourierLogin() {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
-        setPortalHint(null);
         setIsLoading(true);
 
         try {
@@ -112,19 +102,9 @@ export default function CourierLogin() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
-                    {/* Portal mismatch inline notice */}
-                    {portalHint && (
-                        <div className="mb-6 border-b border-amber-400 pb-4">
-                            <p className="text-xs text-amber-700 font-medium mb-2">{portalHint.message}</p>
-                            <Link to={portalHint.link} className="text-[10px] font-bold uppercase tracking-widest text-black underline underline-offset-2 hover:text-black/50 transition-colors">
-                                {portalHint.label} →
-                            </Link>
-                        </div>
-                    )}
-
-                    {error && !portalHint && (
+                    {error && (
                         <div className="mb-6 border-b border-red-500 pb-3">
-                            <p className="text-xs text-red-600 font-medium">{error}</p>
+                            <p className="text-xs text-red-600 font-medium font-mono">{error}</p>
                         </div>
                     )}
 

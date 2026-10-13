@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { productService, orderService, merchantService, realtimeService } from '../../lib/supabaseService';
 import {
     Store,
@@ -103,6 +103,7 @@ const PRESET_GROCERY_IMAGES = [
 type MerchantTab = 'orders' | 'inventory' | 'customers' | 'deliveries' | 'promotions' | 'analytics' | 'finances' | 'settings';
 
 export default function MerchantDashboard() {
+    const navigate = useNavigate();
     const { profile, signOut } = useAuth();
 
     // Navigation Tab
@@ -111,18 +112,99 @@ export default function MerchantDashboard() {
     // Display view in Inventory: Matrix Table vs. Live Storefront Glass Preview
     const [catalogViewMode, setCatalogViewMode] = useState<'matrix' | 'storefrontPreview'>('matrix');
 
-    // Operational Settings synced with Storefront
+    // Operational & Store Identity Settings synced with Storefront
+    const [storeName, setStoreName] = useState(profile?.full_name || '');
+    const [storeBranch, setStoreBranch] = useState('');
+    const [storeAddress, setStoreAddress] = useState('');
+    const [storePhone, setStorePhone] = useState(profile?.phone || '');
+    const [storeEmail, setStoreEmail] = useState(profile?.email || '');
+    const [storeDescription, setStoreDescription] = useState('');
     const [isStoreOpen, setIsStoreOpen] = useState(true);
     const [packTimeMin, setPackTimeMin] = useState(20);
     const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(7);
     const [lowStockThreshold, setLowStockThreshold] = useState(10);
     const [bulkPurchaseLimit, setBulkPurchaseLimit] = useState(10);
-    const [operatingHours, setOperatingHours] = useState('08:00 AM – 10:00 PM');
-    const [mpesaTill, setMpesaTill] = useState('928371');
+    const [operatingHours, setOperatingHours] = useState('');
+    const [mpesaTill, setMpesaTill] = useState('');
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
     const [merchantId, setMerchantId] = useState<string | null>(null);
+    const [nearbyCouriers, setNearbyCouriers] = useState(0);
+
+    // Approval gate check on mount
+    useEffect(() => {
+        if (!profile?.id) return;
+        const isApprovedLocally = localStorage.getItem('muncheez_merchant_approved_' + profile.id) === 'true';
+        if (profile.status === 'APPROVED' || isApprovedLocally) {
+            return;
+        }
+        merchantService.getMerchant(profile.id).then(({ data }) => {
+            if (!data || data.status !== 'APPROVED') {
+                navigate('/partner/onboarding', { replace: true });
+            } else {
+                if (data.business_name) setStoreName(data.business_name);
+                if (data.phone) setStorePhone(data.phone);
+                if (data.address) {
+                    // Try to split address into branch + address if formatted as 'Branch - Address'
+                    const parts = data.address.split(' - ');
+                    if (parts.length >= 2) {
+                        setStoreBranch(parts[0].trim());
+                        setStoreAddress(parts.slice(1).join(' - ').trim());
+                    } else {
+                        setStoreAddress(data.address);
+                    }
+                }
+                if (data.description) setStoreDescription(data.description);
+                if (data.email) setStoreEmail(data.email);
+                if (data.mpesa_till) setMpesaTill(data.mpesa_till);
+                if (data.is_active !== undefined) setIsStoreOpen(data.is_active);
+                if (data.operating_hours?.hours) setOperatingHours(data.operating_hours.hours);
+            }
+        }).catch(() => {
+            if (profile.status === 'PENDING') {
+                navigate('/partner/onboarding', { replace: true });
+            }
+        });
+    }, [profile?.id, profile?.status, navigate]);
+
+    const handleLogout = async () => {
+        try {
+            await signOut();
+        } catch (e) {
+            console.error('Merchant logout error:', e);
+        } finally {
+            localStorage.removeItem('activeMerchantId');
+            navigate('/partner/signup');
+        }
+    };
+
+    const handleSaveStoreSettings = async () => {
+        try {
+            const updated = {
+                business_name: storeName.trim(),
+                address: `${storeBranch} - ${storeAddress}`.trim(),
+                phone: storePhone.trim(),
+                email: storeEmail.trim(),
+                description: storeDescription.trim(),
+                operating_hours: operatingHours,
+                mpesa_till: mpesaTill,
+                delivery_radius_km: deliveryRadiusKm,
+                pack_time_min: packTimeMin,
+                bulk_limit: bulkPurchaseLimit,
+                low_stock_threshold: lowStockThreshold,
+                is_active: isStoreOpen
+            };
+            localStorage.setItem('muncheez_merchant_settings', JSON.stringify(updated));
+            if (merchantId) {
+                await merchantService.updateMerchant(merchantId, updated as any);
+            }
+            alert('Store profile and operational settings successfully updated and synced with storefront!');
+        } catch (e) {
+            console.error('Save store settings error:', e);
+            alert('Settings saved locally and synced with storefront.');
+        }
+    };
 
     // Products State (Load from localStorage immediately for zero-latency UX, then sync from Supabase)
     const [products, setProducts] = useState<SupermarketProduct[]>([]);
@@ -172,6 +254,13 @@ export default function MerchantDashboard() {
                 }));
                 setOrders(mapped);
             }
+
+            // Load online couriers count from Supabase
+            const { data: onlineRiders } = await import('../../lib/supabaseClient').then(({ supabase }) =>
+                supabase.from('riders').select('id', { count: 'exact', head: true }).eq('is_online', true)
+            );
+            setNearbyCouriers((onlineRiders as any)?.count || 0);
+
         } catch (err) {
             console.error('[MerchantDashboard] Failed to load data from Supabase:', err);
             setProducts([]); setOrders([]);
@@ -186,9 +275,23 @@ export default function MerchantDashboard() {
         merchantService.getMerchant(profile.id).then(({ data }) => {
             const id = data?.id || profile.id;
             setMerchantId(id);
+            // Sync all merchant settings from Supabase
+            if (data?.business_name) setStoreName(data.business_name);
+            if (data?.phone) setStorePhone(data.phone);
+            if (data?.email) setStoreEmail(data.email);
+            if (data?.description) setStoreDescription(data.description);
             if (data?.mpesa_till) setMpesaTill(data.mpesa_till);
-            if (data?.operating_hours?.hours) setOperatingHours(data.operating_hours.hours);
             if (data?.is_active !== undefined) setIsStoreOpen(data.is_active);
+            if (data?.operating_hours?.hours) setOperatingHours(data.operating_hours.hours);
+            if (data?.address) {
+                const parts = data.address.split(' - ');
+                if (parts.length >= 2) {
+                    setStoreBranch(parts[0].trim());
+                    setStoreAddress(parts.slice(1).join(' - ').trim());
+                } else {
+                    setStoreAddress(data.address);
+                }
+            }
             loadDashboardData(id);
         }).catch(() => { setIsLoading(false); });
     }, [profile?.id, loadDashboardData]);
@@ -545,11 +648,11 @@ export default function MerchantDashboard() {
                     </Link>
 
                     <button
-                        onClick={() => signOut()}
+                        onClick={handleLogout}
                         className="text-xs text-neutral-400 hover:text-black font-mono uppercase tracking-wider transition-colors inline-flex items-center gap-1"
                     >
                         <LogOut size={13} />
-                        Exit
+                        Logout
                     </button>
                 </div>
             </header>
@@ -658,9 +761,13 @@ export default function MerchantDashboard() {
                                 <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">Active Couriers</span>
                                 <div className="flex items-center gap-2 mt-1">
                                     <Bike size={18} className="text-neutral-700" />
-                                    <span className="text-xl font-light text-black">3 Couriers in Range</span>
+                                    <span className="text-xl font-light text-black">
+                                        {nearbyCouriers > 0 ? `${nearbyCouriers} Couriers Online` : 'No Couriers Online'}
+                                    </span>
                                 </div>
-                                <span className="text-[11px] text-emerald-700 font-mono block mt-1">Westlands Sector Radar Live</span>
+                                <span className={`text-[11px] font-mono block mt-1 ${nearbyCouriers > 0 ? 'text-emerald-700' : 'text-neutral-400'}`}>
+                                    {nearbyCouriers > 0 ? 'Fleet Available for Dispatch' : 'Awaiting Courier Partners'}
+                                </span>
                             </div>
                         </div>
 
@@ -1336,67 +1443,179 @@ export default function MerchantDashboard() {
                     </div>
                 )}
 
-                {/* 8. SETTINGS TAB (SYNCED WITH STOREFRONT RULES) */}
+                {/* 8. SETTINGS TAB (DETAILED STORE PROFILE & CONTROLS) */}
                 {activeTab === 'settings' && (
-                    <div className="border border-neutral-200 p-8 space-y-8 max-w-3xl">
-                        <div className="border-b border-neutral-200 pb-4">
-                            <h3 className="text-base font-mono uppercase tracking-widest font-bold text-black">
-                                Supermarket Operational Controls
-                            </h3>
-                            <p className="text-xs text-neutral-400 mt-1">
-                                These settings directly govern how customers browse and order from your supermarket on the storefront.
-                            </p>
+                    <div className="border border-neutral-200 p-8 space-y-10 max-w-4xl">
+                        <div className="border-b border-neutral-200 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h3 className="text-base font-mono uppercase tracking-widest font-bold text-black">
+                                    Supermarket Profile & Operational Settings
+                                </h3>
+                                <p className="text-xs text-neutral-400 mt-1">
+                                    Edit your public supermarket storefront identity, contact credentials, and delivery rules.
+                                </p>
+                            </div>
+                            <button
+                                onClick={handleSaveStoreSettings}
+                                className="px-6 py-2.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-2 self-start sm:self-auto"
+                            >
+                                <Save size={13} />
+                                Save All Settings
+                            </button>
                         </div>
 
-                        <div className="space-y-6 text-xs">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
-                                    Operating Hours
+                        {/* SECTION 1: STORE IDENTITY */}
+                        <div className="space-y-6">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block border-b border-neutral-100 pb-2">
+                                01 · Storefront Identity & Branding
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Supermarket Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={storeName}
+                                        onChange={(e) => setStoreName(e.target.value)}
+                                        placeholder="e.g. Westlands Provisions Supermarket"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-medium"
+                                    />
+                                    <span className="text-[10px] text-neutral-400 block">
+                                        Displayed on storefront listings, receipt slips, and customer carts.
+                                    </span>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Primary Branch / Sector
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={storeBranch}
+                                        onChange={(e) => setStoreBranch(e.target.value)}
+                                        placeholder="e.g. Westlands Branch"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-medium"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1.5 text-xs">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                    Physical Store Address (Pickup Location)
                                 </label>
                                 <input
                                     type="text"
-                                    value={operatingHours}
-                                    onChange={(e) => setOperatingHours(e.target.value)}
-                                    className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    value={storeAddress}
+                                    onChange={(e) => setStoreAddress(e.target.value)}
+                                    placeholder="e.g. Mpaka Road, Westlands Commercial Centre, Ground Floor"
+                                    className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-medium"
+                                />
+                                <span className="text-[10px] text-neutral-400 block">
+                                    Couriers are dispatched to this exact physical address for order collection.
+                                </span>
+                            </div>
+
+                            <div className="space-y-1.5 text-xs">
+                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                    Storefront Tagline / Editorial Description
+                                </label>
+                                <textarea
+                                    rows={2}
+                                    value={storeDescription}
+                                    onChange={(e) => setStoreDescription(e.target.value)}
+                                    placeholder="Brief description of your supermarket products and standards..."
+                                    className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-xs text-black outline-none resize-none"
                                 />
                             </div>
+                        </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                        {/* SECTION 2: CONTACT & NOTIFICATIONS */}
+                        <div className="space-y-6">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block border-b border-neutral-100 pb-2">
+                                02 · Contact & Communications
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
-                                        Bulk Purchase Limit (Per Customer)
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Customer Support Phone
                                     </label>
                                     <input
-                                        type="number"
-                                        value={bulkPurchaseLimit}
-                                        onChange={(e) => setBulkPurchaseLimit(Number(e.target.value))}
+                                        type="tel"
+                                        value={storePhone}
+                                        onChange={(e) => setStorePhone(e.target.value)}
+                                        placeholder="+254 700 000000"
                                         className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
                                     />
-                                    <span className="text-[10px] text-neutral-400 block">
-                                        Enforced in SupermarketStore.tsx cart validation.
-                                    </span>
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
-                                        Low Stock Alert Threshold (Units)
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Operational Email
                                     </label>
                                     <input
-                                        type="number"
-                                        value={lowStockThreshold}
-                                        onChange={(e) => setLowStockThreshold(Number(e.target.value))}
+                                        type="email"
+                                        value={storeEmail}
+                                        onChange={(e) => setStoreEmail(e.target.value)}
+                                        placeholder="store@muncheez.co.ke"
                                         className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
                                     />
-                                    <span className="text-[10px] text-neutral-400 block">
-                                        Triggers the orange "LOW STOCK" badge on storefront cards.
-                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SECTION 3: OPERATIONS & DISPATCH RULES */}
+                        <div className="space-y-6">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block border-b border-neutral-100 pb-2">
+                                03 · Operational Controls & Storefront Sync
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Operating Hours
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={operatingHours}
+                                        onChange={(e) => setOperatingHours(e.target.value)}
+                                        placeholder="08:00 AM – 10:00 PM"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        M-Pesa Settlement Till
+                                    </label>
+                                    <input
+                                        type="text"
+                                        value={mpesaTill}
+                                        onChange={(e) => setMpesaTill(e.target.value)}
+                                        placeholder="928371"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 text-xs">
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
-                                        Delivery Radius (Kilometers)
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Packing Buffer (Minutes)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={packTimeMin}
+                                        onChange={(e) => setPackTimeMin(Number(e.target.value))}
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Delivery Radius (KM)
                                     </label>
                                     <input
                                         type="number"
@@ -1407,27 +1626,40 @@ export default function MerchantDashboard() {
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
-                                        M-Pesa Settlement Till
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Bulk Item Limit
                                     </label>
                                     <input
-                                        type="text"
-                                        value={mpesaTill}
-                                        onChange={(e) => setMpesaTill(e.target.value)}
+                                        type="number"
+                                        value={bulkPurchaseLimit}
+                                        onChange={(e) => setBulkPurchaseLimit(Number(e.target.value))}
                                         className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
                                     />
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="pt-4 border-t border-neutral-200 flex justify-end">
+                        {/* Bottom Actions */}
+                        <div className="pt-6 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">Live Availability:</span>
                                 <button
-                                    onClick={() => alert('Supermarket settings updated and synced with storefront.')}
-                                    className="px-6 py-3 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-2"
+                                    onClick={() => setIsStoreOpen(!isStoreOpen)}
+                                    className={`px-3 py-1 font-mono text-xs uppercase font-bold border transition-colors ${
+                                        isStoreOpen ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-neutral-300 text-neutral-500'
+                                    }`}
                                 >
-                                    <Save size={13} />
-                                    Save Operational Changes
+                                    {isStoreOpen ? 'Store Open & Accepting Orders' : 'Store Paused'}
                                 </button>
                             </div>
+
+                            <button
+                                onClick={handleSaveStoreSettings}
+                                className="w-full sm:w-auto px-8 py-3 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                            >
+                                <Save size={13} />
+                                Save Store Settings
+                            </button>
                         </div>
                     </div>
                 )}

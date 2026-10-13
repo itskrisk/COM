@@ -25,7 +25,7 @@ export default function CheckoutView() {
     const [loading, setLoading] = useState(true);
 
     // Form States
-    const [deliveryAddress, setDeliveryAddress] = useState('');
+    const [deliveryAddress, setDeliveryAddress] = useState(() => localStorage.getItem('muncheez_delivery_address') || '');
     const [deliveryInstructions, setDeliveryInstructions] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash' | 'card'>('mpesa');
     const [phoneNumber, setPhoneNumber] = useState(profile?.phone || '');
@@ -255,28 +255,23 @@ export default function CheckoutView() {
 
                             <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 space-y-6">
                                 <div className="space-y-2">
-                                    <div className="flex justify-between items-center">
-                                        <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Delivery Location</label>
-                                        <button
-                                            type="button"
-                                            onClick={handleGetCurrentLocation}
-                                            disabled={isLocating}
-                                            className="text-xs font-bold text-[#D4AF37] hover:underline flex items-center gap-1 disabled:opacity-50"
-                                        >
-                                            <MapPin size={12} />
-                                            {isLocating ? 'Locating...' : 'Use Current Location'}
-                                        </button>
-                                    </div>
+                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Delivery Address / Area</label>
                                     <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100 focus-within:ring-2 focus-within:ring-[#D4AF37]/20 transition-all">
-                                        <MapPin size={20} className="text-[#D4AF37]" />
+                                        <MapPin size={20} className="text-[#D4AF37] shrink-0" />
                                         <input
                                             type="text"
                                             value={deliveryAddress}
-                                            onChange={e => setDeliveryAddress(e.target.value)}
-                                            placeholder="Enter your delivery address (e.g. Westlands, Nairobi)"
+                                            onChange={e => {
+                                                setDeliveryAddress(e.target.value);
+                                                localStorage.setItem('muncheez_delivery_address', e.target.value);
+                                            }}
+                                            placeholder="Type your address (e.g. Westlands, Mpaka Road, Apt 4B)"
                                             className="bg-transparent border-none text-sm font-bold w-full focus:ring-0 p-0"
                                         />
                                     </div>
+                                    <span className="text-[11px] text-gray-400 block pl-1">
+                                        Text your location, building, or street. Both merchant and rider receive this exact text.
+                                    </span>
                                 </div>
 
                                 <div className="space-y-2">
