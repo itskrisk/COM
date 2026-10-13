@@ -3,6 +3,7 @@ import { Mail, ArrowRight, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import PageSEO from '../../components/SEO';
 
 /**
  * NEWSROOM: Press, Media & Corporate Information
@@ -90,6 +91,11 @@ export default function Newsroom() {
     return (
         <div className="min-h-screen bg-[#4A90E2] text-white font-sans selection:bg-white selection:text-[#4A90E2] overflow-x-hidden">
             <Navbar />
+            <PageSEO
+                title="Newsroom"
+                description="Press releases, media assets, and corporate information for Muncheez Technologies Ltd."
+                path="/company/news"
+            />
 
             {/* ── HERO: BLUE (#4A90E2) ── */}
             <section className="relative bg-[#4A90E2] text-white pt-40 pb-32 lg:pt-48 lg:pb-44 px-6">
@@ -149,7 +155,7 @@ export default function Newsroom() {
                             <h2 className="text-2xl md:text-3xl font-heading font-light tracking-tight text-gray-900">Press Releases</h2>
                         </div>
                         <Link
-                            to="/newsroom/press-releases"
+                            to="/company/news/press-releases"
                             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-gray-900 border-b border-gray-900/30 pb-1 hover:text-[#4A90E2] hover:border-[#4A90E2] transition-colors group"
                         >
                             All Releases <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
@@ -176,7 +182,7 @@ export default function Newsroom() {
                                 </div>
                                 <div className="md:col-span-2 flex md:justify-end items-start">
                                     <Link
-                                        to="/newsroom/press-releases"
+                                        to="/company/news/press-releases"
                                         className="text-[10px] font-mono uppercase tracking-widest text-gray-900/50 hover:text-[#4A90E2] transition-colors flex items-center gap-1.5 border-b border-transparent hover:border-[#4A90E2] pb-0.5"
                                     >
                                         <FileText size={12} />Full Release
@@ -200,7 +206,7 @@ export default function Newsroom() {
                             <h2 className="text-2xl md:text-3xl font-heading font-light tracking-tight text-white">Brand &amp; Media Kit</h2>
                         </div>
                         <Link
-                            to="/newsroom/media-kit"
+                            to="/company/news/media-kit"
                             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-white border-b border-white/30 pb-1 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors group"
                         >
                             Full Kit <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
@@ -220,7 +226,7 @@ export default function Newsroom() {
                                 <h3 className="text-xl font-heading font-light text-white">{item.title}</h3>
                                 <p className="text-xs text-white/80 font-light leading-relaxed">{item.desc}</p>
                                 <Link
-                                    to="/newsroom/media-kit"
+                                    to="/company/news/media-kit"
                                     className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-white border-b border-white/30 pb-0.5 hover:border-[#D4AF37] hover:text-[#D4AF37] transition-colors group"
                                 >
                                     {item.action} <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
@@ -243,7 +249,7 @@ export default function Newsroom() {
                             <h2 className="text-2xl md:text-3xl font-heading font-light tracking-tight text-gray-900">Corporate Information</h2>
                         </div>
                         <Link
-                            to="/newsroom/corporate"
+                            to="/company/news/corporate"
                             className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-gray-900 border-b border-gray-900/30 pb-1 hover:text-[#4A90E2] hover:border-[#4A90E2] transition-colors group"
                         >
                             Full Profile <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />

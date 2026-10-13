@@ -16,6 +16,7 @@ import { useState, useMemo, useEffect } from 'react';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { publicApi } from '../../lib/api';
+import PageSEO from '../../components/SEO';
 
 // 1. BRAND PILLARS (Functional FOUNDATIONS)
 const SEGMENT_MAP: Record<string, { title: string; subtitle: string; description: string; categories: string[] }> = {
@@ -192,6 +193,11 @@ export default function StoreListing() {
 
     return (
         <div className="min-h-screen font-sans selection:bg-black selection:text-white overflow-x-hidden relative bg-black">
+            <PageSEO
+                title="The Market"
+                description="Supermarkets, mama mboga stalls, snacks, and promotions across Nairobi. Browse the full Muncheez market and order delivery in minutes."
+                path="/stores"
+            />
 
             {/* 1. HEADER & ORIGIN - BLUE SECTION */}
             <section className="relative bg-[#4A90E2] text-white pt-6 pb-24 px-6 lg:px-12 overflow-hidden">

@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import PageSEO from '../../components/SEO';
 
 /**
  * JOIN THE WAITLIST — Early Access Signup
@@ -87,6 +88,11 @@ export default function WaitlistPage() {
     return (
         <div className="min-h-screen bg-[#4A90E2] text-white font-sans selection:bg-white selection:text-[#4A90E2] overflow-x-hidden">
             <Navbar />
+            <PageSEO
+                title="Join the Waitlist"
+                description="Be first when Muncheez opens in your Nairobi neighborhood. Early access signup."
+                path="/waitlist"
+            />
 
             {/* ── Back + Header: BLUE (#4A90E2) ── */}
             <header className="relative bg-[#4A90E2] text-white px-6 md:px-16 pt-28 pb-20 lg:pb-28">

@@ -4,8 +4,8 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 
 const ROLE_DESTINATIONS: Record<string, string> = {
   customer: '/stores',
-  merchant: '/partner',
-  courier: '/courier',
+  merchant: '/merchant',
+  courier: '/rider',
   admin: '/admin',
 };
 

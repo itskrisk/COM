@@ -3,8 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { LogOut, AlertTriangle } from 'lucide-react';
 
 const PORTAL_LINKS: Record<string, { label: string; path: string }> = {
-    merchant: { label: 'Partner Portal', path: '/partner/login' },
-    courier: { label: 'Rider Terminal', path: '/courier/login' },
+    merchant: { label: 'Partner Portal', path: '/merchant/login' },
+    courier: { label: 'Rider Terminal', path: '/rider/login' },
     admin: { label: 'Admin Console', path: '/admin/login' },
 };
 

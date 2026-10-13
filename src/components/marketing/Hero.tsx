@@ -92,7 +92,7 @@ export default function Hero() {
                     {/* Direct Explore Link */}
                     <div className="pt-2">
                         <Link
-                            to="/c/stores?v=market"
+                            to="/stores?v=market"
                             className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white hover:text-[#D4AF37] border-b border-white hover:border-[#D4AF37] pb-1 transition-colors"
                         >
                             Explore All Stores
@@ -108,7 +108,7 @@ export default function Hero() {
                 onClose={() => setIsLocationModalOpen(false)}
                 onSelectLocation={() => {
                     setIsLocationModalOpen(false);
-                    navigate('/c/stores?v=market');
+                    navigate('/stores?v=market');
                 }}
             />
         </>

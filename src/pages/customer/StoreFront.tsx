@@ -2,6 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import SupermarketStore from './store-types/SupermarketStore';
 import { publicApi } from '../../lib/api';
+import PageSEO from '../../components/SEO';
 
 export default function StoreFront() {
     const { id } = useParams();
@@ -51,7 +52,7 @@ export default function StoreFront() {
         return (
             <div className="min-h-screen bg-[#0A0A0A] flex flex-col items-center justify-center p-8 text-center text-white">
                 <h1 className="text-2xl font-bold mb-4">Store Not Found</h1>
-                <button onClick={() => navigate('/c/stores?v=market')} className="px-6 py-3 bg-[#D4AF37] text-black font-bold rounded-xl">
+                <button onClick={() => navigate('/stores?v=market')} className="px-6 py-3 bg-[#D4AF37] text-black font-bold rounded-xl">
                     Back to Market
                 </button>
             </div>
@@ -59,5 +60,14 @@ export default function StoreFront() {
     }
 
     // Platform is dedicated to supermarkets
-    return <SupermarketStore merchant={merchant} products={merchantProducts} />;
+    return (
+        <>
+            <PageSEO
+                title={merchant?.name ? `${merchant.name}` : 'Store'}
+                description={merchant?.name ? `Browse and order from ${merchant.name} on Muncheez. Fast delivery across Nairobi.` : 'Store on Muncheez.'}
+                path={`/stores/${id}`}
+            />
+            <SupermarketStore merchant={merchant} products={merchantProducts} />
+        </>
+    );
 }

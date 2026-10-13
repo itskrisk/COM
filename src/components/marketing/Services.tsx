@@ -121,7 +121,7 @@ export default function Services() {
                                                     {item.description}
                                                 </p>
                                                 <Link
-                                                    to="/c/stores?v=market"
+                                                    to="/stores?v=market"
                                                     className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-white border-b border-white pb-1 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors group/btn"
                                                 >
                                                     Explore
@@ -149,7 +149,7 @@ export default function Services() {
                             return (
                                 <Link
                                     key={item.id}
-                                    to="/c/stores?v=market"
+                                    to="/stores?v=market"
                                     className="relative shrink-0 w-[85vw] aspect-[4/5] overflow-hidden snap-center group block border-t border-b border-white/20"
                                 >
                                     <img

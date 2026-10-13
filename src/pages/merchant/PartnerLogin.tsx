@@ -20,9 +20,9 @@ export default function PartnerLogin() {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
             if (roles.includes('merchant')) {
                 if (profile.status === 'APPROVED') {
-                    navigate('/partner/dashboard', { replace: true });
+                    navigate('/merchant/dashboard', { replace: true });
                 } else {
-                    navigate('/partner/onboarding', { replace: true });
+                    navigate('/merchant/onboarding', { replace: true });
                 }
             }
         }
@@ -90,7 +90,7 @@ export default function PartnerLogin() {
                     <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Welcome Back.</h1>
                     <p className="text-sm text-gray-500">
                         Need a partner account?{' '}
-                        <Link to="/partner/signup" className="font-medium text-[#4A90E2] hover:underline transition-all">
+                        <Link to="/merchant/signup" className="font-medium text-[#4A90E2] hover:underline transition-all">
                             Partner with us
                         </Link>
                     </p>
@@ -168,7 +168,7 @@ export default function PartnerLogin() {
                         <div className="flex items-center gap-4">
                             <Link to="/login" className="text-xs font-bold text-gray-900 hover:text-[#4A90E2] hover:underline uppercase tracking-widest">Customer App</Link>
                             <span className="w-1 h-1 rounded-full bg-gray-200" />
-                            <Link to="/courier/login" className="text-xs font-bold text-gray-900 hover:text-[#4A90E2] hover:underline uppercase tracking-widest">Fleet Terminal</Link>
+                            <Link to="/rider/login" className="text-xs font-bold text-gray-900 hover:text-[#4A90E2] hover:underline uppercase tracking-widest">Fleet Terminal</Link>
                         </div>
                     </div>
                 </motion.div>

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Check, MapPin, Briefcase, ShieldCheck } from 'lu
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
 import { careersService, JobPosition } from '../../lib/careersService';
+import PageSEO from '../../components/SEO';
 
 export default function JobApplicationPage() {
     const { id } = useParams<{ id: string }>();
@@ -140,12 +141,17 @@ export default function JobApplicationPage() {
         <div className="min-h-screen bg-[#4A90E2] text-white font-sans selection:bg-white selection:text-[#4A90E2] flex flex-col justify-between overflow-x-hidden">
             <div>
                 <Navbar />
+                <PageSEO
+                    title={position?.title ? `Apply: ${position.title}` : 'Apply for a Role'}
+                    description="Submit your application to join Muncheez in Nairobi, Kenya."
+                    path={id ? `/company/careers/apply/${id}` : '/company/careers/apply'}
+                />
 
                 {/* Header with Navigation */}
                 <header className="pt-32 pb-8 md:pt-40 md:pb-10 border-b border-white/20">
                     <div className="container max-w-4xl mx-auto px-6">
                         <Link
-                            to="/careers"
+                            to="/company/careers"
                             className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-white/80 hover:text-white mb-6 border-b border-white/30 pb-0.5"
                         >
                             <ArrowLeft size={13} /> Back to Open Positions
@@ -223,7 +229,7 @@ export default function JobApplicationPage() {
 
                             <div className="pt-4">
                                 <Link
-                                    to="/careers"
+                                    to="/company/careers"
                                     className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-white border-b-2 border-white pb-1 hover:text-[#D4AF37] hover:border-[#D4AF37] transition-colors"
                                 >
                                     Return to Careers Directory <ArrowRight size={14} />
