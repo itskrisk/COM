@@ -2958,6 +2958,32 @@ Identified and removed the specific SVG bottom transition curve right above the 
 
 ---
 
+## [2026-10-13] Session: SEO Audit Fixes (SEOptimer report, 14:45 UTC)
+
+### Prompt / Request:
+> SEO audit report for muncheez.co.ke. Address the actionable code-level recommendations.
+
+### Audit Context:
+Report ran 13 Oct 14:45 UTC, BEFORE the routing-restructure push (14:51) and preview deploy (~15:01). Already-resolved items: XML sitemap, canonical tags, OG/Twitter tags, readable URLs (old `/c/stores?v=market`, `/careers`, `/courier/login`, `/legal/contact-us` etc. now 301 to canonical routes).
+
+### Actions Taken:
+
+1. **Title tag** (was 41 chars, target 50-60): "Muncheez | Food, Grocery & Pharmacy Delivery in Nairobi" (55 chars) in `index.html`, `SEO.tsx` DEFAULT_TITLE, and Home PageSEO (renders "Food, Grocery & Pharmacy Delivery in Nairobi | Muncheez", 54 chars).
+2. **Meta description** (was 119 chars, target 120-160): "Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast." (143 chars) in `index.html`, `SEO.tsx` DEFAULT_DESCRIPTION, Home PageSEO.
+3. **Schema markup**: JSON-LD `Organization` + `LocalBusiness` (name, url, logo, description, areaServed "Nairobi, Kenya", PostalAddress) added to `index.html` head.
+4. **og:image**: added `https://muncheez.co.ke/hero-delivery.jpg` (file already in `public/`).
+5. **Alt attributes**: audited all `<img>` tags; home/marketing images already carry alt (hero: "Muncheez Supermarkets"; decorative textures correctly use empty `alt=""`).
+
+### Not actionable in code (external/DNS/accounts):
+- DMARC/SPF records (DNS), analytics tool, social profile links (FB/X/IG/LinkedIn/YouTube), Facebook Pixel, backlink strategy, image optimization (4.69MB photos), PageSpeed mobile (LCP 4.5s), render-blocking resources.
+
+### Tests / Verification:
+- ✅ `npm run build` passes (tsc -b && vite build)
+
+### Result: ✅ Committed and pushed to `origin/routing-restructure`.
+
+---
+
 ## [2026-10-13] Session: Waitlist Page + Footer Company Column Fix
 
 ### Prompt / Request:

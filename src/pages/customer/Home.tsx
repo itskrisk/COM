@@ -14,8 +14,8 @@ export default function Home() {
     return (
         <main>
             <PageSEO
-                title="Everything You Need, Delivered"
-                description="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, delivered fast."
+                title="Food, Grocery & Pharmacy Delivery in Nairobi"
+                description="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast."
                 path="/"
             />
             <Hero />
