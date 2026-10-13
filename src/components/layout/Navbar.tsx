@@ -84,7 +84,7 @@ export default function Navbar() {
                         {[
                             { name: 'SELECTION', href: '/#categories' },
                             { name: 'FEED', href: '/social' },
-                            { name: 'OUR STORY', href: '/our-story' },
+                            { name: 'OUR STORY', href: '/company/story' },
                         ].map((item) => (
                             <a
                                 key={item.name}
@@ -152,8 +152,8 @@ export default function Navbar() {
                         </button>
                         <div className="flex flex-col gap-6 mt-6">
                             {[
-                                { name: 'Our Story', href: '/our-story' },
-                                { name: 'The Team', href: '/our-team' },
+                                { name: 'Our Story', href: '/company/story' },
+                                { name: 'The Team', href: '/company/team' },
                                 { name: 'Selection', href: '/#categories' },
                                 { name: 'Our Offering', href: '/#about' },
                                 { name: 'Feed', href: '/social' },

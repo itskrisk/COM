@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronDown, CheckCircle2, HelpCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import PageSEO from '../../components/SEO';
 
 // --- Types ---
 type PageType = 'legal' | 'contact' | 'faq' | 'help';
@@ -96,8 +97,8 @@ const pages: Record<string, PageData> = {
             { title: "How long does delivery take?", body: "Our average fulfillment window is 30 to 45 minutes. Our dispatch engine dynamically routes riders based on live traffic patterns to ensure food arrives hot and fresh." },
             { title: "How does M-Pesa payment work on Muncheez?", body: "At checkout, enter your M-Pesa phone number and tap 'Pay Now'. An automated M-Pesa STK prompt will appear on your phone asking for your PIN. Payment confirms instantly." },
             { title: "What if my food arrives cold or damaged?", body: "We take quality seriously. Open your order details page in the app and tap 'Report Issue' within 15 minutes of delivery. Our support team will verify and process an instant wallet refund." },
-            { title: "How do I become a merchant partner?", body: "We welcome exceptional kitchens! Click 'Partner With Us' in the footer or visit /partner/signup to submit your establishment for our curation review." },
-            { title: "How do riders join the Muncheez fleet?", body: "Riders can register at /courier/signup. Candidates undergo background verification, vehicle safety checks, and customer service training prior to activation." }
+            { title: "How do I become a merchant partner?", body: "We welcome exceptional kitchens! Click 'Partner With Us' in the footer or visit /merchant/signup to submit your establishment for our curation review." },
+            { title: "How do riders join the Muncheez fleet?", body: "Riders can register at /rider/signup. Candidates undergo background verification, vehicle safety checks, and customer service training prior to activation." }
         ]
     },
 
@@ -420,7 +421,7 @@ function FAQLayout({ page }: { page: PageData }) {
                 <h3 className="text-2xl font-heading font-light text-white mb-2">Still need assistance?</h3>
                 <p className="text-xs text-white/70 mb-8 uppercase tracking-widest font-mono">Our Nairobi support team is available 24/7</p>
                 <Link
-                    to="/legal/contact-us"
+                    to="/contact"
                     className="inline-block py-4 px-8 text-xs font-bold uppercase tracking-[0.3em] text-black bg-white hover:bg-[#D4AF37] hover:text-white transition-all shadow-lg"
                 >
                     Contact Concierge &rarr;
@@ -470,7 +471,7 @@ function HelpLayout({ page }: { page: PageData }) {
                     <p className="text-xs text-white/70 font-light leading-relaxed">Food missing or unsatisfactory? Submit a quick report for instant review.</p>
                 </Link>
 
-                <Link to="/legal/faq" className="group">
+                <Link to="/help/faq" className="group">
                     <span className="text-[10px] font-mono uppercase tracking-widest text-[#D4AF37] block mb-2">03 / Answers</span>
                     <h3 className="text-2xl font-heading font-light text-white mb-2 group-hover:text-[#D4AF37] transition-colors">Browse FAQ Library &rarr;</h3>
                     <p className="text-xs text-white/70 font-light leading-relaxed">Instant answers regarding M-Pesa, delivery boundaries, and refund policies.</p>
@@ -492,11 +493,22 @@ function HelpLayout({ page }: { page: PageData }) {
     );
 }
 
+// --- CANONICAL PATH MAP (SEO) ---
+const CANONICAL_PATHS: Record<string, string> = {
+    'terms-of-service': '/terms',
+    'privacy-policy': '/privacy',
+    'cookie-policy': '/cookies',
+    'contact-us': '/contact',
+    'help-center': '/help',
+    'faq': '/help/faq',
+};
+
 // --- MAIN LEGAL PAGE CONTAINER ---
-export default function LegalPage() {
+export default function LegalPage({ forceType }: { forceType?: string } = {}) {
     const { type, slug } = useParams<{ type?: string; slug?: string }>();
-    const pageKey = type || slug || '';
+    const pageKey = forceType || type || slug || '';
     const page = pageKey ? pages[pageKey] : null;
+    const canonicalPath = CANONICAL_PATHS[pageKey] || '/help';
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -505,7 +517,7 @@ export default function LegalPage() {
     if (!page) {
         return (
             <div className="min-h-screen bg-[#4A90E2] text-white flex flex-col justify-between">
-                <Navbar />
+            <Navbar />
                 <div className="text-center py-40">
                     <h1 className="text-4xl font-heading text-white mb-4">Page Not Found</h1>
                     <p className="text-sm text-white/80 mb-8">The requested legal or support document does not exist.</p>
@@ -521,6 +533,7 @@ export default function LegalPage() {
     return (
         <div className="min-h-screen bg-[#4A90E2] text-white relative selection:bg-white selection:text-black">
             <Navbar />
+            <PageSEO title={page.title} description={page.content} path={canonicalPath} />
 
             {/* Subtle background noise overlay */}
             <div className="absolute inset-0 z-[1] opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat fixed" />

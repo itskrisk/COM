@@ -2981,3 +2981,55 @@ Identified and removed the specific SVG bottom transition curve right above the 
    - Ride With Muncheez → `/courier/signup` (unchanged)
 
 ### Result: ✅ `npm run build` passes (2278 modules).
+
+---
+
+## [2026-10-13] Session: Routing Restructure — Corporate URL Architecture
+
+### Prompt / Request:
+> Full routing restructure into a production-grade URL architecture for muncheez.co.ke. Canonical corporate/shopping/auth/portal routes, legacy redirects, SEO (titles, canonicals, sitemap, robots), proper 404, scroll-to-top on navigation. Also: add Zipporah N (Creative Director & Co-founder) to the team page.
+
+### Old → New Route Mapping (verified against codebase):
+- `/our-story` → `/company/story` · `/our-team` → `/company/team`
+- `/careers` → `/company/careers` · `/careers/apply[/:id]` → `/company/careers/apply[/:id]`
+- `/newsroom[/press-releases|/media-kit|/corporate]` → `/company/news/...`
+- `/investors` → `/company/investors`
+- `/c/stores` → `/stores` (query preserved) · `/store/:id`, `/c/store/:id` → `/stores/:id`
+- `/verify-email`, `/auth/verify-email` → `/auth/verify`
+- `/forgot-password` → `/auth/forgot-password` · `/reset-password` → `/auth/reset-password`
+- `/legal/:type` → canonical `/terms`, `/privacy`, `/cookies`, `/contact`, `/help`, `/help/faq` (unknown legal slugs → 404)
+- `/partner/*` → `/merchant/*` · `/courier/*` → `/rider/*`
+- `/partners/merchants` → `/merchant/signup` · `/partners/riders` → `/rider/signup`
+- `*` catch-all: was redirect-to-home → now renders proper NotFound page
+
+### Actions Taken:
+
+1. **Rewrote [`App.tsx`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/App.tsx)**: route table grouped by domain (customer shopping, auth, corporate, legal, merchant, rider, admin, legacy redirects, 404). Merchant/rider dashboards wrapped in `<ProtectedRoute requiredRole=...>`.
+
+2. **Created [`src/routes/LegacyRedirect.tsx`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/routes/LegacyRedirect.tsx)** — permanent, query-preserving redirects for every old URL (no redirect loops; `/auth/callback` untouched).
+
+3. **Created [`src/routes/ScrollToTop.tsx`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/routes/ScrollToTop.tsx)** — scrolls to top on every route change so footer/nav links land at the top of their page.
+
+4. **Created [`src/pages/common/NotFound.tsx`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/common/NotFound.tsx)** — proper 404 page (blue/gold, no redirect home).
+
+5. **Created [`src/components/SEO.tsx`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/components/SEO.tsx)** — PageSEO component (title, description, canonical, OG, Twitter Card). Applied to all public pages: Home, Stores, StoreFront (dynamic store name), Our Story, Our Team, Newsroom, Press Releases, Media Kit, Corporate Info, Investor Relations, Careers, Job Application, Waitlist, Legal pages (dynamic).
+
+6. **Created [`public/sitemap.xml`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/public/sitemap.xml)** and [`public/robots.txt`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/public/robots.txt)** — 17 canonical public URLs in sitemap; robots allows public pages, disallows auth/portals/checkout/admin.
+
+7. **[`index.html`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/index.html)** — added OG tags + default canonical.
+
+8. **[`LegalPage.tsx`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/common/LegalPage.tsx)** — accepts `forceType` prop so canonical /terms, /privacy, /cookies, /contact, /help, /help/faq render the existing content engine; legacy /legal/* redirects; unknown slugs → 404.
+
+9. **Updated all internal links** across Footer, Navbar, CustomerLayout, ProtectedRoute (LOGIN_PATHS), AuthCallback (ROLE_DESTINATIONS), VerifyEmail, LegalPage prose, Newsroom, Careers, JobApplicationPage, CookieBanner, Hero, Services, StoreFront, CheckoutView, customer/merchant/rider Login/Signup/Onboarding/Dashboard files — all now point to canonical routes.
+
+10. **Fixed pre-existing Footer bug**: Support & Apps column referenced `item.slug` (nonexistent) — now uses `item.href`.
+
+11. **Team page**: added Zipporah N — Creative Director & Founding Member to [`OurTeam.tsx`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/common/OurTeam.tsx).
+
+### Tests / Verification:
+- ✅ `npm run build` passes (tsc -b && vite build, 2281 modules)
+- ✅ Static audit: zero stale references to /partner/, /courier/, /c/stores, /newsroom, /our-story, /legal/ outside the intentional legacy-redirect definitions in App.tsx
+- ⚠️ Browser-level route/auth testing could not be performed in this environment (no browser). Supabase email templates' Site URL/redirect allowlist must include https://muncheez.co.ke/auth/callback — verify in the Supabase dashboard.
+- Not implemented (documented, no fake pages): /shop, /categories/:slug, /products/:slug, /account, /account/orders, /account/settings, /partners (landing), /help/delivery, /help/payments, /help/refunds, /company/sustainability
+
+### Result: ✅ `npm run build` passes.

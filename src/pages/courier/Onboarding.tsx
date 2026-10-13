@@ -45,7 +45,7 @@ export default function CourierOnboarding() {
                 setMpesaPhone(profile.phone);
             }
             if (profile.status === 'APPROVED') {
-                navigate('/courier/dashboard', { replace: true });
+                navigate('/rider/dashboard', { replace: true });
             } else if (profile.status === 'PENDING' || profile.status === 'UNDER_REVIEW') {
                 setSubmitted(true);
             }
@@ -92,7 +92,7 @@ export default function CourierOnboarding() {
         } catch (e) {
             console.error(e);
         } finally {
-            navigate('/courier/signup');
+            navigate('/rider/signup');
         }
     };
 
@@ -109,7 +109,7 @@ export default function CourierOnboarding() {
             const isApprovedLocally = localStorage.getItem('muncheez_rider_approved_' + user.id) === 'true';
 
             if (data?.status === 'APPROVED' || isApprovedLocally) {
-                navigate('/courier/dashboard', { replace: true });
+                navigate('/rider/dashboard', { replace: true });
             } else {
                 alert('Your courier credentials are still under review by the Muncheez Admin Console. You will be granted terminal access immediately once approved.');
             }

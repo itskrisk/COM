@@ -20,9 +20,9 @@ export default function CourierLogin() {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
             if (roles.includes('courier')) {
                 if (profile.status === 'APPROVED') {
-                    navigate('/courier/dashboard', { replace: true });
+                    navigate('/rider/dashboard', { replace: true });
                 } else {
-                    navigate('/courier/onboarding', { replace: true });
+                    navigate('/rider/onboarding', { replace: true });
                 }
             }
         }
@@ -90,7 +90,7 @@ export default function CourierLogin() {
                     <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Welcome Back.</h1>
                     <p className="text-sm text-gray-500">
                         Ready to ride?{' '}
-                        <Link to="/courier/signup" className="font-medium text-[#4A90E2] hover:underline transition-all">
+                        <Link to="/rider/signup" className="font-medium text-[#4A90E2] hover:underline transition-all">
                             Join the fleet
                         </Link>
                     </p>
@@ -168,7 +168,7 @@ export default function CourierLogin() {
                         <div className="flex items-center gap-4">
                             <Link to="/login" className="text-xs font-bold text-gray-900 hover:text-[#4A90E2] hover:underline uppercase tracking-widest">Customer App</Link>
                             <span className="w-1 h-1 rounded-full bg-gray-200" />
-                            <Link to="/partner/login" className="text-xs font-bold text-[#D4AF37] hover:underline uppercase tracking-widest">Merchant Portal</Link>
+                            <Link to="/merchant/login" className="text-xs font-bold text-[#D4AF37] hover:underline uppercase tracking-widest">Merchant Portal</Link>
                         </div>
                     </div>
                 </motion.div>

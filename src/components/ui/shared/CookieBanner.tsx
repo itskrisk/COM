@@ -65,7 +65,7 @@ export default function CookieBanner() {
                                 <span>
                                     Muncheez uses cookies to deliver a fast, secure shopping experience across Nairobi.{' '}
                                     <Link
-                                        to="/legal/cookie-policy"
+                                        to="/cookies"
                                         className="text-neutral-900 underline underline-offset-2 hover:text-neutral-500 transition-colors"
                                     >
                                         Learn more

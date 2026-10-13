@@ -127,12 +127,12 @@ export default function Footer() {
                         </h4>
                         <ul className="space-y-3">
                             {[
-                                { name: 'Our Story', href: '/our-story' },
-                                { name: 'The Team', href: '/our-team' },
-                                { name: 'Careers', href: '/careers' },
+                                { name: 'Our Story', href: '/company/story' },
+                                { name: 'The Team', href: '/company/team' },
+                                { name: 'Careers', href: '/company/careers' },
                                 { name: 'Join the Waitlist', href: '/waitlist' },
-                                { name: 'Partner with Muncheez', href: '/partner/signup' },
-                                { name: 'Ride With Muncheez', href: '/courier/signup' },
+                                { name: 'Partner with Muncheez', href: '/merchant/signup' },
+                                { name: 'Ride With Muncheez', href: '/rider/signup' },
                             ].map((item) => (
                                 <li key={item.name}>
                                     <Link
@@ -153,12 +153,12 @@ export default function Footer() {
                         </h4>
                         <ul className="space-y-3">
                             {[
-                                { name: 'Newsroom', href: '/newsroom' },
-                                { name: 'Press Releases', href: '/newsroom/press-releases' },
-                                { name: 'Brand & Media Kit', href: '/newsroom/media-kit' },
+                                { name: 'Newsroom', href: '/company/news' },
+                                { name: 'Press Releases', href: '/company/news/press-releases' },
+                                { name: 'Brand & Media Kit', href: '/company/news/media-kit' },
                                 { name: 'press@muncheez.com', href: 'mailto:press@muncheez.com', external: true },
-                                { name: 'Investor Relations', href: '/investors' },
-                                { name: 'Corporate Info', href: '/newsroom/corporate' },
+                                { name: 'Investor Relations', href: '/company/investors' },
+                                { name: 'Corporate Info', href: '/company/news/corporate' },
                             ].map((item) => (
                                 <li key={item.name}>
                                     {item.external ? (
@@ -188,13 +188,13 @@ export default function Footer() {
                         </h4>
                         <ul className="space-y-3 mb-6">
                             {[
-                                { name: 'Help Center', slug: 'help-center' },
-                                { name: 'Contact Us', slug: 'contact-us' },
-                                { name: 'FAQs', slug: 'faq' }
+                                { name: 'Help Center', href: '/help' },
+                                { name: 'Contact Us', href: '/contact' },
+                                { name: 'FAQs', href: '/help/faq' },
                             ].map((item) => (
                                 <li key={item.name}>
                                     <Link
-                                        to={`/legal/${item.slug}`}
+                                        to={item.href}
                                         className="text-xs text-zinc-400 hover:text-white transition-colors font-light tracking-wide block"
                                     >
                                         {item.name}
@@ -243,8 +243,8 @@ export default function Footer() {
                 <div className="border-t border-white/10 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-mono">
                     <p>© 2026 Muncheez Technologies Ltd. Built for Nairobi, Kenya.</p>
                     <div className="flex flex-wrap justify-center gap-6">
-                        <Link to="/legal/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
-                        <Link to="/legal/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link>
+                        <Link to="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+                        <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
                         <button
                             onClick={() => setIsCookieModalOpen(true)}
                             className="hover:text-white transition-colors cursor-pointer uppercase font-mono"

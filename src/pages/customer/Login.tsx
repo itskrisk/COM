@@ -166,9 +166,9 @@ export default function Login() {
                         <div className="flex flex-col gap-3">
                             <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block">Are you a Partner?</span>
                             <div className="flex items-center gap-4">
-                                <Link to="/partner/login" className="text-xs font-bold text-[#D4AF37] hover:underline uppercase tracking-widest">Merchant Portal</Link>
+                                <Link to="/merchant/login" className="text-xs font-bold text-[#D4AF37] hover:underline uppercase tracking-widest">Merchant Portal</Link>
                                 <span className="w-1 h-1 rounded-full bg-gray-200" />
-                                <Link to="/courier/login" className="text-xs font-bold text-black hover:underline uppercase tracking-widest">Fleet Terminal</Link>
+                                <Link to="/rider/login" className="text-xs font-bold text-black hover:underline uppercase tracking-widest">Fleet Terminal</Link>
                             </div>
                         </div>
 

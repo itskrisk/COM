@@ -7,13 +7,13 @@ export default function VerifyEmail() {
     const email = location.state?.email || 'your email';
     const portal = location.state?.portal || 'customer';
     const redirectPath = location.state?.redirect || (
-        portal === 'merchant' ? '/partner/onboarding' :
-        portal === 'courier' ? '/courier/onboarding' :
+        portal === 'merchant' ? '/merchant/onboarding' :
+        portal === 'courier' ? '/rider/onboarding' :
         '/login'
     );
 
-    const loginPath = portal === 'merchant' ? '/partner/login' :
-                      portal === 'courier' ? '/courier/login' :
+    const loginPath = portal === 'merchant' ? '/merchant/login' :
+                      portal === 'courier' ? '/rider/login' :
                       '/login';
 
     const portalLabel = portal === 'merchant' ? 'Partner Portal' :

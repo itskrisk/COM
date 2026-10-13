@@ -74,11 +74,11 @@ export default function PartnerSignup() {
             }
 
             if (signupResult.user && (signupResult as any).session) {
-                navigate('/partner/onboarding');
+                navigate('/merchant/onboarding');
                 return;
             }
 
-            navigate('/auth/verify-email', {
+                navigate('/auth/verify', {
                 state: {
                     email: email.trim(),
                     portal: 'merchant',
@@ -127,7 +127,7 @@ export default function PartnerSignup() {
                 {/* Logo & Header */}
                 <div className="mb-12 relative">
                     <Link
-                        to="/partner/login"
+                        to="/merchant/login"
                         className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A90E2] mb-8 hover:opacity-70 transition-all group"
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
@@ -144,7 +144,7 @@ export default function PartnerSignup() {
                     <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Partner with Us.</h1>
                     <p className="text-sm text-gray-500">
                         Already have a partner account?{' '}
-                        <Link to="/partner/login" className="font-medium text-[#4A90E2] hover:underline transition-all">
+                        <Link to="/merchant/login" className="font-medium text-[#4A90E2] hover:underline transition-all">
                             Sign in
                         </Link>
                     </p>
@@ -273,7 +273,7 @@ export default function PartnerSignup() {
                         </div>
 
                         <p className="text-[10px] text-gray-400 leading-relaxed">
-                            By submitting, you agree to our <Link to="/legal/terms-of-service" className="underline hover:text-[#4A90E2]">Partner Terms</Link> and <Link to="/legal/privacy-policy" className="underline hover:text-[#4A90E2]">Privacy Policy</Link>.
+                            By submitting, you agree to our <Link to="/terms" className="underline hover:text-[#4A90E2]">Partner Terms</Link> and <Link to="/privacy" className="underline hover:text-[#4A90E2]">Privacy Policy</Link>.
                         </p>
 
                         <button

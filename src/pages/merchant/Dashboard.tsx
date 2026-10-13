@@ -141,7 +141,7 @@ export default function MerchantDashboard() {
         }
         merchantService.getMerchant(profile.id).then(({ data }) => {
             if (!data || data.status !== 'APPROVED') {
-                navigate('/partner/onboarding', { replace: true });
+                navigate('/merchant/onboarding', { replace: true });
             } else {
                 if (data.business_name) setStoreName(data.business_name);
                 if (data.phone) setStorePhone(data.phone);
@@ -163,7 +163,7 @@ export default function MerchantDashboard() {
             }
         }).catch(() => {
             if (profile.status === 'PENDING') {
-                navigate('/partner/onboarding', { replace: true });
+                navigate('/merchant/onboarding', { replace: true });
             }
         });
     }, [profile?.id, profile?.status, navigate]);
@@ -175,7 +175,7 @@ export default function MerchantDashboard() {
             console.error('Merchant logout error:', e);
         } finally {
             localStorage.removeItem('activeMerchantId');
-            navigate('/partner/signup');
+            navigate('/merchant/signup');
         }
     };
 
@@ -639,7 +639,7 @@ export default function MerchantDashboard() {
 
                     {/* View Customer Storefront Direct Link */}
                     <Link
-                        to="/c/stores?v=market"
+                        to="/stores?v=market"
                         target="_blank"
                         className="border border-neutral-200 hover:border-black px-3 py-1.5 text-xs font-mono uppercase tracking-wider text-neutral-700 inline-flex items-center gap-1 transition-colors"
                     >

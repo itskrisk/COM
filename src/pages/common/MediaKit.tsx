@@ -3,6 +3,7 @@ import { ArrowLeft, Download, FileText, Image as ImageIcon, Type, Palette, Arrow
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import PageSEO from '../../components/SEO';
 
 /**
  * BRAND & MEDIA KIT: Official Assets for Press & Media
@@ -58,6 +59,11 @@ export default function MediaKit() {
     return (
         <div className="min-h-screen bg-[#D4AF37] text-gray-900 font-sans selection:bg-white selection:text-gray-900 overflow-x-hidden">
             <Navbar />
+            <PageSEO
+                title="Brand & Media Kit"
+                description="Official Muncheez logos, brand guidelines, typography, and press photography for media use."
+                path="/company/news/media-kit"
+            />
 
             {/* ── Back ── */}
             <div className="px-6 md:px-16 pt-28">

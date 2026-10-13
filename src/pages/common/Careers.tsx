@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, MapPin, ChevronDown, ChevronUp } from 'lucide-react';
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
+import PageSEO from "../../components/SEO";
 import { careersService, JobPosition } from '../../lib/careersService';
 
 export default function Careers() {
@@ -29,13 +30,18 @@ export default function Careers() {
     };
 
     const handleApply = (pos: JobPosition) => {
-        navigate(`/careers/apply/${pos.id}`);
+        navigate(`/company/careers/apply/${pos.id}`);
     };
 
     return (
         <div className="min-h-screen bg-[#4A90E2] text-white font-sans selection:bg-white selection:text-[#4A90E2] flex flex-col justify-between overflow-x-hidden">
             <div>
                 <Navbar />
+                <PageSEO
+                    title="Careers"
+                    description="Join Muncheez. Current open positions in Nairobi, Kenya."
+                    path="/company/careers"
+                />
 
                 {/* Direct, clean header */}
                 <header className="pt-32 pb-8 md:pt-40 md:pb-10 border-b border-white/20">

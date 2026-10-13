@@ -204,7 +204,7 @@ export default function Signup() {
                         </div>
 
                         <p className="text-[10px] text-gray-400 leading-relaxed">
-                            By signing up, you agree to our <Link to="/legal/terms-of-service" className="underline hover:text-[#4A90E2]">Terms</Link> and <Link to="/legal/privacy-policy" className="underline hover:text-[#4A90E2]">Privacy Policy</Link>.
+                            By signing up, you agree to our <Link to="/terms" className="underline hover:text-[#4A90E2]">Terms</Link> and <Link to="/privacy" className="underline hover:text-[#4A90E2]">Privacy Policy</Link>.
                         </p>
 
                         <button
