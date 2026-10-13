@@ -83,26 +83,27 @@ export const careersService = {
 
     // 2. Add a new position (Admin)
     async addPosition(position: Omit<JobPosition, 'id' | 'created_at'>): Promise<JobPosition> {
-        const newPos: JobPosition = {
-            ...position,
-            id: `job_${Date.now()}`,
-            created_at: new Date().toISOString()
-        };
+        const created_at = new Date().toISOString();
 
         try {
             const { data } = await supabase
                 .from('job_positions')
-                .insert([newPos])
+                .insert([{ ...position, created_at }])
                 .select()
                 .single();
 
             if (data) {
-                newPos.id = data.id;
+                const local = await this.getPositions();
+                const updated = [data, ...local.filter(p => p.id !== data.id)];
+                localStorage.setItem(POSITIONS_KEY, JSON.stringify(updated));
+                window.dispatchEvent(new Event('muncheez_positions_updated'));
+                return data;
             }
         } catch (e) {
             console.warn('Supabase job_positions insert fallback:', e);
         }
 
+        const newPos: JobPosition = { ...position, id: `job_${Date.now()}`, created_at };
         const local = await this.getPositions();
         const updated = [newPos, ...local.filter(p => p.id !== newPos.id)];
         localStorage.setItem(POSITIONS_KEY, JSON.stringify(updated));
@@ -127,16 +128,20 @@ export const careersService = {
 
     // 4. Submit a full detailed application
     async submitApplication(app: Omit<JobApplication, 'id' | 'status' | 'created_at'>): Promise<JobApplication> {
-        const newApp: JobApplication = {
-            ...app,
-            id: `app_${Date.now()}`,
-            status: 'NEW',
-            created_at: new Date().toISOString()
-        };
+        const created_at = new Date().toISOString();
+        let savedId: string | null = null;
 
-        // Try writing to job_applications table
+        // Try writing to job_applications table (Supabase generates the UUID id)
         try {
-            await supabase.from('job_applications').insert([newApp]);
+            const { data } = await supabase
+                .from('job_applications')
+                .insert([{ ...app, created_at }])
+                .select()
+                .single();
+
+            if (data) {
+                savedId = data.id;
+            }
         } catch (e) {
             console.warn('Notice writing to job_applications table:', e);
         }
@@ -150,11 +155,18 @@ export const careersService = {
                 phone: app.phone || null,
                 role: 'CUSTOMER',
                 neighborhood: summaryNote.substring(0, 255),
-                created_at: newApp.created_at
+                created_at
             }]);
         } catch (e) {
             console.warn('Notice writing to waitlist table:', e);
         }
+
+        const newApp: JobApplication = {
+            ...app,
+            id: savedId ?? `app_${Date.now()}`,
+            status: 'NEW',
+            created_at
+        };
 
         // Sync local storage for instant admin access
         const local = JSON.parse(localStorage.getItem(APPLICATIONS_KEY) || '[]');

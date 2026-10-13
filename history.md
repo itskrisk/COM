@@ -2984,6 +2984,38 @@ Report ran 13 Oct 14:45 UTC, BEFORE the routing-restructure push (14:51) and pre
 
 ---
 
+## [2026-10-13] Session: Supabase Wiring Audit + Schema Fix
+
+### Prompt / Request:
+> Is everything built today wired to Supabase? Is the schema updated to handle all of it?
+
+### Audit Findings:
+- **Static / client-side only (no DB needed)**: routing restructure, SEO (PageSEO, sitemap, robots, JSON-LD), Newsroom, Press Releases, Media Kit, Corporate Info, Investor Relations, Our Story, Our Team, Legal pages.
+- **Wired but BROKEN at schema level**:
+  1. `waitlist`: app inserts `full_name, phone, neighborhood` — migration 001 had `area` (no `neighborhood`), schema.sql had only `id/email/role/status`. All inserts failed silently to localStorage fallback.
+  2. Careers: `careersService` reads/writes `job_positions` + `job_applications` tables that did not exist anywhere in the schema, and sent client string ids (`job_...`, `app_...`) that would fail against UUID PKs.
+
+### Actions Taken:
+
+1. **Created [`supabase/migrations/002_careers_and_waitlist_fix.sql`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/supabase/migrations/002_careers_and_waitlist_fix.sql)** (idempotent):
+   - `ALTER TABLE waitlist ADD COLUMN IF NOT EXISTS` full_name, phone, neighborhood, notes, invited_at, joined_at
+   - RLS on waitlist: anon INSERT, authenticated SELECT
+   - `CREATE TABLE job_positions` (UUID PK, title, department, location, type, summary, is_active) with anon SELECT (active only) + authenticated ALL
+   - `CREATE TABLE job_applications` (UUID PK, all 16 application fields, status CHECK constraint NEW/REVIEWING/INTERVIEW/HIRED/REJECTED) with anon INSERT + authenticated ALL
+2. **Updated [`supabase/schema.sql`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/supabase/schema.sql)**: waitlist now has the full column set; job_positions + job_applications tables + policies added.
+3. **Fixed [`src/lib/careersService.ts`](file:///C:/Users/Administrator/OneDrive/Desktop/Muncheez/src/lib/careersService.ts)**: `addPosition` and `submitApplication` no longer send client-generated string ids; Supabase generates UUID ids and returned ids are used, with localStorage fallback preserved when offline.
+
+### To apply on the live project (manual, cannot do from here):
+- Run migration 002 in the Supabase SQL editor (or `supabase db push` if linked).
+- Verify RLS policies are present after applying.
+
+### Tests / Verification:
+- ✅ `npm run build` passes
+
+### Result: ✅ Committed and pushed to `origin/routing-restructure`.
+
+---
+
 ## [2026-10-13] Session: Waitlist Page + Footer Company Column Fix
 
 ### Prompt / Request:
