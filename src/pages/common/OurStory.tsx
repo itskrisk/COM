@@ -3,6 +3,7 @@ import { motion, useScroll, useTransform } from 'framer-motion';
 
 import Navbar from "../../components/layout/Navbar";
 import Footer from "../../components/layout/Footer";
+import PageSEO from "../../components/SEO";
 
 /**
  * OUR STORY - Tech Logistics Enterprise & Storyteller Alignment
@@ -33,6 +34,11 @@ export default function OurStory() {
     return (
         <div ref={containerRef} className="min-h-screen bg-black font-sans selection:bg-white selection:text-black overflow-x-hidden relative">
             <Navbar />
+            <PageSEO
+                title="Our Story"
+                description="How Muncheez became East Africa's hyper-local logistics engine, born in Nairobi's culinary underground."
+                path="/company/story"
+            />
 
             {/* SECTION 1: BLUE (#4A90E2) - THE ORIGIN & PROOF OF CONCEPT */}
             <section className="relative bg-[#4A90E2] text-white pt-40 pb-32 lg:pt-48 lg:pb-56 px-6 min-h-[95vh] flex flex-col justify-center">

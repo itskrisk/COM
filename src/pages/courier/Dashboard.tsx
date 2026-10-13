@@ -93,14 +93,14 @@ export default function CourierDashboard() {
         }
         riderService.getRider(profile.id).then(({ data }) => {
             if (!data || data.status !== 'APPROVED') {
-                navigate('/courier/onboarding', { replace: true });
+                navigate('/rider/onboarding', { replace: true });
             } else {
                 if (data.vehicle_type) setRiderVehicleType(data.vehicle_type);
                 if (data.vehicle_plate) setRiderPlate(data.vehicle_plate);
             }
         }).catch(() => {
             if (profile.status === 'PENDING') {
-                navigate('/courier/onboarding', { replace: true });
+                navigate('/rider/onboarding', { replace: true });
             }
         });
     }, [profile?.id, profile?.status, navigate]);
@@ -111,7 +111,7 @@ export default function CourierDashboard() {
         } catch (e) {
             console.error('Courier logout error:', e);
         } finally {
-            navigate('/courier/signup');
+            navigate('/rider/signup');
         }
     };
 

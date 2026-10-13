@@ -47,7 +47,7 @@ export default function MerchantOnboarding() {
             if (profile.full_name && !storeName) setStoreName(profile.full_name);
             if (profile.phone && !phone) setPhone(profile.phone);
             if (profile.status === 'APPROVED') {
-                navigate('/partner/dashboard', { replace: true });
+                navigate('/merchant/dashboard', { replace: true });
             } else if (profile.status === 'PENDING' || profile.status === 'UNDER_REVIEW') {
                 setSubmitted(true);
             }
@@ -99,7 +99,7 @@ export default function MerchantOnboarding() {
         } catch (e) {
             console.error(e);
         } finally {
-            navigate('/partner/signup');
+            navigate('/merchant/signup');
         }
     };
 
@@ -116,7 +116,7 @@ export default function MerchantOnboarding() {
             const isApprovedLocally = localStorage.getItem('muncheez_merchant_approved_' + user.id) === 'true';
 
             if (data?.status === 'APPROVED' || isApprovedLocally) {
-                navigate('/partner/dashboard', { replace: true });
+                navigate('/merchant/dashboard', { replace: true });
             } else {
                 alert('Your application is still under review by the Muncheez Admin Console. You will be granted access immediately once approved.');
             }

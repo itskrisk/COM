@@ -10,8 +10,8 @@ interface ProtectedRouteProps {
 
 const LOGIN_PATHS: Record<string, string> = {
     customer: '/login',
-    merchant: '/partner/login',
-    courier: '/courier/login',
+    merchant: '/merchant/login',
+    courier: '/rider/login',
     admin: '/admin/login',
 };
 

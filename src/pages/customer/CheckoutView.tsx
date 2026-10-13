@@ -92,7 +92,7 @@ export default function CheckoutView() {
     // Redirect if cart is empty
     useEffect(() => {
         if (itemCount === 0) {
-            navigate('/c/stores');
+            navigate('/stores');
         }
     }, [itemCount, navigate]);
 

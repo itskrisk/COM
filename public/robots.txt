@@ -1,0 +1,25 @@
+User-agent: *
+Allow: /
+Allow: /stores
+Allow: /company
+Allow: /terms
+Allow: /privacy
+Allow: /cookies
+Allow: /contact
+Allow: /help
+Allow: /waitlist
+
+Disallow: /login
+Disallow: /signup
+Disallow: /auth/
+Disallow: /checkout
+Disallow: /order/
+Disallow: /merchant/
+Disallow: /rider/
+Disallow: /admin/
+Disallow: /partner/
+Disallow: /courier/
+Disallow: /coming-soon
+Disallow: /social
+
+Sitemap: https://muncheez.co.ke/sitemap.xml

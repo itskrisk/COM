@@ -8,10 +8,16 @@ import Testimonials from "../../components/marketing/Testimonials";
 import AppDownload from "../../components/marketing/AppDownload";
 import PartnerTicker from "../../components/marketing/PartnerTicker";
 import Footer from "../../components/layout/Footer";
+import PageSEO from "../../components/SEO";
 
 export default function Home() {
     return (
         <main>
+            <PageSEO
+                title="Everything You Need, Delivered"
+                description="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, delivered fast."
+                path="/"
+            />
             <Hero />
 
             <Services />

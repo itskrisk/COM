@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
+import PageSEO from '../../components/SEO';
 
 const team = [
   {
@@ -18,6 +19,12 @@ const team = [
     note: 'Nairobi, KE',
     bio: 'Crafting the binary heartbeat of Muncheez. Architecting real-time dispatch, single-session security, and high-scale infrastructure built for the 254.',
   },
+  {
+    name: 'Zipporah N',
+    title: 'Creative Director & Founding Member',
+    note: 'Nairobi, KE',
+    bio: 'The aesthetic compass of Muncheez. Leading our search for Nairobi\'s hidden culinary gems and defining our visual soul with a camera in one hand and a fork in the other.',
+  },
 ];
 
 export default function OurTeam() {
@@ -28,8 +35,13 @@ export default function OurTeam() {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#4A90E2] text-white selection:bg-white selection:text-black">
-      <Navbar />
+      <div className="min-h-screen flex flex-col bg-[#4A90E2] text-white selection:bg-white selection:text-black">
+        <Navbar />
+      <PageSEO
+        title="The Team"
+        description="Meet the founders and operators building Muncheez in Nairobi."
+        path="/company/team"
+      />
 
       {/* ── Back ── */}
       <div className="px-6 md:px-16 pt-32">
