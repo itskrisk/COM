@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
 
 const ROLE_DESTINATIONS: Record<string, string> = {
-  customer: '/stores',
-  merchant: '/merchant',
-  courier: '/rider',
-  admin: '/admin',
+  customer: '/login',
+  merchant: '/merchant/login',
+  courier: '/rider/login',
+  admin: '/admin/login',
 };
 
 type Status = 'loading' | 'success' | 'error';
@@ -39,12 +40,16 @@ export default function AuthCallback() {
           return;
         }
 
-        // For email verification, we don't have Supabase anymore
-        // Just redirect to login with a success message
+        // Email verification complete — route to the portal login that matches
+        // the account's assigned role. Onboarding happens only AFTER login.
+        const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+        const role = verifiedUser?.user_metadata?.role || 'customer';
+        const destination = ROLE_DESTINATIONS[role] || '/login';
+
         setStatus('success');
-        setMessage('Email verified successfully! Redirecting to login...');
+        setMessage('Email verified successfully! Please sign in to continue.');
         setTimeout(() => {
-          if (!cancelled) navigate('/login', { replace: true });
+          if (!cancelled) navigate(destination, { replace: true });
         }, 2000);
 
       } catch (err: any) {

@@ -34,6 +34,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
         return <Navigate to={loginPath} state={{ from: location }} replace />;
     }
 
+    // Email confirmation gate: unverified accounts cannot reach protected pages
+    if (user.emailVerified === false) {
+        return <Navigate to="/auth/verify" replace />;
+    }
+
     // User is logged in but profile not loaded yet — wait
     if (!profile) {
         return (

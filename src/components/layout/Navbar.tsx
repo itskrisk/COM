@@ -17,31 +17,44 @@ export default function Navbar() {
 
     const AuthButton = ({ mobile = false }) => {
         const isCustomer = user && (profile?.roles?.includes('customer') || profile?.role === 'customer' || !profile);
-        const firstName = profile?.full_name?.split(' ')[0];
-        const buttonText = isCustomer ? (firstName || 'ACCOUNT') : 'Login';
+        const displayName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Account';
         const targetPath = isCustomer ? '/stores' : '/login';
 
-        const baseClasses = mobile
-            ? 'w-full py-3.5 text-center text-xs font-bold uppercase tracking-widest rounded-xl transition-all'
-            : 'hidden md:flex items-center justify-center px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all duration-300 ';
+        // Logged-in state: editorial account chip with initials
+        if (user && isCustomer) {
+            const initials = (profile?.full_name || user?.email || 'A')
+                .split(' ').slice(0, 2).map((n: string) => n.charAt(0)).join('').toUpperCase();
 
-        const activeStyles = mobile
-            ? (user ? 'bg-[#4A90E2] text-white' : 'bg-white text-black font-extrabold')
-            : (scrolled
-                ? 'bg-white text-black hover:bg-[#4A90E2] hover:text-white shadow-lg'
-                : 'bg-white/5 text-white hover:bg-white hover:text-black border border-white/10 hover:border-transparent');
+            return (
+                <Link
+                    to={targetPath}
+                    onClick={() => mobile && setMobileMenuOpen(false)}
+                    className={mobile
+                        ? 'w-full flex items-center justify-between px-5 py-3.5 bg-[#4A90E2] text-white rounded-xl transition-all'
+                        : 'hidden md:flex items-center gap-3 px-5 py-2.5 rounded-full bg-white/5 border border-white/10 hover:bg-white hover:text-black transition-all duration-300 text-white hover:border-transparent'}
+                >
+                    <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-black ${mobile ? 'bg-white/20 text-white' : 'bg-[#4A90E2] text-white'}`}>
+                        {initials}
+                    </span>
+                    <span className="text-xs font-bold uppercase tracking-widest">{displayName}</span>
+                    <ArrowRight size={12} className="opacity-60" />
+                </Link>
+            );
+        }
 
+        // Logged-out state: Login CTA
         return (
             <Link
                 to={targetPath}
                 onClick={() => mobile && setMobileMenuOpen(false)}
-                className={`${baseClasses} ${activeStyles} group`}
-            >
+                className={`${mobile
+                    ? 'w-full py-3.5 text-center text-xs font-bold uppercase tracking-widest bg-white text-black rounded-xl transition-all'
+                    : 'hidden md:flex items-center justify-center px-8 py-3 rounded-full text-[10px] font-bold uppercase tracking-[0.3em] transition-all duration-300 ' + (scrolled
+                        ? 'bg-white text-black hover:bg-[#4A90E2] hover:text-white shadow-lg'
+                        : 'bg-white/5 text-white hover:bg-white hover:text-black border border-white/10 hover:border-transparent')}`}
+                >
                 <span className="flex items-center justify-center gap-2">
-                    {buttonText}
-                    {user && !mobile && (
-                        <ArrowRight size={12} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-                    )}
+                    Login
                 </span>
             </Link>
         );
@@ -115,7 +128,7 @@ export default function Navbar() {
                                 to="/stores"
                                 className="md:hidden flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#4A90E2]"
                             >
-                                {profile?.full_name?.split(' ')[0] || 'App'} <ArrowRight size={14} />
+                                {profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Account'} <ArrowRight size={14} />
                             </Link>
                         )}
                     </div>

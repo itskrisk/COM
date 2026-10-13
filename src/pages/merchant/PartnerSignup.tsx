@@ -73,17 +73,13 @@ export default function PartnerSignup() {
                 }
             }
 
-            if (signupResult.user && (signupResult as any).session) {
-                navigate('/merchant/onboarding');
-                return;
-            }
-
-                navigate('/auth/verify', {
+            // EVENT ORDER: signup -> email confirmation -> login -> onboarding (once) -> approval
+            navigate('/auth/verify', {
                 state: {
                     email: email.trim(),
                     portal: 'merchant',
-                    redirect: '/partner/onboarding',
-                    message: 'Account created! Please check your email to verify your account, then complete onboarding.'
+                    redirect: '/merchant/login',
+                    message: 'Account created! Please check your email to verify your account, then sign in to complete onboarding.'
                 }
             });
         } catch (err: any) {
