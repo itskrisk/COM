@@ -13,7 +13,6 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [portalHint, setPortalHint] = useState<{ message: string; link: string; label: string } | null>(null);
 
     // Get destination from router state or default to /stores
     const from = (location.state as any)?.from?.pathname || "/stores";
@@ -24,18 +23,6 @@ export default function Login() {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
             if (roles.includes('customer')) {
                 navigate(from, { replace: true });
-            } else if (roles.includes('merchant')) {
-                setPortalHint({
-                    message: 'This email is registered as a merchant account.',
-                    link: '/partner/login',
-                    label: 'Go to Merchant Portal'
-                });
-            } else if (roles.includes('courier')) {
-                setPortalHint({
-                    message: 'This email is registered as a courier account.',
-                    link: '/courier/login',
-                    label: 'Go to Courier Terminal'
-                });
             }
         }
     }, [authLoading, user, profile, navigate, from]);
@@ -44,7 +31,6 @@ export default function Login() {
         e.preventDefault();
         setLoading(true);
         setError(null);
-        setPortalHint(null);
 
         try {
             const { error: loginError } = await signIn(email, password);
@@ -115,17 +101,7 @@ export default function Login() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
-                    {/* Portal mismatch inline notice */}
-                    {portalHint && (
-                        <div className="mb-6 border-b border-amber-400 pb-4">
-                            <p className="text-xs text-amber-700 font-medium mb-2">{portalHint.message}</p>
-                            <Link to={portalHint.link} className="text-[10px] font-bold uppercase tracking-widest text-black underline underline-offset-2 hover:text-black/50 transition-colors">
-                                {portalHint.label} →
-                            </Link>
-                        </div>
-                    )}
-
-                    {error && !portalHint && (
+                    {error && (
                         <div className="mb-6 border-b border-red-500 pb-3">
                             <p className="text-xs text-red-600 font-medium">{error}</p>
                         </div>

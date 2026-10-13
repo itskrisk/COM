@@ -119,10 +119,25 @@ export default function Approvals() {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
             const { error } = await supabase
                 .from(table)
-                .update({ status: 'APPROVED', is_active: activeTab === 'merchants' ? true : undefined })
+                .update({ status: 'APPROVED', is_active: true })
                 .eq('id', id);
 
             if (error) throw error;
+
+            // Sync user profile status
+            try {
+                await supabase.from('profiles').update({ status: 'APPROVED' }).eq('id', id);
+            } catch (pErr) {
+                console.warn('Profile sync notice:', pErr);
+            }
+
+            // Sync local storage flag for immediate client response
+            if (activeTab === 'merchants') {
+                localStorage.setItem('muncheez_merchant_approved_' + id, 'true');
+            } else {
+                localStorage.setItem('muncheez_rider_approved_' + id, 'true');
+            }
+
             await loadData();
         } catch (err) {
             console.error('Error approving:', err);
@@ -138,10 +153,23 @@ export default function Approvals() {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
             const { error } = await supabase
                 .from(table)
-                .update({ status: 'REJECTED' })
+                .update({ status: 'REJECTED', is_active: false })
                 .eq('id', id);
 
             if (error) throw error;
+
+            try {
+                await supabase.from('profiles').update({ status: 'REJECTED' }).eq('id', id);
+            } catch (pErr) {
+                console.warn('Profile sync notice:', pErr);
+            }
+
+            if (activeTab === 'merchants') {
+                localStorage.removeItem('muncheez_merchant_approved_' + id);
+            } else {
+                localStorage.removeItem('muncheez_rider_approved_' + id);
+            }
+
             await loadData();
         } catch (err) {
             console.error('Error rejecting:', err);

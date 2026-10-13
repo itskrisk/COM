@@ -86,6 +86,41 @@ export default function CourierOnboarding() {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            navigate('/courier/signup');
+        }
+    };
+
+    const handleCheckApproval = async () => {
+        if (!user?.id) return;
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('riders')
+                .select('status')
+                .eq('id', user.id)
+                .single();
+
+            const isApprovedLocally = localStorage.getItem('muncheez_rider_approved_' + user.id) === 'true';
+
+            if (data?.status === 'APPROVED' || isApprovedLocally) {
+                navigate('/courier/dashboard', { replace: true });
+            } else {
+                alert('Your courier credentials are still under review by the Muncheez Admin Console. You will be granted terminal access immediately once approved.');
+            }
+        } catch (err) {
+            console.error('Check approval error:', err);
+            alert('Your application is currently under review by Fleet Dispatch.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     if (submitted) {
         return (
             <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
@@ -98,11 +133,11 @@ export default function CourierOnboarding() {
                             Courier Fleet Portal
                         </span>
                         <button
-                            onClick={() => signOut()}
-                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors"
+                            onClick={handleLogout}
+                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors font-mono uppercase tracking-wider"
                         >
                             <LogOut size={13} />
-                            Sign Out
+                            Logout
                         </button>
                     </div>
                 </header>
@@ -111,13 +146,13 @@ export default function CourierOnboarding() {
                     <div className="border-b border-neutral-200 pb-8 mb-10">
                         <div className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-amber-700 bg-amber-50 px-2.5 py-1 mb-6 border border-amber-200">
                             <Clock size={12} />
-                            Fleet Verification in Progress
+                            Fleet Verification in Progress · Pending Admin Approval
                         </div>
                         <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-black mb-4">
                             Your courier documents are with the dispatch desk.
                         </h1>
                         <p className="text-neutral-500 text-sm max-w-xl leading-relaxed">
-                            We are verifying your National ID, driving credential, and vehicle details. Once approved by fleet dispatch, you will be able to toggle online and start receiving supermarket pickup orders.
+                            We are verifying your National ID, driving credential, and vehicle details. Once approved by the Muncheez Admin Console, you will be able to access your terminal, toggle online, and receive supermarket delivery dispatches.
                         </p>
                     </div>
 
@@ -137,18 +172,19 @@ export default function CourierOnboarding() {
                             </div>
                         )}
                         <div className="py-4 flex justify-between items-center text-xs">
-                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Assigned Zone</span>
-                            <span className="text-neutral-600">Nairobi Metropolis Supermarket Network</span>
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Status</span>
+                            <span className="text-amber-700 font-mono uppercase font-bold text-[11px]">Awaiting Admin Approval</span>
                         </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                         <button
-                            onClick={() => navigate('/courier/dashboard')}
+                            onClick={handleCheckApproval}
+                            disabled={loading}
                             className="w-full sm:w-auto px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                         >
-                            <Eye size={14} />
-                            Enter Courier Terminal Preview Mode
+                            <ShieldCheck size={14} />
+                            {loading ? 'Checking Status...' : 'Check Approval Status'}
                         </button>
                         <a
                             href="https://wa.me/254700000000"

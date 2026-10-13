@@ -93,6 +93,41 @@ export default function MerchantOnboarding() {
         }
     };
 
+    const handleLogout = async () => {
+        try {
+            await signOut();
+        } catch (e) {
+            console.error(e);
+        } finally {
+            navigate('/partner/signup');
+        }
+    };
+
+    const handleCheckApproval = async () => {
+        if (!user?.id) return;
+        setLoading(true);
+        try {
+            const { data } = await supabase
+                .from('merchants')
+                .select('status')
+                .eq('id', user.id)
+                .single();
+
+            const isApprovedLocally = localStorage.getItem('muncheez_merchant_approved_' + user.id) === 'true';
+
+            if (data?.status === 'APPROVED' || isApprovedLocally) {
+                navigate('/partner/dashboard', { replace: true });
+            } else {
+                alert('Your application is still under review by the Muncheez Admin Console. You will be granted access immediately once approved.');
+            }
+        } catch (err) {
+            console.error('Check approval error:', err);
+            alert('Your application is currently under review by Admin.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // If submitted or application is under review
     if (submitted && !previewMode) {
         return (
@@ -107,11 +142,11 @@ export default function MerchantOnboarding() {
                             Merchant Portal · Supermarkets
                         </span>
                         <button
-                            onClick={() => signOut()}
-                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors"
+                            onClick={handleLogout}
+                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors font-mono uppercase tracking-wider"
                         >
                             <LogOut size={13} />
-                            Sign Out
+                            Logout
                         </button>
                     </div>
                 </header>
@@ -121,13 +156,13 @@ export default function MerchantOnboarding() {
                     <div className="border-b border-neutral-200 pb-8 mb-10">
                         <div className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-amber-700 bg-amber-50 px-2.5 py-1 mb-6 border border-amber-200">
                             <Clock size={12} />
-                            Application Under Review
+                            Application Under Review · Pending Admin Approval
                         </div>
                         <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-black mb-4">
                             Your Supermarket onboarding is with compliance.
                         </h1>
                         <p className="text-neutral-500 text-sm max-w-xl leading-relaxed">
-                            We are verifying your KRA PIN and municipal business registration. Once confirmed by our operations team, your full store inventory suite will unlock.
+                            We are verifying your KRA PIN and municipal business registration. Once approved by the Muncheez Admin Console, your full store inventory suite and universal storefront presence will unlock.
                         </p>
                     </div>
 
@@ -146,19 +181,20 @@ export default function MerchantOnboarding() {
                             <span className="font-mono text-black uppercase tracking-wider text-[11px]">The Market · Supermarket</span>
                         </div>
                         <div className="py-4 flex justify-between items-center text-xs">
-                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Review SLA</span>
-                            <span className="text-neutral-600">24 – 48 Hours</span>
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Status</span>
+                            <span className="text-amber-700 font-mono uppercase font-bold text-[11px]">Awaiting Admin Approval</span>
                         </div>
                     </div>
 
                     {/* Action Row */}
                     <div className="flex flex-col sm:flex-row items-center gap-4">
                         <button
-                            onClick={() => navigate('/partner/dashboard')}
+                            onClick={handleCheckApproval}
+                            disabled={loading}
                             className="w-full sm:w-auto px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                         >
-                            <Eye size={14} />
-                            Enter Dashboard Preview Mode
+                            <ShieldCheck size={14} />
+                            {loading ? 'Checking Status...' : 'Check Approval Status'}
                         </button>
                         <a
                             href="https://wa.me/254700000000"

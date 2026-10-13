@@ -37,42 +37,6 @@ export default function CustomerLayout() {
         }
     };
 
-    // Only show wrong-portal wall AFTER auth has fully resolved
-    if (!loading && user && profile && !isCustomer) {
-        const portal = PORTAL_LINKS[primaryRole];
-        return (
-            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 text-center">
-                <div className="w-16 h-16 bg-amber-50 rounded-2xl flex items-center justify-center mb-6">
-                    <AlertTriangle size={32} className="text-amber-500" />
-                </div>
-                <h1 className="text-2xl font-bold tracking-tight text-gray-900 mb-2">
-                    Wrong Portal
-                </h1>
-                <p className="text-gray-500 text-sm max-w-xs mb-8">
-                    You are currently logged in as a <strong className="text-gray-800 capitalize">{primaryRole}</strong>.
-                    This is the Customer App. Your account does not have access here.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                    {portal && (
-                        <Link
-                            to={portal.path}
-                            className="px-6 py-3 bg-gray-900 text-white text-xs font-bold uppercase tracking-widest rounded-xl hover:bg-gray-700 transition-all"
-                        >
-                            Go to {portal.label}
-                        </Link>
-                    )}
-                    <button
-                        onClick={handleSignOut}
-                        className="px-6 py-3 border border-gray-200 text-gray-500 text-xs font-bold uppercase tracking-widest rounded-xl hover:border-gray-400 hover:text-gray-800 transition-all flex items-center gap-2 justify-center"
-                    >
-                        <LogOut size={14} />
-                        Sign Out
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    // Always render — auth loads in background without blocking the page
+    // Always render — allow seamless storefront browsing without role-blocking popups
     return <Outlet />;
 }

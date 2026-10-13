@@ -1,78 +1,78 @@
 import { useState } from 'react';
-import { Instagram, Facebook, Twitter, Linkedin, ArrowRight } from 'lucide-react';
+import { Instagram, Facebook, Twitter, Linkedin, ArrowRight, Check } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import appStoreIcon from "../../assets/app-store-icon.png";
 import googlePlayIcon from "../../assets/google-play-icon.png";
-import googleLogo from "../../assets/logos/google.png";
-import vodaLogo from "../../assets/logos/voda.png";
-import inkLogo from "../../assets/logos/ink.png";
 import CookieModal from '../ui/shared/CookieModal';
 
 export default function Footer() {
     const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
+    const [newsletterEmail, setNewsletterEmail] = useState('');
+    const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
+
+    const handleNewsletterSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (newsletterEmail.trim()) {
+            setNewsletterSubscribed(true);
+            setTimeout(() => {
+                setNewsletterEmail('');
+            }, 3000);
+        }
+    };
 
     return (
-        <footer className="bg-black text-white relative z-50 border-t border-white/10" id="contact">
-            <div className="container">
+        <footer className="bg-[#121214] text-white relative z-50 border-t border-white/10" id="contact">
+            <div className="container mx-auto px-6 lg:px-12">
 
-                {/* Newsletter - Soulful Update */}
-                <div className="flex flex-col lg:flex-row justify-between items-center lg:items-end gap-8 py-10 border-b border-white/5">
-                    <div className="max-w-xl text-center lg:text-left">
-                        <span className="text-[10px] font-bold text-[#4A90E2] uppercase tracking-[0.4em] mb-3 block">Newsletter</span>
-                        <h3 className="text-3xl md:text-5xl font-heading font-light mb-4 tracking-tight">Join the Fam<span className="text-[#4A90E2]">.</span></h3>
-                        <p className="text-white/40 font-light leading-relaxed max-w-sm mx-auto lg:mx-0 text-xs md:text-sm">
-                            Get the 254 scoop: exclusive deals, city favorites, and the soul of Nairobi delivered to your inbox.
+                {/* Newsletter Strip */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-end gap-8 py-12 border-b border-white/10">
+                    <div className="max-w-xl">
+                        <h3 className="text-3xl md:text-5xl font-heading font-light tracking-tight text-white mb-3">
+                            Join the Fam<span className="text-[#4A90E2]">.</span>
+                        </h3>
+                        <p className="text-zinc-400 font-light leading-relaxed text-xs md:text-sm">
+                            Exclusive deals, city favorites, and updates delivered to your inbox.
                         </p>
                     </div>
+
                     <div className="w-full lg:w-auto">
-                        <form className="flex w-full md:w-96 relative" onSubmit={(e) => e.preventDefault()}>
-                            <input
-                                type="email"
-                                placeholder="Your email address"
-                                className="bg-transparent border-b border-white/20 text-white w-full focus:outline-none focus:border-white/40 transition-all placeholder:text-white/20 text-sm py-2"
-                            />
-                            <button className="absolute right-0 top-1/2 -translate-y-1/2 text-white hover:text-[#4A90E2] transition-colors">
-                                <ArrowRight size={20} />
-                            </button>
+                        <form className="flex flex-col w-full md:w-96" onSubmit={handleNewsletterSubmit}>
+                            <div className="relative flex items-center">
+                                <input
+                                    type="email"
+                                    required
+                                    value={newsletterEmail}
+                                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                                    placeholder="Enter your email address"
+                                    className="bg-transparent border-b border-white/25 text-white w-full pb-3 pr-10 text-sm focus:outline-none focus:border-[#4A90E2] transition-colors placeholder:text-zinc-500"
+                                />
+                                <button
+                                    type="submit"
+                                    aria-label="Subscribe to newsletter"
+                                    className="absolute right-0 bottom-3 text-white/70 hover:text-[#4A90E2] transition-colors cursor-pointer"
+                                >
+                                    {newsletterSubscribed ? <Check size={18} className="text-emerald-400" /> : <ArrowRight size={18} />}
+                                </button>
+                            </div>
                         </form>
                     </div>
                 </div>
 
-                {/* Partners - Ecosystem Integrations */}
-                <div className="py-6 border-b border-white/5 flex flex-col sm:flex-row items-center justify-between gap-6">
-                    <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-white/30">
-                        Ecosystem Partners
-                    </span>
-                    <div className="flex items-center gap-8 sm:gap-12">
-                        <img
-                            src={googleLogo}
-                            alt="Google"
-                            className="h-5 sm:h-6 w-auto object-contain opacity-50 hover:opacity-100 transition-opacity invert"
-                        />
-                        <img
-                            src={vodaLogo}
-                            alt="Vodacom / M-Pesa"
-                            className="h-5 sm:h-6 w-auto object-contain opacity-50 hover:opacity-100 transition-opacity"
-                        />
-                        <img
-                            src={inkLogo}
-                            alt="Ink"
-                            className="h-5 sm:h-6 w-auto object-contain opacity-50 hover:opacity-100 transition-opacity invert"
-                        />
-                    </div>
-                </div>
+                {/* Main Navigation Matrix */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-8 gap-y-12 py-14">
 
-                <div className="grid grid-cols-2 lg:grid-cols-5 gap-x-8 gap-y-10 lg:gap-12 py-10">
-                    {/* Identity - Compact Branding */}
-                    <div className="col-span-2 lg:col-span-1 border-b lg:border-none border-white/5 pb-8 lg:pb-0">
-                        <Link to="/" className="flex items-center gap-2 mb-4">
-                            <span className="font-heading font-bold text-2xl tracking-tighter text-white">
+                    {/* Col 1: Identity & Brand */}
+                    <div className="col-span-2 md:col-span-3 lg:col-span-1 border-b lg:border-b-0 border-white/10 pb-8 lg:pb-0">
+                        <Link to="/" className="flex items-center mb-4 group inline-flex">
+                            <span className="font-heading font-bold text-2xl tracking-tighter text-white group-hover:text-[#4A90E2] transition-colors">
                                 Muncheez<span className="text-[#4A90E2]">.</span>
                             </span>
                         </Link>
-                        <p className="text-white/20 text-[10px] uppercase tracking-widest leading-relaxed mb-4 max-w-xs">
+                        <p className="text-zinc-400 text-xs font-light leading-relaxed mb-6 max-w-xs">
                             Bringing Nairobi's favorite kitchens straight to your door.
                         </p>
+
+                        {/* Social Links */}
                         <div className="flex gap-4">
                             {[
                                 { Icon: Instagram, name: 'Instagram', href: 'https://instagram.com' },
@@ -85,7 +85,8 @@ export default function Footer() {
                                     href={social.href}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-white/30 hover:text-white transition-colors"
+                                    aria-label={social.name}
+                                    className="text-zinc-500 hover:text-white transition-colors"
                                 >
                                     <social.Icon size={16} />
                                 </a>
@@ -93,21 +94,24 @@ export default function Footer() {
                         </div>
                     </div>
 
-                    {/* Services */}
+                    {/* Col 2: Selection */}
                     <div>
-                        <h4 className="text-[9px] font-bold text-white/20 uppercase tracking-[0.3em] mb-4">Selection</h4>
-                        <ul className="space-y-2">
+                        <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-[0.35em] mb-5">
+                            Selection
+                        </h4>
+                        <ul className="space-y-3">
                             {[
                                 { name: 'The Kitchens', href: '/stores' },
                                 { name: 'The Pantry', href: '/stores' },
                                 { name: '254 Gems', href: '/stores' },
                                 { name: 'The Oven', href: '/stores' },
-                                { name: 'Home Favs', href: '/stores' }
+                                { name: 'Supermarket Express', href: '/stores' },
+                                { name: 'Browse All Stores', href: '/stores' }
                             ].map((item) => (
                                 <li key={item.name}>
                                     <Link
                                         to={item.href}
-                                        className="text-xs text-white/40 hover:text-white transition-colors font-light tracking-wide"
+                                        className="text-xs text-zinc-400 hover:text-white transition-colors font-light tracking-wide block"
                                     >
                                         {item.name}
                                     </Link>
@@ -116,36 +120,25 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* Company */}
+                    {/* Col 3: Company */}
                     <div>
-                        <h4 className="text-[9px] font-bold text-white/20 uppercase tracking-[0.3em] mb-4">Company</h4>
-                        <ul className="space-y-2">
+                        <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-[0.35em] mb-5">
+                            Company
+                        </h4>
+                        <ul className="space-y-3">
                             {[
-                                { name: 'About Us', href: '/our-story' },
-                                { name: 'Our Team', href: '/our-team' },
-                                { name: 'Partner With Us', href: '/partner/login' },
-                                { name: 'Join as Rider', href: '/courier/login' }
+                                { name: 'Our Story', href: '/our-story' },
+                                { name: 'The Team', href: '/our-team' },
+                                { name: 'Careers', href: '/careers' },
+                                { name: 'Join the Waitlist', href: '/waitlist' },
+                                { name: 'Partner with Muncheez', href: '/partner/signup' },
+                                { name: 'Ride With Muncheez', href: '/courier/signup' },
                             ].map((item) => (
                                 <li key={item.name}>
-                                    <Link to={item.href} className="text-xs text-white/40 hover:text-white transition-colors font-light tracking-wide">{item.name}</Link>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-
-                    {/* Support */}
-                    <div>
-                        <h4 className="text-[9px] font-bold text-white/20 uppercase tracking-[0.3em] mb-4">Support</h4>
-                        <ul className="space-y-2">
-                            {[
-                                { name: 'Help', slug: 'help-center' },
-                                { name: 'Contact', slug: 'contact-us' },
-                                { name: 'FAQs', slug: 'faq' },
-                                { name: 'Terms', slug: 'terms-of-service' },
-                                { name: 'Privacy', slug: 'privacy-policy' }
-                            ].map((item) => (
-                                <li key={item.name}>
-                                    <Link to={`/legal/${item.slug}`} className="text-xs text-white/40 hover:text-white transition-colors font-light tracking-wide">
+                                    <Link
+                                        to={item.href}
+                                        className="text-xs text-zinc-400 hover:text-white transition-colors font-light tracking-wide block"
+                                    >
                                         {item.name}
                                     </Link>
                                 </li>
@@ -153,30 +146,112 @@ export default function Footer() {
                         </ul>
                     </div>
 
-                    {/* Download */}
-                    <div className="col-span-1 lg:col-span-1">
-                        <h4 className="text-[9px] font-bold text-white/20 uppercase tracking-[0.3em] mb-4">Get App</h4>
-                        <div className="flex flex-col gap-2">
-                            <a href="https://apps.apple.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white/30 hover:text-white transition-colors group">
-                                <img src={appStoreIcon} alt="App Store" className="w-5 h-5 shrink-0 object-contain invert opacity-40 group-hover:opacity-100 transition-opacity" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">App Store</span>
+                    {/* Col 4: Press & Media */}
+                    <div>
+                        <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-[0.35em] mb-5">
+                            Press &amp; Media
+                        </h4>
+                        <ul className="space-y-3">
+                            {[
+                                { name: 'Newsroom', href: '/newsroom' },
+                                { name: 'Press Releases', href: '/newsroom/press-releases' },
+                                { name: 'Brand & Media Kit', href: '/newsroom/media-kit' },
+                                { name: 'press@muncheez.com', href: 'mailto:press@muncheez.com', external: true },
+                                { name: 'Investor Relations', href: '/investors' },
+                                { name: 'Corporate Info', href: '/newsroom/corporate' },
+                            ].map((item) => (
+                                <li key={item.name}>
+                                    {item.external ? (
+                                        <a
+                                            href={item.href}
+                                            className="text-xs text-zinc-400 hover:text-white transition-colors font-light tracking-wide block"
+                                        >
+                                            {item.name}
+                                        </a>
+                                    ) : (
+                                        <Link
+                                            to={item.href}
+                                            className="text-xs text-zinc-400 hover:text-white transition-colors font-light tracking-wide block"
+                                        >
+                                            {item.name}
+                                        </Link>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    {/* Col 5: Support & App Download */}
+                    <div>
+                        <h4 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-[0.35em] mb-5">
+                            Support &amp; Apps
+                        </h4>
+                        <ul className="space-y-3 mb-6">
+                            {[
+                                { name: 'Help Center', slug: 'help-center' },
+                                { name: 'Contact Us', slug: 'contact-us' },
+                                { name: 'FAQs', slug: 'faq' }
+                            ].map((item) => (
+                                <li key={item.name}>
+                                    <Link
+                                        to={`/legal/${item.slug}`}
+                                        className="text-xs text-zinc-400 hover:text-white transition-colors font-light tracking-wide block"
+                                    >
+                                        {item.name}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+
+                        <div className="pt-2 border-t border-white/10 flex flex-col gap-2.5">
+                            <span className="text-[9px] font-mono uppercase tracking-[0.25em] text-zinc-500 block">
+                                Mobile Experience
+                            </span>
+                            <a
+                                href="https://apps.apple.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2.5 text-zinc-400 hover:text-white transition-colors group"
+                            >
+                                <img
+                                    src={appStoreIcon}
+                                    alt="App Store"
+                                    className="w-4 h-4 shrink-0 object-contain invert opacity-60 group-hover:opacity-100 transition-opacity"
+                                />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">App Store</span>
                             </a>
-                            <a href="https://play.google.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-white/30 hover:text-white transition-colors group">
-                                <img src={googlePlayIcon} alt="Google Play" className="w-5 h-5 shrink-0 object-contain opacity-40 group-hover:opacity-100 transition-opacity" />
-                                <span className="text-[10px] font-bold uppercase tracking-widest">Play Store</span>
+                            <a
+                                href="https://play.google.com"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2.5 text-zinc-400 hover:text-white transition-colors group"
+                            >
+                                <img
+                                    src={googlePlayIcon}
+                                    alt="Google Play"
+                                    className="w-4 h-4 shrink-0 object-contain opacity-60 group-hover:opacity-100 transition-opacity"
+                                />
+                                <span className="text-[10px] font-bold uppercase tracking-wider">Google Play</span>
                             </a>
                         </div>
                     </div>
+
                 </div>
 
+
                 {/* Bottom Bar */}
-                <div className="border-t border-white/5 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-[0.2em] text-white/20">
-                    <p>© 2026 Muncheez Technologies Ltd. Built for Nairobi.</p>
+                <div className="border-t border-white/10 py-6 flex flex-col md:flex-row justify-between items-center gap-4 text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-mono">
+                    <p>© 2026 Muncheez Technologies Ltd. Built for Nairobi, Kenya.</p>
                     <div className="flex flex-wrap justify-center gap-6">
                         <Link to="/legal/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
                         <Link to="/legal/terms-of-service" className="hover:text-white transition-colors">Terms of Service</Link>
-                        <Link to="/admin/login" className="hover:text-white transition-colors">Admin Login</Link>
-                        <button onClick={() => setIsCookieModalOpen(true)} className="hover:text-white transition-colors cursor-pointer uppercase">Cookie Settings</button>
+                        <button
+                            onClick={() => setIsCookieModalOpen(true)}
+                            className="hover:text-white transition-colors cursor-pointer uppercase font-mono"
+                        >
+                            Cookie Preferences
+                        </button>
+                        <Link to="/admin/login" className="hover:text-white transition-colors">Admin Access</Link>
                     </div>
                 </div>
 

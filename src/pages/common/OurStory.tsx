@@ -215,8 +215,6 @@ export default function OurStory() {
                         </span>
                     </div>
                 </div>
-
-                <BottomCurve fill="#000000" />
             </section>
 
             <Footer />
