@@ -570,6 +570,15 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallet_ledger ENABLE ROW LEVEL SECURITY;
 ALTER TABLE complaints ENABLE ROW LEVEL SECURITY;
 ALTER TABLE warnings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+ALTER TABLE dispatch_offers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE rider_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE financial_ledger ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_status_history ENABLE ROW LEVEL SECURITY;
+ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
 
 -- Profiles
 DROP POLICY IF EXISTS "Profiles readable by all" ON profiles;
@@ -588,6 +597,7 @@ DROP POLICY IF EXISTS "Merchants readable by all" ON merchants;
 DROP POLICY IF EXISTS "Merchants update own record" ON merchants;
 DROP POLICY IF EXISTS "Merchants admin manage" ON merchants;
 CREATE POLICY "Merchants readable by all" ON merchants FOR SELECT USING (true);
+CREATE POLICY "Merchants update own record" ON merchants FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Merchants admin manage" ON merchants FOR ALL USING (public.is_admin());
 
 -- Riders
@@ -595,13 +605,8 @@ DROP POLICY IF EXISTS "Riders readable by all" ON riders;
 DROP POLICY IF EXISTS "Riders update own record" ON riders;
 DROP POLICY IF EXISTS "Riders admin manage" ON riders;
 CREATE POLICY "Riders readable by all" ON riders FOR SELECT USING (true);
+CREATE POLICY "Riders update own record" ON riders FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Riders admin manage" ON riders FOR ALL USING (public.is_admin());
-
--- Dev bypass: allow all operations when unauthenticated (for local development)
-DROP POLICY IF EXISTS "Merchants dev bypass" ON merchants;
-DROP POLICY IF EXISTS "Riders dev bypass" ON riders;
-CREATE POLICY "Merchants dev bypass" ON merchants FOR ALL USING (auth.uid() IS NULL);
-CREATE POLICY "Riders dev bypass" ON riders FOR ALL USING (auth.uid() IS NULL);
 
 -- Products
 DROP POLICY IF EXISTS "Products visible to all" ON products;
@@ -660,8 +665,39 @@ CREATE POLICY "Merchants view offers for their orders" ON dispatch_offers FOR SE
 );
 
 -- ============================================================
--- ADMIN RLS POLICIES
+-- ORDER STATUS HISTORY RLS
 -- ============================================================
+DROP POLICY IF EXISTS "Admins view order status history" ON order_status_history;
+CREATE POLICY "Admins view order status history" ON order_status_history FOR SELECT USING (public.is_admin());
+DROP POLICY IF EXISTS "Order parties view status history" ON order_status_history;
+CREATE POLICY "Order parties view status history" ON order_status_history FOR SELECT USING (
+    EXISTS (SELECT 1 FROM orders WHERE orders.id = order_status_history.order_id
+        AND (orders.customer_id = auth.uid() OR orders.merchant_id = auth.uid() OR orders.rider_id = auth.uid()))
+);
+
+-- ============================================================
+-- CATEGORIES RLS
+-- ============================================================
+DROP POLICY IF EXISTS "Categories visible to all" ON categories;
+CREATE POLICY "Categories visible to all" ON categories FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage all categories" ON categories;
+CREATE POLICY "Admins manage all categories" ON categories FOR ALL USING (public.is_admin());
+
+-- ============================================================
+-- CAMPAIGNS RLS
+-- ============================================================
+DROP POLICY IF EXISTS "Campaigns visible to all" ON campaigns;
+CREATE POLICY "Campaigns visible to all" ON campaigns FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage all campaigns" ON campaigns;
+CREATE POLICY "Admins manage all campaigns" ON campaigns FOR ALL USING (public.is_admin());
+
+-- ============================================================
+-- PROMO CODES RLS
+-- ============================================================
+DROP POLICY IF EXISTS "Promo codes visible to all" ON promo_codes;
+CREATE POLICY "Promo codes visible to all" ON promo_codes FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Admins manage all promo codes" ON promo_codes;
+CREATE POLICY "Admins manage all promo codes" ON promo_codes FOR ALL USING (public.is_admin());
 
 -- Profiles: Admins can do everything
 DROP POLICY IF EXISTS "Admins manage all profiles" ON profiles;
@@ -763,7 +799,7 @@ ALTER TABLE public.waitlist ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Anyone can insert waitlist" ON public.waitlist;
 CREATE POLICY "Anyone can insert waitlist" ON public.waitlist FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins can view waitlist" ON public.waitlist;
-CREATE POLICY "Admins can view waitlist" ON public.waitlist FOR SELECT USING (auth.role() = 'authenticated');
+CREATE POLICY "Admins can view waitlist" ON public.waitlist FOR SELECT USING (public.is_admin());
 
 -- ============================================================
 -- JOB POSITIONS & JOB APPLICATIONS (careers)
@@ -783,8 +819,8 @@ ALTER TABLE public.job_positions ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public read job positions" ON public.job_positions;
 CREATE POLICY "Public read job positions" ON public.job_positions FOR SELECT USING (is_active = true);
 DROP POLICY IF EXISTS "Authenticated manage job positions" ON public.job_positions;
-CREATE POLICY "Authenticated manage job positions" ON public.job_positions
-    FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Admins manage job positions" ON public.job_positions
+    FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 CREATE TABLE IF NOT EXISTS public.job_applications (
     id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -817,7 +853,7 @@ DROP POLICY IF EXISTS "Anyone can apply" ON public.job_applications;
 CREATE POLICY "Anyone can apply" ON public.job_applications FOR INSERT WITH CHECK (true);
 DROP POLICY IF EXISTS "Admins manage job applications" ON public.job_applications;
 CREATE POLICY "Admins manage job applications" ON public.job_applications
-    FOR ALL USING (auth.role() = 'authenticated') WITH CHECK (auth.role() = 'authenticated');
+    FOR ALL USING (public.is_admin()) WITH CHECK (public.is_admin());
 
 -- ============================================================
 -- PUBLIC CONTACT MESSAGES (footer /contact form)
@@ -843,7 +879,7 @@ CREATE POLICY "Anyone can send a message" ON public.contacts
 
 DROP POLICY IF EXISTS "Admins can view messages" ON public.contacts;
 CREATE POLICY "Admins can view messages" ON public.contacts
-    FOR SELECT USING (auth.role() = 'authenticated');
+    FOR SELECT USING (public.is_admin());
 
 -- ============================================================
 -- STORAGE BUCKETS & POLICIES

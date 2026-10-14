@@ -3185,3 +3185,49 @@ All 10 points from the recovered request have been implemented and are running l
 - No push yet (per your instruction to hold until you confirm)
 
 Let me know if you’d like to proceed with a push to update the live site (muncheez.co.ke) or need any adjustments before doing so.
+---
+
+## [2026-10-14] Session: Security Hardening — RLS Coverage, Mock Data Removal, Onboarding Duplicate Prevention
+
+### Prompt / Request:
+> "please proceed and continue"
+
+Continuing from the previous session's audit. The remaining pending items were:
+1. Fix missing RLS (`ENABLE ROW LEVEL SECURITY`) on several tables.
+2. Fix overly permissive policies on `waitlist`, `job_positions`, `job_applications`, `contacts`.
+3. Add duplicate submission prevention to merchant onboarding.
+4. Remove mock data from `socialService.ts` and `MockDatabaseContext.tsx`.
+5. Verify build.
+
+### Actions Taken:
+
+1. **`supabase/schema.sql` — RLS coverage completed**
+   - Added `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` for: `financial_ledger`, `notifications`, `dispatch_offers`, `rider_locations`, `reviews`, `categories`, `order_status_history`, `campaigns`, `promo_codes`.
+   - Restricted `waitlist` SELECT policy from `auth.role() = 'authenticated'` to `public.is_admin()` so only admins can view the waitlist.
+   - Restricted `job_positions` management policy from `auth.role() = 'authenticated'` to `public.is_admin()`.
+   - Restricted `job_applications` management policy from `auth.role() = 'authenticated'` to `public.is_admin()`.
+   - Restricted `contacts` SELECT policy from `auth.role() = 'authenticated'` to `public.is_admin()`.
+   - Removed the dev bypass policies (`Merchants dev bypass`, `Riders dev bypass`) that allowed unauthenticated access (`auth.uid() IS NULL`).
+   - Restored `Riders update own record` (UPDATE USING auth.uid() = id) and `Merchants update own record` (UPDATE USING auth.uid() = id) policies that were inadvertently removed when the dev bypass was cleaned up.
+   - Added new RLS policies for `order_status_history` (admin SELECT + order-party SELECT), `categories` (public SELECT + admin ALL), `campaigns` (public SELECT + admin ALL), `promo_codes` (public SELECT + admin ALL).
+
+2. **`src/pages/merchant/Onboarding.tsx` — Duplicate submission prevention**
+   - Before upserting, the handler now queries the existing merchant row for `onboarding_completed` and `status`. If `onboarding_completed` is already true, it short-circuits and sets `submitted = true` without re-submitting.
+
+3. **`src/lib/socialService.ts` — Mock data removed**
+   - Deleted the hardcoded `MOCK_USERS` array (5 fake users).
+   - Rewrote `searchUsers` to be `async` and query the real `profiles` table via Supabase (`full_name`/`phone` ILIKE search, limit 10). Falls back to Dicebear avatar seeded by user ID when `avatar_url` is null.
+
+4. **`src/pages/customer/SocialDashboard.tsx` — Async caller updated**
+   - Updated the `searchQuery` effect to call `socialService.searchUsers(searchQuery)` as a promise and pass the resolved value to `setSearchResults`.
+
+5. **`src/context/MockDatabaseContext.tsx` — Supabase-backed update**
+   - `updateMerchantStatus` now calls Supabase directly (`supabase.from('merchants').update({ status }).eq('id', id)`) instead of a non-existent `adminApi.updateMerchantStatus` method.
+
+### Build Verification:
+- `npm run build` (tsc -b && vite build) — **PASSED** (2281 modules transformed, built in 16.37s).
+- Warnings are pre-existing (chunk size >500 kB, browserslist data age, dynamic-import chunking notice) — no new errors introduced.
+
+### Status:
+- All 4 pending fixes applied and verified.
+- No push yet (per instruction to hold until confirmed).

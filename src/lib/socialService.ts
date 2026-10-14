@@ -1,18 +1,11 @@
 import { Friend, SharedOrder, FriendRequest, Notification, PrivacySettings, User } from '../types/social';
+import { supabase } from './supabaseClient';
 
 const FRIENDS_KEY = 'muncheez_friends';
 const REQUESTS_KEY = 'muncheez_friend_requests';
 const SHARED_ORDERS_KEY = 'muncheez_shared_orders';
 const NOTIFICATIONS_KEY = 'muncheez_notifications';
 const PRIVACY_KEY = 'muncheez_privacy';
-
-const MOCK_USERS: User[] = [
-    { id: 'u1', name: 'Zipporah', username: 'zippy_fast', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Zipporah' },
-    { id: 'u2', name: 'Kevin', username: 'kev_orders', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Kevin' },
-    { id: 'u3', name: 'Sarah', username: 'sarah_eats', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Sarah' },
-    { id: 'u4', name: 'Mike', username: 'mike_pizza', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Mike' },
-    { id: 'u5', name: 'Elena', username: 'elena_chef', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena' },
-];
 
 const INITIAL_FRIENDS: Friend[] = [];
 const INITIAL_ORDERS: SharedOrder[] = [];
@@ -70,13 +63,23 @@ export const socialService = {
         localStorage.setItem(PRIVACY_KEY, JSON.stringify(settings));
     },
 
-    searchUsers: (query: string): User[] => {
+    searchUsers: async (query: string): Promise<User[]> => {
         if (!query) return [];
         const normalizedQuery = query.toLowerCase();
-        return MOCK_USERS.filter(u =>
-            u.name.toLowerCase().includes(normalizedQuery) ||
-            u.username.toLowerCase().includes(normalizedQuery)
-        );
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('id, full_name, phone, avatar_url')
+            .or(`full_name.ilike.%${normalizedQuery}%,phone.ilike.%${normalizedQuery}%`)
+            .limit(10);
+
+        if (error || !data) return [];
+
+        return data.map((row: any) => ({
+            id: row.id,
+            name: row.full_name || 'Unknown',
+            username: (row.phone || '').replace(/\D/g, ''),
+            avatar: row.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${row.id}`
+        }));
     },
 
     sendFriendRequest: (fromUser: User, toId: string) => {
