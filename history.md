@@ -3260,3 +3260,14 @@ Continuing from the previous session's audit. The remaining pending items were:
 
 ### Status:
 - Committed as `9099e61` on `main`. Pushed to `origin/main`.
+# #   S u m m a r y   o f   C h a n g e s \ n \ n -   U p d a t e d   f a v i c o n   t o   u s e   M u n c h e e z l o g o m o b i l e w h i t e . p n g   ( c h a n g e d   f r o m   . j p g   t o   . p n g   f o r   b e t t e r   t r a n s p a r e n c y )   i n   i n d e x . h t m l . \ n -   U p d a t e d   o g : i m a g e   a n d   t w i t t e r : i m a g e   t o   u s e   t h e   s a m e   . p n g   i m a g e . \ n -   U p d a t e d   J S O N - L D   l o g o   t o   u s e   t h e   . p n g   i m a g e . \ n -   E n s u r e d   t h e   i m a g e   i s   u s e d   f o r   b r o w s e r   t a b   ( f a v i c o n )   a n d   U R L   s h a r i n g   ( s o c i a l   m e d i a   p r e v i e w s ) . \ n \ n N o t e :   T h e   i m a g e   i t s e l f   i s   a s s u m e d   t o   b e   c i r c u l a r   a n d   p a d d e d   a s   p e r   u s e r   r e q u e s t ;   n o   i m a g e   p r o c e s s i n g   w a s   p e r f o r m e d .  
+ 
+ # #   B r o w s e r   T a b   a n d   U R L   I m a g e   S e t u p   -   F i n a l   S t a t e 
+ -   B r o w s e r   t a b   f a v i c o n :   / l o g o s / m u n c h e e z l o g o m o b i l e w h i t e . p n g   ( P N G   f i l e ) 
+ -   O p e n   G r a p h   i m a g e :   / l o g o s / u r l i m a g e . j p g   
+ -   T w i t t e r   i m a g e :   / l o g o s / u r l i m a g e . j p g 
+ -   J S O N - L D   l o g o :   / l o g o s / m u n c h e e z l o g o m o b i l e w h i t e . p n g 
+ 
+ T h e   b r o w s e r   t a b   u s e s   t h e   P N G   i m a g e   a s   r e q u e s t e d ,   a n d   U R L   s h a r i n g   u s e s   t h e   s e p a r a t e   J P G   i m a g e . 
+  
+ 
