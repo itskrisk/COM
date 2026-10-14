@@ -115,7 +115,7 @@ export default function StoreListing() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
-            onClick={() => navigate(`/c/store/${store.id}`)}
+            onClick={() => navigate(`/stores/${store.id}`)}
             className="group cursor-pointer"
         >
             {/* Glass Container */}
@@ -305,9 +305,9 @@ export default function StoreListing() {
                             {/* Navigation Links */}
                             <div className="flex flex-col gap-6 mt-6">
                                 {[
-                                    { label: 'The Market', path: '/c/stores?v=market' },
+                                    { label: 'The Market', path: '/stores?v=market' },
                                     { label: 'Home', path: '/' },
-                                    { label: 'Our Story', path: '/our-story' }
+                                    { label: 'Our Story', path: '/company/story' }
                                 ].map((link, i) => (
                                     <motion.button
                                         key={link.label}

@@ -15,6 +15,11 @@ const LOGIN_PATHS: Record<string, string> = {
     admin: '/admin/login',
 };
 
+const ONBOARDING_PATHS: Record<string, string> = {
+    merchant: '/merchant/onboarding',
+    courier: '/rider/onboarding',
+};
+
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
     const { user, profile, loading } = useAuth();
     const location = useLocation();
@@ -34,6 +39,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
         return <Navigate to={loginPath} state={{ from: location }} replace />;
     }
 
+    // Email confirmation gate: unverified accounts cannot reach protected pages
+    if (user.emailVerified === false) {
+        return <Navigate to="/auth/verify" replace />;
+    }
+
     // User is logged in but profile not loaded yet — wait
     if (!profile) {
         return (
@@ -50,6 +60,24 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     if (requiredRole && !profile.roles?.includes(requiredRole)) {
         const loginPath = LOGIN_PATHS[requiredRole] || '/login';
         return <Navigate to={loginPath} replace />;
+    }
+
+    // Onboarding status enforcement for merchant and courier roles
+    if (requiredRole === 'merchant' || requiredRole === 'courier') {
+        const onboardingPath = ONBOARDING_PATHS[requiredRole];
+        const merchantData = (user as any)?.merchant;
+        const riderData = (user as any)?.rider;
+        const status = requiredRole === 'merchant'
+            ? merchantData?.status
+            : riderData?.status;
+
+        // If onboarding not completed, redirect to onboarding
+        if (status === 'PENDING' || status === 'VERIFICATION_PENDING' || status === 'UNDER_REVIEW') {
+            // Allow access to onboarding page itself
+            if (location.pathname !== onboardingPath) {
+                return <Navigate to={onboardingPath} replace />;
+            }
+        }
     }
 
     return <>{children}</>;

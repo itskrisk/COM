@@ -53,10 +53,10 @@ export default function AdminLayout() {
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
     return (
-        <div className="min-h-screen bg-gray-50 font-sans flex text-gray-900">
+        <div className="min-h-screen bg-white font-sans flex text-gray-900">
             {/* Sidebar (Desktop) */}
-            <aside className="hidden lg:flex w-64 bg-white border-r border-gray-200 h-screen sticky top-0 flex-col z-20">
-                <div className="h-16 flex items-center px-6 border-b border-gray-100">
+            <aside className="hidden lg:flex w-64 bg-white border-r border-neutral-200 h-screen sticky top-0 flex-col z-20">
+                <div className="h-16 flex items-center px-6 border-b border-neutral-200">
                     <span className="font-heading font-bold text-xl tracking-tighter">
                         Muncheez<span className="text-[#D4AF37]">.</span> Ops
                     </span>
@@ -67,9 +67,9 @@ export default function AdminLayout() {
                         <button
                             key={item.path}
                             onClick={() => navigate(item.path)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive(item.path)
-                                ? 'bg-black text-white shadow-lg shadow-black/10'
-                                : 'text-gray-500 hover:bg-gray-50 hover:text-black'
+                            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-l-2 ${isActive(item.path)
+                                ? 'border-[#D4AF37] bg-neutral-50 text-black'
+                                : 'border-transparent text-gray-500 hover:bg-neutral-50 hover:text-black'
                                 }`}
                         >
                             <item.icon size={18} />
@@ -78,15 +78,15 @@ export default function AdminLayout() {
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-gray-100">
+                <div className="p-4 border-t border-neutral-200">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors border-l-2 border-transparent"
                     >
                         <LogOut size={18} />
                         <span>Logout</span>
                     </button>
-                    <div className="mt-4 px-4 py-3 bg-gray-50 rounded-xl flex items-center gap-3 text-left">
+                    <div className="mt-4 px-4 py-3 border border-neutral-200 flex items-center gap-3 text-left">
                         <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs">
                             AD
                         </div>
@@ -102,10 +102,10 @@ export default function AdminLayout() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Header */}
-                <header className="h-16 bg-white border-b border-gray-200 sticky top-0 z-10 px-4 lg:px-8 flex items-center justify-between">
+                <header className="h-16 bg-white border-b border-neutral-200 sticky top-0 z-10 px-4 lg:px-8 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            className="lg:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+                            className="lg:hidden p-2 text-gray-500 hover:bg-neutral-100"
                             onClick={() => setIsMobileMenuOpen(true)}
                         >
                             <Menu size={24} />
@@ -117,13 +117,13 @@ export default function AdminLayout() {
                             <input
                                 type="text"
                                 placeholder="Search orders, users, transactions... (Cmd+K)"
-                                className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-transparent focus:bg-white focus:border-gray-200 rounded-lg text-sm transition-all focus:outline-none focus:ring-2 focus:ring-black/5"
+                                className="w-full pl-10 pr-4 py-2 bg-transparent border-b border-neutral-200 focus:border-black text-sm transition-all focus:outline-none"
                             />
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="relative p-2 text-gray-400 hover:text-black hover:bg-gray-50 rounded-lg transition-colors">
+                        <button className="relative p-2 text-gray-400 hover:text-black hover:bg-neutral-50 transition-colors">
                             <Bell size={20} />
                             <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
                         </button>
@@ -141,7 +141,7 @@ export default function AdminLayout() {
                 <div className="fixed inset-0 z-50 lg:hidden">
                     <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
                     <aside className="absolute top-0 left-0 w-64 bg-white h-full shadow-2xl flex flex-col">
-                        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-100">
+                        <div className="h-16 flex items-center justify-between px-6 border-b border-neutral-200">
                             <span className="font-heading font-bold text-xl tracking-tighter">
                                 Muncheez<span className="text-[#D4AF37]">.</span>
                             </span>
@@ -157,9 +157,9 @@ export default function AdminLayout() {
                                         navigate(item.path);
                                         setIsMobileMenuOpen(false);
                                     }}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors ${isActive(item.path)
-                                        ? 'bg-black text-white'
-                                        : 'text-gray-500 hover:bg-gray-50 hover:text-black'
+                                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-l-2 ${isActive(item.path)
+                                        ? 'border-[#D4AF37] bg-neutral-50 text-black'
+                                        : 'border-transparent text-gray-500 hover:bg-neutral-50 hover:text-black'
                                         }`}
                                 >
                                     <item.icon size={18} />
@@ -168,13 +168,13 @@ export default function AdminLayout() {
                             ))}
                         </nav>
 
-                        <div className="p-4 border-t border-gray-100">
+                        <div className="p-4 border-t border-neutral-200">
                             <button
                                 onClick={() => {
                                     setIsMobileMenuOpen(false);
                                     handleLogout();
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors border-l-2 border-transparent"
                             >
                                 <LogOut size={18} />
                                 <span>Log Out</span>

@@ -32,7 +32,7 @@ const SocialDashboard = () => {
 
     useEffect(() => {
         if (searchQuery.length > 1) {
-            setSearchResults(socialService.searchUsers(searchQuery));
+            socialService.searchUsers(searchQuery).then(setSearchResults);
         } else {
             setSearchResults([]);
         }

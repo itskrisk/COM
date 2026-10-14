@@ -38,7 +38,8 @@ import {
     UploadCloud,
     LayoutGrid,
     List,
-    Sparkles
+    Sparkles,
+    ShieldCheck
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -600,6 +601,100 @@ export default function MerchantDashboard() {
         setNewPromoCode('');
         setIsPromoModalOpen(false);
     };
+
+    // ── APPROVAL GATE ──────────────────────────────────────────────
+    // No dashboard access until the Admin Console approves the merchant.
+    // Pending merchants see a waiting screen; rejected merchants see a notice.
+    const [approvalGate, setApprovalGate] = useState<'checking' | 'approved' | 'pending' | 'rejected'>('checking');
+
+    const runApprovalCheck = useCallback(() => {
+        if (!profile?.id) {
+            setApprovalGate('pending');
+            return;
+        }
+        merchantService.getMerchant(profile.id)
+            .then(({ data }) => {
+                if (data?.status === 'APPROVED') {
+                    setApprovalGate('approved');
+                } else if (data?.status === 'REJECTED') {
+                    setApprovalGate('rejected');
+                } else {
+                    setApprovalGate('pending');
+                }
+            })
+            .catch(() => setApprovalGate('pending'));
+    }, [profile?.id]);
+
+    useEffect(() => {
+        runApprovalCheck();
+    }, [runApprovalCheck]);
+
+    if (approvalGate === 'checking') {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <div className="w-8 h-8 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+            </div>
+        );
+    }
+
+    if (approvalGate !== 'approved') {
+        const isRejected = approvalGate === 'rejected';
+        return (
+            <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
+                <header className="border-b border-neutral-200 px-6 sm:px-10 py-4 flex items-center justify-between">
+                    <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+                        Muncheez<span className="text-[#4A90E2]">.</span>
+                    </Link>
+                    <button
+                        onClick={async () => { await signOut(); navigate('/merchant/login', { replace: true }); }}
+                        className="text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors"
+                    >
+                        Sign Out
+                    </button>
+                </header>
+                <main className="flex-1 flex items-center justify-center px-6 py-16">
+                    <div className="max-w-xl w-full text-center">
+                        <div className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 mb-8 border border-amber-200 bg-amber-50 text-amber-700">
+                            <Clock size={12} />
+                            {isRejected ? 'Application Not Approved' : 'Awaiting Admin Approval'}
+                        </div>
+                        <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-black mb-4">
+                            {isRejected
+                                ? 'Your application was not approved.'
+                                : 'Your application is with the compliance desk.'}
+                        </h1>
+                        <p className="text-neutral-500 text-sm leading-relaxed mb-10">
+                            {isRejected
+                                ? 'The Muncheez Admin Console has reviewed your merchant application and it was not approved at this time. Contact the compliance desk for details or submit a fresh application.'
+                                : 'We are verifying your KRA PIN and business registration. Your full dashboard unlocks the moment the Admin Console approves your application. No action is needed from you.'}
+                        </p>
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+                            {!isRejected && (
+                                <button
+                                    onClick={runApprovalCheck}
+                                    className="w-full sm:w-auto px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all inline-flex items-center gap-2"
+                                >
+                                    <ShieldCheck size={14} />
+                                    Check Approval Status
+                                </button>
+                            )}
+                            <a
+                                href="https://wa.me/254700000000"
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-full sm:w-auto px-6 py-3.5 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest text-black transition-colors text-center"
+                            >
+                                Contact Compliance Desk
+                            </a>
+                        </div>
+                    </div>
+                </main>
+                <footer className="border-t border-neutral-200 px-6 sm:px-10 py-4 text-center text-[10px] font-mono tracking-widest uppercase text-neutral-400">
+                    Muncheez Merchant Portal
+                </footer>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">

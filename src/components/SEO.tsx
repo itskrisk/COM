@@ -9,9 +9,9 @@ import { useEffect } from 'react';
 
 export const SITE_URL = 'https://muncheez.co.ke';
 
-const DEFAULT_TITLE = 'Muncheez - Everything You Need, Delivered';
+const DEFAULT_TITLE = 'Muncheez | Food, Grocery & Pharmacy Delivery in Nairobi';
 const DEFAULT_DESCRIPTION =
-    'Premium delivery from restaurants, supermarkets, and pharmacies. Browse local businesses, order simply, delivered fast.';
+    'Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast.';
 
 interface PageSEOProps {
     /** Page-specific title, e.g. "Our Story". Rendered as "Our Story | Muncheez". */

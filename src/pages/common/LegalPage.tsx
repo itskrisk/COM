@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, ChevronDown, CheckCircle2, HelpCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import PageSEO from '../../components/SEO';
@@ -205,11 +206,28 @@ function LegalLayout({ page }: { page: PageData }) {
 function ContactLayout({ page }: { page: PageData }) {
     const navigate = useNavigate();
     const [submitted, setSubmitted] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({ name: '', email: '', category: 'General Inquiry', message: '' });
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setSubmitted(true);
+        setIsSubmitting(true);
+        try {
+            const { error } = await supabase.from('contacts').insert([{
+                name: formData.name.trim(),
+                email: formData.email.trim(),
+                category: formData.category,
+                message: formData.message.trim(),
+                status: 'OPEN'
+            }]);
+            if (error) throw error;
+            setSubmitted(true);
+        } catch (err) {
+            console.error('Contact submission failed:', err);
+            setSubmitted(true);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (

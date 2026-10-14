@@ -41,18 +41,54 @@ export default function MerchantOnboarding() {
     const [packTimeMin, setPackTimeMin] = useState('20');
     const [permitDocName, setPermitDocName] = useState<string | null>(null);
 
-    // Prefill from profile if available
+    // GATES (event order): signed up -> email confirmed -> logged in -> onboarding ONCE -> admin approval
     useEffect(() => {
+        if (!user) {
+            navigate('/merchant/signup', { replace: true });
+            return;
+        }
+
+        if (!user.emailVerified) {
+            navigate('/auth/verify', {
+                replace: true,
+                state: {
+                    email: user.email,
+                    portal: 'merchant',
+                    redirect: '/merchant/login',
+                    message: 'Please confirm your email before continuing to onboarding.'
+                }
+            });
+            return;
+        }
+
         if (profile) {
             if (profile.full_name && !storeName) setStoreName(profile.full_name);
             if (profile.phone && !phone) setPhone(profile.phone);
-            if (profile.status === 'APPROVED') {
-                navigate('/merchant/dashboard', { replace: true });
-            } else if (profile.status === 'PENDING' || profile.status === 'UNDER_REVIEW') {
-                setSubmitted(true);
-            }
         }
-    }, [profile, navigate]);
+
+        if (user?.id) {
+            (async () => {
+                try {
+                    const { data } = await supabase
+                        .from('merchants')
+                        .select('status, onboarding_completed')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (data?.status === 'APPROVED') {
+                        navigate('/merchant/dashboard', { replace: true });
+                    } else if (data && data.onboarding_completed) {
+                        // ONCE-ONLY: onboarding already submitted, only the waiting screen remains
+                        setSubmitted(true);
+                    }
+                } catch {
+                    if (profile?.status === 'PENDING' || profile?.status === 'UNDER_REVIEW') {
+                        setSubmitted(true);
+                    }
+                }
+            })();
+        }
+    }, [profile, navigate, user, storeName, phone]);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -67,18 +103,31 @@ export default function MerchantOnboarding() {
 
         try {
             if (user?.id) {
+                // Duplicate submission prevention: check if onboarding already completed
+                const { data: existing } = await supabase
+                    .from('merchants')
+                    .select('onboarding_completed, status')
+                    .eq('id', user.id)
+                    .single();
+
+                if (existing?.onboarding_completed) {
+                    setSubmitted(true);
+                    setLoading(false);
+                    return;
+                }
+
                 await supabase
                     .from('merchants')
                     .upsert({
                         id: user.id,
                         business_name: storeName.trim(),
-                        type: 'Supermarket',
                         address: `${branchName} - ${address.trim()}`,
                         phone: phone.trim(),
                         kra_pin: kraPin.trim(),
                         health_permit: businessPermitNumber.trim(),
                         mpesa_till: mpesaTill.trim(),
                         status: 'PENDING',
+                        onboarding_completed: true,
                         documents: permitDocName ? { permit: permitDocName } : null,
                         created_at: new Date().toISOString()
                     }, { onConflict: 'id' });

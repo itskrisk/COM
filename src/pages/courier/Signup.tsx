@@ -66,17 +66,13 @@ export default function CourierSignup() {
                 }
             }
 
-            if (signupResult.user && (signupResult as any).session) {
-                navigate('/rider/onboarding');
-                return;
-            }
-
-                navigate('/auth/verify', {
+            // EVENT ORDER: signup -> email confirmation -> login -> onboarding (once) -> approval
+            navigate('/auth/verify', {
                 state: {
                     email: email.trim(),
                     portal: 'courier',
-                    redirect: '/courier/onboarding',
-                    message: 'Account created! Please check your inbox to verify your email, then complete onboarding.'
+                    redirect: '/rider/login',
+                    message: 'Account created! Please check your inbox to verify your email, then sign in to complete onboarding.'
                 }
             });
         } catch (err: any) {

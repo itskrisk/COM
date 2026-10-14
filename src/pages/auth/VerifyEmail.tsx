@@ -6,11 +6,6 @@ export default function VerifyEmail() {
     const location = useLocation();
     const email = location.state?.email || 'your email';
     const portal = location.state?.portal || 'customer';
-    const redirectPath = location.state?.redirect || (
-        portal === 'merchant' ? '/merchant/onboarding' :
-        portal === 'courier' ? '/rider/onboarding' :
-        '/login'
-    );
 
     const loginPath = portal === 'merchant' ? '/merchant/login' :
                       portal === 'courier' ? '/rider/login' :
@@ -65,24 +60,24 @@ export default function VerifyEmail() {
 
                     <div className="border-t border-b border-gray-100 py-4 my-6">
                         <p className="text-xs font-mono text-gray-500 uppercase tracking-wider">
-                            Once confirmed, you will proceed directly to document onboarding and approval.
+                            Once confirmed, sign in to continue to document onboarding and approval.
                         </p>
                     </div>
                 </div>
 
                 <div className="space-y-3 max-w-md">
                     <button
-                        onClick={() => navigate(redirectPath)}
+                        onClick={() => navigate(loginPath)}
                         className="w-full flex justify-between items-center py-4 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#4A90E2] transition-colors"
                     >
-                        <span>Continue to Onboarding</span>
+                        <span>Continue to Login</span>
                         <ArrowRight size={16} />
                     </button>
                     <button
-                        onClick={() => navigate(loginPath)}
+                        onClick={() => navigate('/')}
                         className="w-full text-center py-3 text-xs font-mono uppercase tracking-wider text-gray-500 hover:text-black border-b border-transparent hover:border-black transition-colors"
                     >
-                        Return to {portalLabel}
+                        Back to Home
                     </button>
                 </div>
             </div>
