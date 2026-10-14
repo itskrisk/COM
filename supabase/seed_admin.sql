@@ -11,7 +11,7 @@ BEGIN
     -- Check if admin already exists
     SELECT id INTO admin_user_id FROM auth.users WHERE email = 'admin@muncheez.co.ke';
     
-    IF admin_user_id IS NULL THEN
+IF admin_user_id IS NULL THEN
         -- Create new admin user
         INSERT INTO auth.users (
             id,
@@ -25,13 +25,21 @@ BEGIN
         ) VALUES (
             gen_random_uuid(),
             'admin@muncheez.co.ke',
-            crypt('admin123', gen_salt('bf')),
+            crypt('Admin@Muncheez', gen_salt('bf')),
             NOW(),
             NOW(),
             NOW(),
             '{"full_name": "Admin User", "role": "admin"}'::jsonb,
             true
         ) RETURNING id INTO admin_user_id;
+    ELSE
+        -- Admin already exists: reset password to the canonical value
+        UPDATE auth.users
+        SET encrypted_password = crypt('Admin@Muncheez', gen_salt('bf')),
+            email_confirmed_at = NOW(),
+            raw_user_meta_data = '{"full_name": "Admin User", "role": "admin"}'::jsonb,
+            updated_at = NOW()
+        WHERE id = admin_user_id;
     END IF;
     
     -- 2. Create/update the admin profile
@@ -89,5 +97,5 @@ END $$;
 -- ============================================================
 -- ADMIN CREDENTIALS:
 -- Email: admin@muncheez.co.ke
--- Password: admin123
+-- Password: Admin@Muncheez
 -- ============================================================

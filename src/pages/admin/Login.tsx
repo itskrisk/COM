@@ -7,7 +7,7 @@ export default function AdminLogin() {
     const navigate = useNavigate();
     const { user, profile, loading: authLoading, signIn } = useAuth();
     const [email, setEmail] = useState('admin@muncheez.co.ke');
-    const [password, setPassword] = useState('admin123');
+    const [password, setPassword] = useState('Admin@Muncheez');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -148,7 +148,7 @@ export default function AdminLogin() {
                 </form>
 
                 <p className="text-[10px] text-gray-400 mt-12 font-mono uppercase tracking-widest">
-                    Master Admin: admin / admin123
+                    Master Admin: admin@muncheez.co.ke / Admin@Muncheez
                 </p>
             </div>
         </div>
