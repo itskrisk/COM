@@ -103,6 +103,19 @@ export default function MerchantOnboarding() {
 
         try {
             if (user?.id) {
+                // Duplicate submission prevention: check if onboarding already completed
+                const { data: existing } = await supabase
+                    .from('merchants')
+                    .select('onboarding_completed, status')
+                    .eq('id', user.id)
+                    .single();
+
+                if (existing?.onboarding_completed) {
+                    setSubmitted(true);
+                    setLoading(false);
+                    return;
+                }
+
                 await supabase
                     .from('merchants')
                     .upsert({

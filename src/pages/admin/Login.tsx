@@ -1,7 +1,6 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLogin() {
@@ -25,44 +24,7 @@ export default function AdminLogin() {
         setError('');
 
         try {
-            // 1. Try to sign in first
-            let result = await signIn(email, password);
-
-            // 2. If login fails (user doesn't exist yet), auto-provision the admin user via Supabase Admin
-            if (result.error && (result.error.toLowerCase().includes('invalid') || result.error.toLowerCase().includes('credentials') || result.error.toLowerCase().includes('email not confirmed'))) {
-                // Directly create the user via supabase signUp (bypassing the AuthContext signUp which checks existing sessions)
-                const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        data: {
-                            full_name: 'Admin User',
-                            role: 'admin'
-                        }
-                    }
-                });
-
-                if (signUpError) {
-                    // If user already exists but password wrong, show clearer message
-                    if (signUpError.message.toLowerCase().includes('already registered') || signUpError.message.toLowerCase().includes('user already registered')) {
-                        setError('Invalid credentials. If you just created your Supabase project, please check your email to confirm the admin account first, then try logging in again.');
-                    } else {
-                        setError(signUpError.message);
-                    }
-                    return;
-                }
-
-                if (signUpData?.user && !signUpData?.session) {
-                    // Email confirmation required
-                    setError('Admin account created! Please check your email to confirm the account, then return here to log in.');
-                    return;
-                }
-
-                // If session is immediate (email confirmation disabled), try sign-in
-                if (signUpData?.session) {
-                    result = await signIn(email, password);
-                }
-            }
+            const result = await signIn(email, password);
 
             if (result.error) {
                 setError(result.error);

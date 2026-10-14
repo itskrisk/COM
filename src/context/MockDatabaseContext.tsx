@@ -219,7 +219,8 @@ export const MockDatabaseProvider = ({ children }: { children: ReactNode }) => {
     // ── WRITE ACTIONS ─────────────────────────────────────────
 
     const updateMerchantStatus = async (id: string, status: MerchantStatus) => {
-        await adminApi.approveMerchant(id);
+        const { supabase } = await import('../lib/supabaseClient');
+        await supabase.from('merchants').update({ status }).eq('id', id);
         await refreshMerchants();
     };
 
