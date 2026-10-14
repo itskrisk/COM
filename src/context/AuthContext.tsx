@@ -270,65 +270,67 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signUp = async (
-    email: string,
-    password: string,
-    metadata?: Record<string, any>
-  ): Promise<{ error: string | null }> => {
-    try {
-      const role = metadata?.role || 'customer';
+const signUp = async (
+        email: string,
+        password: string,
+        metadata?: Record<string, any>
+    ): Promise<{ error: string | null }> => {
+        try {
+            const role = metadata?.role || 'customer';
 
-      const cleanPhone = metadata?.phone?.trim() ? metadata.phone.trim() : undefined;
-      const { data, error } = await authService.signUp(email, password, {
-        full_name: metadata?.name || email.split('@')[0],
-        phone: cleanPhone,
-        role: role,
-        merchant_type: metadata?.merchantType || 'Restaurant',
-        vehicle_type: metadata?.vehicleType || 'Motorbike'
-      });
+            const cleanPhone = metadata?.phone?.trim() ? metadata.phone.trim() : undefined;
+            const { data, error } = await authService.signUp(email, password, {
+                full_name: metadata?.name || email.split('@')[0],
+                phone: cleanPhone,
+                role: role,
+                merchant_type: metadata?.merchantType || 'Restaurant',
+                vehicle_type: metadata?.vehicleType || 'Motorbike'
+            });
 
-      if (error) {
-        return { error: error.message || 'Signup failed.' };
-      }
+            if (error) {
+                console.error('[AuthContext] signUp error:', error);
+                return { error: (error as any)?.message || JSON.stringify(error) || 'Signup failed.' };
+            }
 
-      if (data.session) {
-        localStorage.setItem('accessToken', data.session.access_token);
-        setToken(data.session.access_token);
-      }
+            if (data.session) {
+                localStorage.setItem('accessToken', data.session.access_token);
+                setToken(data.session.access_token);
+            }
 
-      if (!data.user) {
-        return { error: 'Signup failed. No user data returned.' };
-      }
+            if (!data.user) {
+                return { error: 'Signup failed. No user data returned.' };
+            }
 
-      // Get profile
-      const { data: profileData } = await profileService.getProfile(data.user.id);
-      const isAdminUser = email === 'admin@muncheez.co.ke' || role === 'admin';
-      const roles = isAdminUser ? ['admin'] : (profileData?.roles || [role]);
+            // Get profile
+            const { data: profileData } = await profileService.getProfile(data.user.id);
+            const isAdminUser = email === 'admin@muncheez.co.ke' || role === 'admin';
+            const roles = isAdminUser ? ['admin'] : (profileData?.roles || [role]);
 
-      const normalizedUser: User = {
-        id: data.user.id,
-        email: data.user.email || '',
-        fullName: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
-        phone: data.user.user_metadata?.phone,
-        emailVerified: data.user.email_confirmed_at ? true : false,
-        loyaltyTier: 'bronze',
-        profile: profileData ? {
-          ...profileData,
-          roles
-        } : {
-          id: data.user.id,
-          roles,
-          status: 'ACTIVE'
+            const normalizedUser: User = {
+                id: data.user.id,
+                email: data.user.email || '',
+                fullName: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
+                phone: data.user.user_metadata?.phone,
+                emailVerified: data.user.email_confirmed_at ? true : false,
+                loyaltyTier: 'bronze',
+                profile: profileData ? {
+                    ...profileData,
+                    roles
+                } : {
+                    id: data.user.id,
+                    roles,
+                    status: 'ACTIVE'
+                }
+            };
+
+            setUser(normalizedUser);
+            setProfile(normalizedUser.profile);
+            return { error: null };
+        } catch (err: any) {
+            console.error('[AuthContext] signUp exception:', err);
+            return { error: err?.message || JSON.stringify(err) || 'Signup failed.' };
         }
-      };
-
-      setUser(normalizedUser);
-      setProfile(normalizedUser.profile);
-      return { error: null };
-    } catch (err: any) {
-      return { error: err.message || 'Signup failed.' };
-    }
-  };
+    };
 
   const signOut = async () => {
     try {

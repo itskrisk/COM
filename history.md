@@ -3231,3 +3231,32 @@ Continuing from the previous session's audit. The remaining pending items were:
 ### Status:
 - All 4 pending fixes applied and verified.
 - No push yet (per instruction to hold until confirmed).
+---
+
+## [2026-10-14] Session: Supabase Wiring Verification + Carts Table Fix
+
+### Prompt / Request:
+> "I recently provided you with new keys to my Supabase, and they are in the env folder. Can you make sure everything is working correctly, and is connected. Because I need stuff to reflect in the muncheez.co.ke when I push and backend to work."
+
+### Actions Taken:
+
+1. **`src/lib/supabaseClient.ts` — Removed hardcoded fallback credentials**
+   - The file still had hardcoded fallbacks to the OLD project (`kjpqzybsxapaecpyzxih` / `sb_publishable_oQSUmk5Pbl4hITNxoQki9w_MfUZcifw`) that would silently override the new keys in `.env`.
+   - Now throws a clear error if `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` are missing, and uses only the values from `.env`.
+
+2. **Verified live connectivity to the new project** (`https://ewsdumyzxmvnmjeatlqp.supabase.co`):
+   - REST API (`/rest/v1/merchants?select=count`) → HTTP 200
+   - Auth health (`/auth/v1/health`) → HTTP 200, GoTrue v2.197.0
+
+3. **Audited schema coverage against the live project** — checked 23 tables. All exist EXCEPT `carts` (404), which `cartService` depends on for checkout.
+
+4. **Added `carts` table** to `supabase/schema.sql` (with RLS: users manage own cart, admins manage all) and created `supabase/migrations/005_carts_table.sql` for the live project.
+
+### Verification:
+- `npm run build` (tsc -b && vite build) — **PASSED** (2281 modules, 32.91s).
+
+### User action required:
+- Run `supabase/migrations/005_carts_table.sql` in the Supabase SQL editor on the new project (cannot apply DDL from the anon key). Until then, checkout cart operations will fail.
+
+### Status:
+- Committed as `9099e61` on `main`. Pushed to `origin/main`.
