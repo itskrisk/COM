@@ -1,11 +1,15 @@
-import { Mail, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Mail, ArrowLeft, ArrowRight, RefreshCw } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState } from 'react';
+import { supabase } from '../../lib/supabaseClient';
 
 export default function VerifyEmail() {
     const navigate = useNavigate();
     const location = useLocation();
     const email = location.state?.email || 'your email';
     const portal = location.state?.portal || 'customer';
+    const [resendMessage, setResendMessage] = useState<string | null>(null);
+    const [resending, setResending] = useState(false);
 
     const loginPath = portal === 'merchant' ? '/merchant/login' :
                       portal === 'courier' ? '/rider/login' :
@@ -14,6 +18,27 @@ export default function VerifyEmail() {
     const portalLabel = portal === 'merchant' ? 'Partner Portal' :
                         portal === 'courier' ? 'Rider Terminal' :
                         'Customer Login';
+
+    const handleResend = async () => {
+        if (!email || email === 'your email') {
+            setResendMessage('We do not have your email on file. Please sign up again.');
+            return;
+        }
+        setResending(true);
+        setResendMessage(null);
+        try {
+            const { error } = await supabase.auth.resend({ type: 'signup', email });
+            if (error) {
+                setResendMessage(error.message || 'Could not resend verification email.');
+            } else {
+                setResendMessage('Verification email resent. Please check your inbox.');
+            }
+        } catch (err: any) {
+            setResendMessage(err.message || 'Could not resend verification email.');
+        } finally {
+            setResending(false);
+        }
+    };
 
     return (
         <div className="min-h-screen bg-white flex overflow-hidden">
@@ -63,9 +88,23 @@ export default function VerifyEmail() {
                             Once confirmed, sign in to continue to document onboarding and approval.
                         </p>
                     </div>
+
+                    {resendMessage && (
+                        <div className="border-b border-gray-200 pb-3 mb-6">
+                            <p className="text-xs text-gray-600 font-medium">{resendMessage}</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-3 max-w-md">
+                    <button
+                        onClick={handleResend}
+                        disabled={resending}
+                        className="w-full flex justify-between items-center py-4 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#4A90E2] disabled:bg-gray-400 transition-colors inline-flex items-center gap-2"
+                    >
+                        <RefreshCw size={16} className={resending ? 'animate-spin' : ''} />
+                        <span>{resending ? 'Resending...' : 'Resend Verification Email'}</span>
+                    </button>
                     <button
                         onClick={() => navigate(loginPath)}
                         className="w-full flex justify-between items-center py-4 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#4A90E2] transition-colors"

@@ -12,6 +12,7 @@ export default function Signup() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [fullName, setFullName] = useState('');
+    const [phone, setPhone] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [portalHint, setPortalHint] = useState<{ message: string; link: string; label: string } | null>(null);
@@ -23,8 +24,20 @@ export default function Signup() {
         setError(null);
         setPortalHint(null);
 
+        if (!fullName.trim() || !email.trim() || !password) {
+            setError('Please fill in all required fields.');
+            setLoading(false);
+            return;
+        }
+
         if (password !== confirmPassword) {
             setError("Passwords do not match.");
+            setLoading(false);
+            return;
+        }
+
+        if (password.length < 6) {
+            setError('Password must be at least 6 characters long.');
             setLoading(false);
             return;
         }
@@ -41,14 +54,15 @@ export default function Signup() {
             } else {
                 // New user signup
                 const { error: signupError } = await signUp(email, password, {
-                    name: fullName,
+                    name: fullName.trim(),
+                    phone: phone.trim() || undefined,
                     role: 'customer',
                 });
 
                 if (signupError) throw new Error(signupError);
 
                 navigate('/auth/verify-email', {
-                    state: { email: email }
+                    state: { email: email.trim() }
                 });
                 return;
             }
@@ -155,6 +169,20 @@ export default function Signup() {
                                 onChange={(e) => setFullName(e.target.value)}
                                 className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
                                 placeholder="Enter your name"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
+                                Phone Number
+                            </label>
+                            <input
+                                id="customer-signup-phone"
+                                type="tel"
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                placeholder="+254 700 000 000"
                             />
                         </div>
 

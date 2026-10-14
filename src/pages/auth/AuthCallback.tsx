@@ -108,21 +108,21 @@ export default function AuthCallback() {
           </div>
         )}
 
-        {status === 'error' && (
-          <div className="flex flex-col gap-3 mt-6">
-            <a
-              href="/signup"
-              className="w-full py-4 px-6 rounded-2xl text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] transition-all uppercase tracking-widest text-center block"
-            >
-              Try Signing Up Again
-            </a>
-            <a
-              href="/login"
-              className="w-full py-4 px-6 rounded-2xl text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all uppercase tracking-widest text-center block"
-            >
-              Back to Login
-            </a>
-          </div>
+{status === 'error' && (
+            <div className="flex flex-col gap-3 mt-6">
+                <a
+                    href="/signup"
+                    className="w-full py-4 px-6 text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] transition-all uppercase tracking-widest text-center block"
+                >
+                    Try Signing Up Again
+                </a>
+                <a
+                    href="/login"
+                    className="w-full py-4 px-6 text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all uppercase tracking-widest text-center block"
+                >
+                    Back to Login
+                </a>
+            </div>
         )}
       </div>
 
