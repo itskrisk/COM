@@ -141,6 +141,24 @@ CREATE TABLE IF NOT EXISTS riders (
 );
 
 -- ============================================================
+-- SHOPPING CART
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS carts (
+    id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id     UUID REFERENCES profiles(id) ON DELETE CASCADE,
+    session_id  TEXT,
+    items       JSONB NOT NULL DEFAULT '[]'::jsonb,
+    merchant_id UUID REFERENCES merchants(id) ON DELETE SET NULL,
+    is_active   BOOLEAN DEFAULT true,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_carts_user_id ON carts(user_id);
+CREATE INDEX IF NOT EXISTS idx_carts_session_id ON carts(session_id);
+
+-- ============================================================
 -- PRODUCT CATALOG
 -- ============================================================
 
@@ -579,6 +597,12 @@ ALTER TABLE order_status_history ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE campaigns ENABLE ROW LEVEL SECURITY;
 ALTER TABLE promo_codes ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE carts ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Users manage own cart" ON carts;
+CREATE POLICY "Users manage own cart" ON carts FOR ALL USING (auth.uid() = user_id);
+DROP POLICY IF EXISTS "Admins manage all carts" ON carts;
+CREATE POLICY "Admins manage all carts" ON carts FOR ALL USING (public.is_admin());
 
 -- Profiles
 DROP POLICY IF EXISTS "Profiles readable by all" ON profiles;
