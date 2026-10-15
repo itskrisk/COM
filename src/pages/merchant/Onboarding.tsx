@@ -182,65 +182,65 @@ export default function MerchantOnboarding() {
         return (
             <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
                 {/* Minimalist Header */}
-                <header className="border-b border-neutral-200 px-6 sm:px-12 py-5 flex items-center justify-between">
-                    <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+                <header className="border-b border-neutral-200 px-4 sm:px-6 md:px-12 py-4 flex items-center justify-between gap-3">
+                    <Link to="/" className="font-heading font-bold text-xl sm:text-2xl tracking-tighter text-black flex-shrink-0">
                         Muncheez<span className="text-[#00BCD4]">.</span>
                     </Link>
-                    <div className="flex items-center gap-6">
-                        <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                    <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+                        <span className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-neutral-400 hidden sm:inline">
                             Merchant Portal · Supermarkets
                         </span>
                         <button
                             onClick={handleLogout}
-                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors font-mono uppercase tracking-wider"
+                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors font-mono uppercase tracking-wider px-3 py-2 min-h-[44px]"
                         >
                             <LogOut size={13} />
-                            Logout
+                            <span className="hidden sm:inline">Logout</span>
                         </button>
                     </div>
                 </header>
 
                 {/* Editorial Application Review Canvas */}
-                <main className="max-w-3xl mx-auto w-full px-6 py-16">
+                <main className="max-w-3xl mx-auto w-full px-4 sm:px-6 py-10 sm:py-16 flex-1">
                     <div className="border-b border-neutral-200 pb-8 mb-10">
-                        <div className="inline-flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-amber-700 bg-amber-50 px-2.5 py-1 mb-6 border border-amber-200">
+                        <div className="inline-flex items-center gap-2 text-[9px] sm:text-[10px] font-mono uppercase tracking-widest text-amber-700 bg-amber-50 px-2.5 py-1.5 mb-6 border border-amber-200 flex-wrap">
                             <Clock size={12} />
                             Application Under Review · Pending Admin Approval
                         </div>
-                        <h1 className="text-4xl sm:text-5xl font-light tracking-tight text-black mb-4">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-light tracking-tight text-black mb-4 leading-tight">
                             Your Supermarket onboarding is with compliance.
                         </h1>
-                        <p className="text-neutral-500 text-sm max-w-xl leading-relaxed">
+                        <p className="text-neutral-500 text-sm sm:text-base max-w-xl leading-relaxed">
                             We are verifying your KRA PIN and municipal business registration. Once approved by the Muncheez Admin Console, your full store inventory suite and universal storefront presence will unlock.
                         </p>
                     </div>
 
                     {/* Unboxed Editorial Spec Breakdown */}
-                    <div className="divide-y divide-neutral-200 border-t border-b border-neutral-200 mb-12">
-                        <div className="py-4 flex justify-between items-center text-xs">
-                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Trading Entity</span>
-                            <span className="font-medium text-black">{storeName || 'Supermarket Provisions Store'}</span>
+                    <div className="divide-y divide-neutral-200 border-t border-b border-neutral-200 mb-10">
+                        <div className="py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 text-xs sm:text-xs">
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[10px] sm:text-[11px]">Trading Entity</span>
+                            <span className="font-medium text-black text-right sm:text-left">{storeName || 'Supermarket Provisions Store'}</span>
                         </div>
-                        <div className="py-4 flex justify-between items-center text-xs">
-                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Primary Branch</span>
-                            <span className="font-medium text-black">{branchName}</span>
+                        <div className="py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 text-xs sm:text-xs">
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[10px] sm:text-[11px]">Primary Branch</span>
+                            <span className="font-medium text-black text-right sm:text-left">{branchName}</span>
                         </div>
-                        <div className="py-4 flex justify-between items-center text-xs">
-                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Assigned Model</span>
-                            <span className="font-mono text-black uppercase tracking-wider text-[11px]">The Market · Supermarket</span>
+                        <div className="py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 text-xs sm:text-xs">
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[10px] sm:text-[11px]">Assigned Model</span>
+                            <span className="font-mono text-black uppercase tracking-wider text-[10px] sm:text-[11px] text-right sm:text-left">The Market · Supermarket</span>
                         </div>
-                        <div className="py-4 flex justify-between items-center text-xs">
-                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[11px]">Status</span>
-                            <span className="text-amber-700 font-mono uppercase font-bold text-[11px]">Awaiting Admin Approval</span>
+                        <div className="py-3 sm:py-4 flex flex-col sm:flex-row sm:justify-between items-start sm:items-center gap-2 text-xs sm:text-xs">
+                            <span className="text-neutral-400 font-mono uppercase tracking-wider text-[10px] sm:text-[11px]">Status</span>
+                            <span className="text-amber-700 font-mono uppercase font-bold text-[10px] sm:text-[11px] text-right sm:text-left">Awaiting Admin Approval</span>
                         </div>
                     </div>
 
                     {/* Action Row */}
-                    <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
                         <button
                             onClick={handleCheckApproval}
                             disabled={loading}
-                            className="w-full sm:w-auto px-8 py-3.5 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                            className="w-full sm:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-all flex items-center justify-center gap-2 min-h-[48px]"
                         >
                             <ShieldCheck size={14} />
                             {loading ? 'Checking Status...' : 'Check Approval Status'}
@@ -249,7 +249,7 @@ export default function MerchantOnboarding() {
                             href="https://wa.me/254700000000"
                             target="_blank"
                             rel="noreferrer"
-                            className="w-full sm:w-auto px-6 py-3.5 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest text-black transition-colors text-center"
+                            className="w-full sm:w-auto px-5 sm:px-6 py-3.5 sm:py-4 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest text-black transition-colors text-center min-h-[48px] flex items-center justify-center"
                         >
                             Contact Compliance Desk →
                         </a>
@@ -257,7 +257,7 @@ export default function MerchantOnboarding() {
                 </main>
 
                 {/* Minimalist Footer */}
-                <footer className="border-t border-neutral-200 px-6 sm:px-12 py-4 text-center text-[10px] font-mono tracking-widest uppercase text-neutral-400">
+                <footer className="border-t border-neutral-200 px-4 sm:px-6 md:px-12 py-3 sm:py-4 text-center text-[9px] sm:text-[10px] font-mono tracking-widest uppercase text-neutral-400">
                     Muncheez Metropolis Logistics · Nairobi, Kenya
                 </footer>
             </div>
@@ -267,20 +267,20 @@ export default function MerchantOnboarding() {
     return (
         <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
             {/* Header */}
-            <header className="border-b border-neutral-200 px-6 sm:px-12 py-5 flex items-center justify-between">
-                <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+            <header className="border-b border-neutral-200 px-4 sm:px-6 md:px-12 py-4 flex items-center justify-between gap-3">
+                <Link to="/" className="font-heading font-bold text-xl sm:text-2xl tracking-tighter text-black flex-shrink-0">
                     Muncheez<span className="text-[#00BCD4]">.</span>
                 </Link>
-                <div className="flex items-center gap-6">
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-neutral-400 hidden sm:inline">
                         Step {step} of 2 · Supermarket Onboarding
                     </span>
                     <button
                         onClick={() => signOut()}
-                        className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors"
+                        className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors px-3 py-2 min-h-[44px]"
                     >
                         <LogOut size={13} />
-                        Sign Out
+                        <span className="hidden sm:inline">Sign Out</span>
                     </button>
                 </div>
             </header>
@@ -447,7 +447,7 @@ export default function MerchantOnboarding() {
                                 <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
                                     Upload Business Registration / Permit Document
                                 </label>
-                                <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-8 px-6 flex flex-col items-center justify-center cursor-pointer text-center">
+                                <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-6 sm:py-8 px-4 sm:px-6 flex flex-col items-center justify-center cursor-pointer text-center">
                                     <UploadCloud size={24} className="text-neutral-400 mb-2" />
                                     <span className="text-xs font-medium text-black">
                                         {permitDocName ? permitDocName : 'Select PDF or Image of Business Registration'}
@@ -465,7 +465,7 @@ export default function MerchantOnboarding() {
                             </div>
 
                             {/* Button Bar */}
-                            <div className="pt-6 border-t border-neutral-200 flex justify-between items-center">
+                            <div className="pt-6 border-t border-neutral-200 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setStep(1)}

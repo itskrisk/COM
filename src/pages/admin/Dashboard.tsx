@@ -8,16 +8,28 @@ import {
     CheckCircle,
     User,
     ArrowRight,
-    Package
+    Package,
+    LogOut
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+
+const ADMIN_SESSION_KEY = 'muncheez_admin_session';
 
 export default function AdminDashboard() {
+    const navigate = useNavigate();
+    const { signOut } = useAuth();
     const [orders, setOrders] = useState<any[]>([]);
     const [merchants, setMerchants] = useState<any[]>([]);
     const [riders, setRiders] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+
+    const handleLogout = async () => {
+        await signOut();
+        navigate('/admin/login', { replace: true });
+    };
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -25,7 +37,7 @@ export default function AdminDashboard() {
                 const [ordersData, merchantsData, ridersData] = await Promise.all([
                     supabase.from('orders').select('*, customer:profiles!customer_id(full_name, phone)').order('created_at', { ascending: false }).limit(50),
                     supabase.from('merchants').select('id, business_name, type, status, logo_url').order('created_at', { ascending: false }),
-                    supabase.from('riders').select('id, is_online, status').order('created_at', { ascending: false })
+                    supabase.from('riders').select('id, name, is_online, status, rating, total_deliveries, performance, earnings, wallet').order('created_at', { ascending: false })
                 ]);
 
                 if (ordersData.data) setOrders(ordersData.data);
@@ -72,21 +84,28 @@ export default function AdminDashboard() {
     return (
         <div className="space-y-8 pb-12">
             {/* Page Header */}
-            <div className="flex justify-between items-end">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 sm:mb-8">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-black">Operations Cockpit</h1>
-                    <p className="text-sm text-gray-400 font-medium">Real-time system oversight • Nairobi Central Hub</p>
+                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black">Operations Cockpit</h1>
+                    <p className="text-xs sm:text-sm text-gray-400 font-medium">Real-time system oversight • Nairobi Central Hub</p>
                 </div>
-                <div className="flex gap-2">
-                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full border border-green-100">
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-green-50 rounded-full border border-green-100">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                         <span className="text-[10px] font-bold text-green-700 uppercase tracking-wider text-nowrap">System Status: Optimal</span>
                     </div>
+                    <button
+                        onClick={handleLogout}
+                        className="p-3 sm:p-2 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl text-gray-500 hover:text-gray-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                        aria-label="Sign out"
+                    >
+                        <LogOut size={20} sm:size={18} />
+                    </button>
                 </div>
             </div>
 
             {/* KPI Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
                 <StatCard
                     title="Gross Revenue"
                     value={`KES ${(totalRevenue / 1000).toFixed(1)}K`}
@@ -124,7 +143,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Ops Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
 
                 {/* Sector Status */}
                 <div className="bg-white rounded-3xl border border-gray-100 shadow-sm p-6 overflow-hidden relative">
@@ -319,16 +338,16 @@ function StatCard({ title, value, subValue, trend, isPositive, icon: Icon, color
     };
 
     return (
-        <div className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 relative group">
-            <div className={`absolute top-6 right-6 p-2 rounded-2xl ${colorStyles[color]} border transition-transform group-hover:scale-110`}>
-                <Icon size={20} />
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 relative group">
+            <div className={`absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-xl sm:rounded-2xl ${colorStyles[color]} border transition-transform group-hover:scale-110`}>
+                <Icon size={18} sm:size={20} />
             </div>
 
             <div className="relative pt-2">
-                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-4">{title}</p>
+                <p className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-3 sm:mb-4">{title}</p>
                 <div className="flex items-baseline gap-2 mb-1">
-                    <h3 className="text-4xl font-black text-black tracking-tight">{value}</h3>
-                    <div className={`flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isPositive ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>
+                    <h3 className="text-3xl sm:text-4xl font-black text-black tracking-tight">{value}</h3>
+                    <div className={`flex items-center gap-0.5 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full ${isPositive ? 'text-green-600 bg-green-50' : 'text-red-500 bg-red-50'}`}>
                         {trend}
                     </div>
                 </div>

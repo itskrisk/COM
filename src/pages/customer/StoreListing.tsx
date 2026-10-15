@@ -17,6 +17,7 @@ import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { publicApi } from '../../lib/api';
 import PageSEO from '../../components/SEO';
+import { supabase } from '../../lib/supabaseClient';
 
 // 1. BRAND PILLARS (Functional FOUNDATIONS)
 const SEGMENT_MAP: Record<string, { title: string; subtitle: string; description: string; categories: string[] }> = {
@@ -30,10 +31,10 @@ const SEGMENT_MAP: Record<string, { title: string; subtitle: string; description
 
 export default function StoreListing() {
     const navigate = useNavigate();
-    const { user, profile, signOut } = useAuth();
+    const { user, profile, signOut, refreshUser } = useAuth();
     const [searchParams] = useSearchParams();
     const activeView = 'market';
-    const activeTag = searchParams.get('tag'); // Get the deep-link tag
+    const activeTag = searchParams.get('tag');
     const config = SEGMENT_MAP.market;
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -41,11 +42,19 @@ export default function StoreListing() {
     const [stores, setStores] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // Location State
+    // Location State - synced between localStorage and Supabase profile
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
     const [userLocation, setUserLocation] = useState('');
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // Sync location from profile or localStorage on mount/profile change
+    useEffect(() => {
+        const profileLocation = profile?.location_preferences?.neighborhood;
+        const storageLocation = localStorage.getItem('muncheez_delivery_address');
+        const fallback = profileLocation || storageLocation || '';
+        setUserLocation(fallback);
+    }, [profile]);
 
     // Load stores from Supabase
     useEffect(() => {
@@ -72,6 +81,29 @@ export default function StoreListing() {
             setSearchQuery('');
         }
     }, [activeTag]);
+
+    // Unified location handler - saves to both localStorage and Supabase profile
+    const handleLocationSelect = async (loc: string) => {
+        setUserLocation(loc);
+        localStorage.setItem('muncheez_delivery_address', loc);
+        
+        if (user?.id) {
+            try {
+                await supabase
+                    .from('profiles')
+                    .update({ 
+                        location_preferences: { 
+                            neighborhood: loc,
+                            delivery_notes: profile?.location_preferences?.delivery_notes || ''
+                        } 
+                    })
+                    .eq('id', user.id);
+                refreshUser();
+            } catch (err) {
+                console.error('Failed to save location to profile:', err);
+            }
+        }
+    };
 
     // Unified Market Data (Wired to Supabase)
     const MARKET_STORES = useMemo(() => {
@@ -205,7 +237,7 @@ export default function StoreListing() {
 
                 {/* Brand Top Nav */}
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 md:gap-8 mb-16 relative z-30">
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
                         {/* Hamburger for Mobile */}
                         <button
                             onClick={() => setIsMenuOpen(true)}
@@ -214,24 +246,25 @@ export default function StoreListing() {
                             <Menu size={20} />
                         </button>
 
-                        <div onClick={() => navigate('/')} className="cursor-pointer flex items-center gap-2 shrink-0 text-2xl font-heading font-bold tracking-tighter">
+                        <div onClick={() => navigate('/')} className="cursor-pointer flex items-center gap-0 shrink-0 text-2xl font-heading font-bold tracking-tighter">
                             Muncheez<span className="text-[#D4AF37]">.</span>
                         </div>
 
-                        {/* Location - Restored (Interactive) */}
-                        <div
+                        {/* Location - Minimal */}
+                        <button
                             onClick={() => setIsLocationModalOpen(true)}
-                            className="hidden md:flex items-center gap-2 bg-white/5 border border-white/10 px-4 py-2 rounded-full cursor-pointer hover:bg-white/10 transition-all"
+                            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full cursor-pointer hover:bg-white/10 transition-all"
+                            aria-label="Delivery location"
                         >
-                            <MapPin size={12} className="text-[#D4AF37]" />
-                            <span className="text-[10px] font-black uppercase tracking-widest truncate max-w-[150px]">
-                                {userLocation || 'Set delivery location'}
+                            <MapPin size={11} className="text-[#D4AF37]" />
+                            <span className="text-[10px] font-medium uppercase tracking-wider truncate max-w-[160px] text-white/90">
+                                {userLocation || 'Delivery location'}
                             </span>
-                        </div>
+                        </button>
                     </div>
 
                     {/* Integrated Search */}
-                    <div className="flex-1 max-w-xl relative group">
+                    <div className="flex-1 max-w-md relative group">
                         <Search size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
                         <input
                             type="text"
@@ -242,8 +275,26 @@ export default function StoreListing() {
                         />
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-white text-black rounded-lg flex items-center justify-center shadow-lg cursor-pointer transition-transform hover:scale-105 active:scale-95"><ShoppingBag size={18} /></div>
+                    <div className="flex items-center gap-2">
+                        {/* Cart - Modern with badge */}
+                        <button
+                            onClick={() => navigate('/checkout')}
+                            className="relative w-10 h-10 bg-white text-[#4A90E2] rounded-xl flex items-center justify-center shadow-sm hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
+                            aria-label="View cart"
+                        >
+                            <ShoppingBag size={18} />
+                            {(() => {
+                                const cart = JSON.parse(localStorage.getItem('muncheez_cart_items') || '[]');
+                                const count = cart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+                                return count > 0 ? (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-[#D4AF37] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                        {count > 99 ? '99+' : count}
+                                    </span>
+                                ) : null;
+                            })()}
+                        </button>
+
+                        {/* Profile / Account */}
                         <button
                             onClick={() => setIsProfileOpen(true)}
                             aria-label="Open account"
@@ -262,10 +313,7 @@ export default function StoreListing() {
                 <LocationModal
                     isOpen={isLocationModalOpen}
                     onClose={() => setIsLocationModalOpen(false)}
-                    onSelectLocation={(loc) => {
-                        setUserLocation(loc);
-                        setIsLocationModalOpen(false);
-                    }}
+                    onSelectLocation={handleLocationSelect}
                 />
 
                 {/* Profile Modal */}

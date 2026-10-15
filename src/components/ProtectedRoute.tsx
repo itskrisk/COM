@@ -3,11 +3,6 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AppRole } from '../context/AuthContext';
 
-interface ProtectedRouteProps {
-    children: React.ReactNode;
-    requiredRole?: AppRole;
-}
-
 const LOGIN_PATHS: Record<string, string> = {
     customer: '/login',
     merchant: '/merchant/login',
@@ -20,6 +15,24 @@ const ONBOARDING_PATHS: Record<string, string> = {
     courier: '/rider/onboarding',
 };
 
+const ADMIN_SESSION_KEY = 'muncheez_admin_session';
+
+const isAdminSessionValid = (): boolean => {
+    try {
+        const session = sessionStorage.getItem(ADMIN_SESSION_KEY);
+        if (!session) return false;
+        const { expiry } = JSON.parse(session);
+        return Date.now() < expiry;
+    } catch {
+        return false;
+    }
+};
+
+interface ProtectedRouteProps {
+    children: React.ReactNode;
+    requiredRole?: AppRole;
+}
+
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole }) => {
     const { user, profile, loading } = useAuth();
     const location = useLocation();
@@ -31,6 +44,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
                 <div className="w-8 h-8 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
             </div>
         );
+    }
+
+    // Admin: check hardcoded session first
+    if (requiredRole === 'admin') {
+        if (!isAdminSessionValid()) {
+            return <Navigate to={LOGIN_PATHS.admin} state={{ from: location }} replace />;
+        }
+        return <>{children}</>;
     }
 
     // No user at all — send to the appropriate login page

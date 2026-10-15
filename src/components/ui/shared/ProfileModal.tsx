@@ -286,6 +286,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
         if (error) {
             setFeedback({ type: 'error', text: 'Failed to save location preferences' });
         } else {
+            // Also update localStorage so navbar reflects immediately
+            localStorage.setItem('muncheez_delivery_address', neighborhood);
             setFeedback({ type: 'success', text: 'Location preferences saved!' });
         }
     };
@@ -318,11 +320,14 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
         if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') return;
         setIsSaving(true);
         try {
+            // Delete profile data from Supabase
+            await supabase.from('profiles').delete().eq('id', user.id);
             await signOut();
             onClose();
             window.location.href = '/';
         } catch (e) {
             console.error('Delete account error:', e);
+            setFeedback({ type: 'error', text: 'Failed to delete account. Please try again.' });
         } finally {
             setIsSaving(false);
         }
@@ -837,7 +842,20 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                         />
                                                     </div>
                                                     <button
-                                                        onClick={() => setFeedback({ type: 'success', text: 'M-Pesa phone number updated' })}
+                                                        onClick={async () => {
+                                                            if (!user) return;
+                                                            try {
+                                                                const { error } = await supabase
+                                                                    .from('profiles')
+                                                                    .update({ phone: mpesaNumber.trim() || null })
+                                                                    .eq('id', user.id);
+                                                                if (error) throw error;
+                                                                await refreshUser();
+                                                                setFeedback({ type: 'success', text: 'M-Pesa phone number updated!' });
+                                                            } catch (err: any) {
+                                                                setFeedback({ type: 'error', text: err.message || 'Failed to update M-Pesa number' });
+                                                            }
+                                                        }}
                                                         className="w-full py-4 bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
                                                     >
                                                         Save M-Pesa Number
@@ -865,12 +883,26 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                             >
                                                                 Visit
                                                             </button>
-                                                            <button
-                                                                onClick={() => setSupabaseFavorites(supabaseFavorites.filter((f: any) => f.id !== fav.id))}
-                                                                className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                            </button>
+<button
+                                                                    onClick={async () => {
+                                                                        if (!user) return;
+                                                                        const updated = supabaseFavorites.filter((f: any) => f.id !== fav.id);
+                                                                        setSupabaseFavorites(updated);
+                                                                        try {
+                                                                            const { error } = await supabase
+                                                                                .from('profiles')
+                                                                                .update({ favorites: updated })
+                                                                                .eq('id', user.id);
+                                                                            if (error) throw error;
+                                                                            setFeedback({ type: 'success', text: 'Favorite removed' });
+                                                                        } catch (err: any) {
+                                                                            setFeedback({ type: 'error', text: 'Failed to remove favorite' });
+                                                                        }
+                                                                    }}
+                                                                    className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                                                                >
+                                                                    <Trash2 size={14} />
+                                                                </button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -882,27 +914,45 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                     {view === 'notifications' && (
                                         <motion.div key="notifications" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Notifications</h3>
-                                            <div className="divide-y divide-gray-100 border-t border-b border-gray-100">
-                                                {[
-                                                    { key: 'orderStatus', title: 'Order Status Updates', desc: 'Real-time alerts when kitchen accepts order' },
-                                                    { key: 'riderAlerts', title: 'Rider Location Alerts', desc: 'SMS updates when courier is nearby' },
-                                                    { key: 'promotions', title: 'Promotions & Offers', desc: 'Exclusive weekly discounts & vouchers' },
-                                                    { key: 'marketing', title: 'Marketing Newsletter', desc: 'New restaurant launches in Nairobi' }
-                                                ].map(item => (
-                                                    <div key={item.key} className="py-4 flex items-center justify-between">
-                                                        <div className="pr-4">
-                                                            <div className="text-xs font-bold text-gray-900">{item.title}</div>
-                                                            <div className="text-[10px] text-gray-400">{item.desc}</div>
+<div className="divide-y divide-gray-100 border-t border-b border-gray-100">
+                                                    {[
+                                                        { key: 'orderStatus', title: 'Order Status Updates', desc: 'Real-time alerts when kitchen accepts order' },
+                                                        { key: 'riderAlerts', title: 'Rider Location Alerts', desc: 'SMS updates when courier is nearby' },
+                                                        { key: 'promotions', title: 'Promotions & Offers', desc: 'Exclusive weekly discounts & vouchers' },
+                                                        { key: 'marketing', title: 'Marketing Newsletter', desc: 'New restaurant launches in Nairobi' }
+                                                    ].map(item => (
+                                                        <div key={item.key} className="py-4 flex items-center justify-between">
+                                                            <div className="pr-4">
+                                                                <div className="text-xs font-bold text-gray-900">{item.title}</div>
+                                                                <div className="text-[10px] text-gray-400">{item.desc}</div>
+                                                            </div>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={(supabaseNotifications as any)[item.key]}
+                                                                onChange={e => setSupabaseNotifications({ ...supabaseNotifications, [item.key]: e.target.checked })}
+                                                                className="w-4 h-4 accent-black cursor-pointer"
+                                                            />
                                                         </div>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={(supabaseNotifications as any)[item.key]}
-                                                            onChange={e => setSupabaseNotifications({ ...supabaseNotifications, [item.key]: e.target.checked })}
-                                                            className="w-4 h-4 accent-black cursor-pointer"
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!user) return;
+                                                        try {
+                                                            const { error } = await supabase
+                                                                .from('profiles')
+                                                                .update({ notification_settings: supabaseNotifications })
+                                                                .eq('id', user.id);
+                                                            if (error) throw error;
+                                                            setFeedback({ type: 'success', text: 'Notification preferences saved!' });
+                                                        } catch (err: any) {
+                                                            setFeedback({ type: 'error', text: 'Failed to save notifications' });
+                                                        }
+                                                    }}
+                                                    className="w-full py-4 mt-4 bg-black text-white rounded-full text-xs font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+                                                >
+                                                    Save Notification Preferences
+                                                </button>
                                         </motion.div>
                                     )}
 

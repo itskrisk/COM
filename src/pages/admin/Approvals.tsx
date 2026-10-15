@@ -196,7 +196,7 @@ export default function Approvals() {
                 href={url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-2 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-all text-sm font-medium"
+                className="flex items-center gap-2 px-3 py-2.5 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-all text-sm font-medium min-h-[44px]"
             >
                 <FileText size={16} />
                 <span>{label}</span>
@@ -211,7 +211,7 @@ export default function Approvals() {
         
         if (docEntries.length === 0) {
             return (
-                <div className="flex items-center gap-2 text-amber-600 text-sm">
+                <div className="flex items-center gap-2 text-amber-600 text-sm min-h-[44px]">
                     <AlertTriangle size={16} />
                     <span>No documents uploaded</span>
                 </div>
@@ -235,7 +235,7 @@ export default function Approvals() {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all"
+                        className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all min-h-[40px]"
                     >
                         <FileText size={14} />
                         {getDocLabel(key)}
@@ -252,7 +252,7 @@ export default function Approvals() {
 
         if (docEntries.length === 0) {
             return (
-                <div className="flex items-center gap-2 text-amber-600 text-sm">
+                <div className="flex items-center gap-2 text-amber-600 text-sm min-h-[44px]">
                     <AlertTriangle size={16} />
                     <span>No documents uploaded</span>
                 </div>
@@ -278,7 +278,7 @@ export default function Approvals() {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all"
+                        className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all min-h-[40px]"
                     >
                         <FileText size={14} />
                         {getDocLabel(key)}
@@ -290,42 +290,42 @@ export default function Approvals() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFBF7] p-6">
+        <div className="min-h-screen bg-[#FDFBF7] px-4 sm:px-6 lg:px-8 py-6">
             <div className="max-w-6xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black tracking-tight text-black mb-2">Approvals</h1>
-                    <p className="text-gray-500 font-medium">Review and manage merchant and rider applications</p>
+                <div className="mb-6 sm:mb-8">
+                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black mb-2">Approvals</h1>
+                    <p className="text-gray-500 font-medium text-sm">Review and manage merchant and rider applications</p>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 mb-6">
+                <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                     <button
                         onClick={() => setActiveTab('merchants')}
-                        className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all ${
+                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all whitespace-nowrap ${
                             activeTab === 'merchants'
                                 ? 'bg-black text-white shadow-lg'
                                 : 'bg-white text-gray-400 hover:bg-gray-50'
                         }`}
                     >
-                        <Store size={16} className="inline mr-2" />
+                        <Store size={16} />
                         Merchants
                     </button>
                     <button
                         onClick={() => setActiveTab('riders')}
-                        className={`px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all ${
+                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all whitespace-nowrap ${
                             activeTab === 'riders'
                                 ? 'bg-black text-white shadow-lg'
                                 : 'bg-white text-gray-400 hover:bg-gray-50'
                         }`}
                     >
-                        <Bike size={16} className="inline mr-2" />
+                        <Bike size={16} />
                         Riders
                     </button>
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
                     <div className="flex-1 relative">
                         <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                         <input
@@ -333,15 +333,15 @@ export default function Approvals() {
                             placeholder={`Search ${activeTab}...`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all"
+                            className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all text-sm min-h-[48px]"
                         />
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
                         {(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED', 'ALL'] as Status[]).map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setStatusFilter(status)}
-                                className={`px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-widest transition-all ${
+                                className={`flex items-center px-3 sm:px-4 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap min-h-[48px] ${
                                     statusFilter === status
                                         ? 'bg-black text-white'
                                         : 'bg-white text-gray-400 hover:bg-gray-50'
@@ -355,8 +355,8 @@ export default function Approvals() {
 
                 {/* Content */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
+                    <div className="flex items-center justify-center py-12 sm:py-20">
+                        <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-[#D4AF37]"></div>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -367,28 +367,28 @@ export default function Approvals() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                                    className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                                 {merchant.logo_url ? (
                                                     <img src={merchant.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
                                                 ) : (
-                                                    <Store size={24} className="text-gray-400" />
+                                                    <Store size={20} sm:size={24} className="text-gray-400" />
                                                 )}
                                             </div>
-                                            <div>
-                                                <h3 className="font-bold text-lg">{merchant.business_name}</h3>
-                                                <p className="text-sm text-gray-500">{merchant.type}</p>
+                                            <div className="min-w-0">
+                                                <h3 className="font-bold text-base sm:text-lg truncate">{merchant.business_name}</h3>
+                                                <p className="text-xs sm:text-sm text-gray-500">{merchant.type}</p>
                                                 {merchant.description && (
-                                                    <p className="text-xs text-gray-400 mt-1 max-w-md truncate">{merchant.description}</p>
+                                                    <p className="text-xs text-gray-400 mt-1 max-w-md sm:max-w-xs truncate">{merchant.description}</p>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${getStatusColor(merchant.status)}`}>
+                                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                            <span className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[9px] sm:text-xs font-black uppercase tracking-widest ${getStatusColor(merchant.status)}`}>
                                                 {merchant.status}
                                             </span>
 
@@ -397,14 +397,16 @@ export default function Approvals() {
                                                     <button
                                                         onClick={() => handleApprove(merchant.id)}
                                                         disabled={processing === merchant.id}
-                                                        className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50"
+                                                        className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                        aria-label="Approve merchant"
                                                     >
                                                         <CheckCircle2 size={20} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleReject(merchant.id)}
                                                         disabled={processing === merchant.id}
-                                                        className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50"
+                                                        className="p-2.5 sm:p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                        aria-label="Reject merchant"
                                                     >
                                                         <XCircle size={20} />
                                                     </button>
@@ -417,7 +419,7 @@ export default function Approvals() {
                                     <div className="mt-4 pt-4 border-t border-gray-100">
                                         <button
                                             onClick={() => setExpandedMerchant(expandedMerchant === merchant.id ? null : merchant.id)}
-                                            className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-all"
+                                            className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-all min-h-[44px]"
                                         >
                                             <FileText size={16} />
                                             <span>Documents & Details</span>
@@ -432,7 +434,7 @@ export default function Approvals() {
                                                 animate={{ opacity: 1, height: 'auto' }}
                                                 className="mt-3 p-4 bg-gray-50 rounded-xl"
                                             >
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 gap-4">
                                                     <div>
                                                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Business Info</p>
                                                         <div className="space-y-1 text-sm">
@@ -457,16 +459,16 @@ export default function Approvals() {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                                    className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
                                 >
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-gray-100 rounded-xl flex items-center justify-center">
-                                                <Bike size={24} className="text-gray-400" />
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                                <Bike size={20} sm:size={24} className="text-gray-400" />
                                             </div>
-                                            <div>
-                                                <h3 className="font-bold text-lg">{rider.vehicle_type} Rider</h3>
-                                                <p className="text-sm text-gray-500">
+                                            <div className="min-w-0">
+                                                <h3 className="font-bold text-base sm:text-lg truncate">{rider.vehicle_type} Rider</h3>
+                                                <p className="text-xs sm:text-sm text-gray-500">
                                                     {rider.is_online ? 'Online' : 'Offline'} • {rider.status}
                                                 </p>
                                                 {rider.vehicle_plate && (
@@ -475,8 +477,8 @@ export default function Approvals() {
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-3">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-widest ${getStatusColor(rider.status)}`}>
+                                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                            <span className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[9px] sm:text-xs font-black uppercase tracking-widest ${getStatusColor(rider.status)}`}>
                                                 {rider.status}
                                             </span>
 
@@ -485,14 +487,16 @@ export default function Approvals() {
                                                     <button
                                                         onClick={() => handleApprove(rider.id)}
                                                         disabled={processing === rider.id}
-                                                        className="p-2 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50"
+                                                        className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                        aria-label="Approve rider"
                                                     >
                                                         <CheckCircle2 size={20} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleReject(rider.id)}
                                                         disabled={processing === rider.id}
-                                                        className="p-2 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50"
+                                                        className="p-2.5 sm:p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                        aria-label="Reject rider"
                                                     >
                                                         <XCircle size={20} />
                                                     </button>
@@ -505,7 +509,7 @@ export default function Approvals() {
                                     <div className="mt-4 pt-4 border-t border-gray-100">
                                         <button
                                             onClick={() => setExpandedRider(expandedRider === rider.id ? null : rider.id)}
-                                            className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-all"
+                                            className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-black transition-all min-h-[44px]"
                                         >
                                             <FileText size={16} />
                                             <span>Documents & Equipment</span>
@@ -530,16 +534,16 @@ export default function Approvals() {
                         </AnimatePresence>
 
                         {(activeTab === 'merchants' && merchants.length === 0) && (
-                            <div className="text-center py-20">
-                                <Store size={48} className="mx-auto text-gray-300 mb-4" />
-                                <p className="text-gray-500 font-medium">No merchants found</p>
+                            <div className="text-center py-12 sm:py-20">
+                                <Store size={40} sm:size={48} className="mx-auto text-gray-300 mb-4" />
+                                <p className="text-gray-500 font-medium text-sm sm:text-base">No merchants found</p>
                             </div>
                         )}
 
                         {(activeTab === 'riders' && riders.length === 0) && (
-                            <div className="text-center py-20">
-                                <Bike size={48} className="mx-auto text-gray-300 mb-4" />
-                                <p className="text-gray-500 font-medium">No riders found</p>
+                            <div className="text-center py-12 sm:py-20">
+                                <Bike size={40} sm:size={48} className="mx-auto text-gray-300 mb-4" />
+                                <p className="text-gray-500 font-medium text-sm sm:text-base">No riders found</p>
                             </div>
                         )}
                     </div>

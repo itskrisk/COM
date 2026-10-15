@@ -137,10 +137,15 @@ export default function CourierDashboard() {
                 vehicle_plate: riderPlate.trim().toUpperCase(),
                 operating_zone: riderOperatingZone,
                 emergency_contact: riderEmergencyContact
+                    ? { name: riderEmergencyContact, phone: riderEmergencyContact }
+                    : undefined
             };
             localStorage.setItem('muncheez_rider_settings', JSON.stringify(payload));
             if (riderId) {
                 await riderService.updateRider(riderId, payload as any);
+                // Refresh rider record so performance/settings reflect immediately
+                const { data: refreshed } = await riderService.getRider(riderId);
+                if (refreshed) setRiderData(refreshed);
             }
             setVehicleInfo(prev => ({
                 ...prev,
@@ -170,6 +175,7 @@ export default function CourierDashboard() {
 
     // ── SUPABASE DATA LOADING ───────────────────────────────────────────────
     const [riderId, setRiderId] = useState<string | null>(null);
+    const [riderData, setRiderData] = useState<any>(null);
     const [vehicleInfo, setVehicleInfo] = useState({
         type: '', make: '', model: '', plate: '',
         inspectionStatus: 'Pending Verification',
@@ -179,6 +185,12 @@ export default function CourierDashboard() {
 
     const loadCourierData = useCallback(async (rId: string) => {
         try {
+            // Load rider record from Supabase for performance metrics
+            const { data: riderRecord } = await riderService.getRider(rId);
+            if (riderRecord) {
+                setRiderData(riderRecord);
+            }
+
             // Load pending dispatch offers
             const { data: offers } = await dispatchService.getPendingOffers(rId);
             if (offers && offers.length > 0) {
@@ -225,6 +237,7 @@ export default function CourierDashboard() {
         if (!profile?.id) return;
         riderService.getRider(profile.id).then(({ data }) => {
             if (data) {
+                setRiderData(data);
                 const id = data.id || profile.id;
                 setRiderId(id);
                 // Sync rider info from Supabase
@@ -288,19 +301,20 @@ export default function CourierDashboard() {
             .catch(console.error);
     }, [presence, riderId]);
 
-    // Performance Metrics — derived from real wallet/transaction data
+    // Performance Metrics — derived from real Supabase riders table data
     const realCompletedDeliveries = walletTransactions.filter(t => t.type === 'CREDIT').length;
+    const riderPerf = (riderData?.performance as any) || {};
     const performanceStats = {
         tier: realCompletedDeliveries >= 100 ? 'Gold Tier · High Priority Dispatch'
              : realCompletedDeliveries >= 20 ? 'Silver Tier · Standard Dispatch'
              : 'New Partner · Building History',
-        rating: (profile as any)?.rating || 0,
-        acceptanceRate: 0, // TODO: compute from dispatch_offers accepted/offered ratio when data available
-        completionRate: 0, // TODO: compute from completed vs accepted orders when data available
-        onTimeRate: 0,
-        reliabilityScore: 0,
+        rating: riderPerf.rating || (profile as any)?.rating || 0,
+        acceptanceRate: riderPerf.acceptanceRate || 0,
+        completionRate: riderPerf.completionRate || 0,
+        onTimeRate: riderPerf.onTimeRate || 0,
+        reliabilityScore: riderPerf.reliabilityScore || 0,
         hourlyRateKES: realCompletedDeliveries >= 100 ? 310 : 250,
-        totalDeliveriesAllTime: realCompletedDeliveries
+        totalDeliveriesAllTime: riderPerf.totalOrders || realCompletedDeliveries
     };
 
     // Accept Offer (local + Supabase)
@@ -591,9 +605,9 @@ export default function CourierDashboard() {
                                 <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">Fleet Tier</span>
                                 <div className="flex items-center gap-2 mt-1">
                                     <Award size={18} className="text-amber-600" />
-                                    <span className="text-xl font-light text-black">Gold Partner</span>
+                                    <span className="text-xl font-light text-black">{performanceStats.tier.split('·')[0].trim()}</span>
                                 </div>
-                                <span className="text-[11px] text-neutral-400 block mt-1">+15% Priority Dispatch Bonus</span>
+                                <span className="text-[11px] text-neutral-400 block mt-1">{performanceStats.tier.includes('Gold') ? '+15% Priority Dispatch Bonus' : performanceStats.tier.includes('Silver') ? 'Standard Dispatch' : 'Building History'}</span>
                             </div>
                         </div>
 
@@ -744,8 +758,8 @@ export default function CourierDashboard() {
                             </div>
                             <div className="p-6">
                                 <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">Today's Shift Haul</span>
-                                <span className="text-4xl font-light text-black font-mono">KES 1,280</span>
-                                <span className="text-[11px] text-neutral-400 block mt-1">From 7 fulfilled deliveries</span>
+                                <span className="text-4xl font-light text-black font-mono">KES {walletTransactions.filter(t => t.type === 'CREDIT').reduce((s, tx) => s + tx.amount, 0).toLocaleString()}</span>
+                                <span className="text-[11px] text-neutral-400 block mt-1">From {walletTransactions.filter(t => t.type === 'CREDIT').length} fulfilled deliveries</span>
                             </div>
                             <div className="p-6">
                                 <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">M-Pesa Registered Number</span>
@@ -936,11 +950,11 @@ export default function CourierDashboard() {
                                 </div>
                                 <div className="py-3 flex justify-between">
                                     <span className="text-neutral-400 uppercase">Protective Helmet Verified</span>
-                                    <span className="text-emerald-700">Verified & Approved</span>
+                                    <span className={(riderData as any)?.helmet_verified ? 'text-emerald-700' : 'text-amber-600'}>{(riderData as any)?.helmet_verified ? 'Verified & Approved' : 'Pending Verification'}</span>
                                 </div>
                                 <div className="py-3 flex justify-between">
                                     <span className="text-neutral-400 uppercase">Thermal Grocery Bag Verified</span>
-                                    <span className="text-emerald-700">Verified & Approved</span>
+                                    <span className={(riderData as any)?.thermal_bag_verified ? 'text-emerald-700' : 'text-amber-600'}>{(riderData as any)?.thermal_bag_verified ? 'Verified & Approved' : 'Pending Verification'}</span>
                                 </div>
                             </div>
                         </div>
@@ -960,11 +974,11 @@ export default function CourierDashboard() {
                                 </div>
                                 <div className="py-3 flex justify-between">
                                     <span className="text-neutral-400 uppercase">National ID Number</span>
-                                    <span className="text-black">33819204</span>
+                                    <span className="text-black">{(riderData as any)?.national_id || '—'}</span>
                                 </div>
                                 <div className="py-3 flex justify-between">
                                     <span className="text-neutral-400 uppercase">Operational Zone</span>
-                                    <span className="text-black">Westlands, Kilimani, Lavington Metropolis</span>
+                                    <span className="text-black">{(riderData as any)?.operating_zone || 'Not set'}</span>
                                 </div>
                             </div>
                         </div>

@@ -162,20 +162,20 @@ export default function CourierOnboarding() {
     if (submitted) {
         return (
             <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
-                <header className="border-b border-neutral-200 px-6 sm:px-12 py-5 flex items-center justify-between">
-                    <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+                <header className="border-b border-neutral-200 px-4 sm:px-6 md:px-12 py-4 flex items-center justify-between gap-3">
+                    <Link to="/" className="font-heading font-bold text-xl sm:text-2xl tracking-tighter text-black flex-shrink-0">
                         Muncheez<span className="text-[#00BCD4]">.</span>
                     </Link>
-                    <div className="flex items-center gap-6">
-                        <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                    <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+                        <span className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-neutral-400 hidden sm:inline">
                             Courier Fleet Portal
                         </span>
                         <button
                             onClick={handleLogout}
-                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors font-mono uppercase tracking-wider"
+                            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors font-mono uppercase tracking-wider px-3 py-2 min-h-[44px]"
                         >
                             <LogOut size={13} />
-                            Logout
+                            <span className="hidden sm:inline">Logout</span>
                         </button>
                     </div>
                 </header>
@@ -244,20 +244,20 @@ export default function CourierOnboarding() {
 
     return (
         <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-neutral-900 selection:text-white">
-            <header className="border-b border-neutral-200 px-6 sm:px-12 py-5 flex items-center justify-between">
-                <Link to="/" className="font-heading font-bold text-2xl tracking-tighter text-black">
+            <header className="border-b border-neutral-200 px-4 sm:px-6 md:px-12 py-4 flex items-center justify-between gap-3">
+                <Link to="/" className="font-heading font-bold text-xl sm:text-2xl tracking-tighter text-black flex-shrink-0">
                     Muncheez<span className="text-[#00BCD4]">.</span>
                 </Link>
-                <div className="flex items-center gap-6">
-                    <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+                    <span className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-neutral-400 hidden sm:inline">
                         Step {step} of 2 · Courier Fleet Enrollment
                     </span>
                     <button
                         onClick={() => signOut()}
-                        className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors"
+                        className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors px-3 py-2 min-h-[44px]"
                     >
                         <LogOut size={13} />
-                        Sign Out
+                        <span className="hidden sm:inline">Sign Out</span>
                     </button>
                 </div>
             </header>
@@ -408,7 +408,7 @@ export default function CourierOnboarding() {
                                 <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
                                     National ID Photo / Driving License Upload
                                 </label>
-                                <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-8 px-6 flex flex-col items-center justify-center cursor-pointer text-center">
+                                <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-6 sm:py-8 px-4 sm:px-6 flex flex-col items-center justify-center cursor-pointer text-center">
                                     <UploadCloud size={24} className="text-neutral-400 mb-2" />
                                     <span className="text-xs font-medium text-black">
                                         {idDocName ? idDocName : 'Select ID Document or License (PDF/Image)'}
@@ -428,7 +428,7 @@ export default function CourierOnboarding() {
                                 </label>
                             </div>
 
-                            <div className="pt-6 border-t border-neutral-200 flex justify-between items-center">
+                            <div className="pt-6 border-t border-neutral-200 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">
                                 <button
                                     type="button"
                                     onClick={() => setStep(1)}

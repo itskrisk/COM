@@ -76,6 +76,10 @@ export default function Riders() {
                     if (r.insurance_url && !docs.insurance) docs.insurance = { url: r.insurance_url, filename: 'Insurance Certificate' };
                     if (r.profile_photo_url && !docs.photo) docs.photo = { url: r.profile_photo_url, filename: 'Profile Photo' };
 
+                    const perf = r.performance || {};
+                    const earn = r.earnings || {};
+                    const wal = r.wallet || {};
+
                     return {
                         id: r.id,
                         name: r.name || r.profile?.full_name || 'Unnamed Courier',
@@ -87,17 +91,24 @@ export default function Riders() {
                         currentOrderId: undefined,
                         documents: docs,
                         emergencyContact: r.emergency_contact || {},
-                        performance: r.performance || {
-                            rating: r.rating || 5.0,
-                            acceptanceRate: 100,
-                            completionRate: 100,
-                            reliabilityScore: 100,
-                            onTimeRate: 100,
-                            ordersToday: 0,
-                            totalOrders: r.total_orders || 0
+                        performance: {
+                            rating: (perf as any).rating ?? r.rating ?? 5.0,
+                            acceptanceRate: (perf as any).acceptanceRate ?? r.acceptance_rate ?? 100,
+                            completionRate: (perf as any).completionRate ?? r.completion_rate ?? 100,
+                            reliabilityScore: (perf as any).reliabilityScore ?? r.reliability_score ?? 100,
+                            onTimeRate: (perf as any).onTimeRate ?? 0,
+                            ordersToday: (perf as any).ordersToday ?? 0,
+                            totalOrders: (perf as any).totalOrders ?? r.total_orders ?? r.total_deliveries ?? 0
                         },
-                        earnings: r.earnings || { today: 0, weekly: 0, total: 0 },
-                        wallet: r.wallet || { balance: 0, pending: 0 },
+                        earnings: {
+                            today: (earn as any).today ?? 0,
+                            weekly: (earn as any).weekly ?? 0,
+                            total: (earn as any).total ?? 0
+                        },
+                        wallet: {
+                            balance: (wal as any).balance ?? 0,
+                            pending: (wal as any).pending ?? 0
+                        },
                         vehicle: {
                             make: r.vehicle_make || 'N/A',
                             model: r.vehicle_model || 'N/A',
@@ -196,13 +207,13 @@ export default function Riders() {
 
     const handleSaveRider = async (data: any) => {
         const newRiderId = `rider_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-        
+
         try {
             await supabase.from('profiles').insert([{
                 id: newRiderId,
                 full_name: data.name,
                 phone: data.phone,
-                role: 'rider'
+                roles: ['courier']
             }]);
         } catch (e) {
             console.warn('Could not insert profile:', e);
@@ -210,6 +221,8 @@ export default function Riders() {
 
         const { error: riderError } = await supabase.from('riders').insert([{
             id: newRiderId,
+            name: data.name,
+            phone: data.phone,
             vehicle_type: data.vehicleType,
             vehicle_make: data.vehicleMake || 'Unknown',
             vehicle_model: data.vehicleModel || 'Unknown',
@@ -217,7 +230,19 @@ export default function Riders() {
             status: 'APPROVED',
             is_online: false,
             rating: 5.0,
-            total_orders: 0
+            total_orders: 0,
+            total_deliveries: 0,
+            performance: {
+                rating: 5.0,
+                acceptanceRate: 100,
+                completionRate: 100,
+                reliabilityScore: 100,
+                onTimeRate: 100,
+                ordersToday: 0,
+                totalOrders: 0
+            },
+            earnings: { today: 0, weekly: 0, total: 0 },
+            wallet: { balance: 0, pending: 0 }
         }]);
 
         if (riderError) {

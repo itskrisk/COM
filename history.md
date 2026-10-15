@@ -3279,4 +3279,54 @@ Continuing from the previous session's audit. The remaining pending items were:
  
  T h e   b r o w s e r   t a b   n o w   u s e s   b r o w s e r i m a g e . p n g   a s   r e q u e s t e d ,   a n d   U R L   s h a r i n g   c o n t i n u e s   t o   u s e   u r l i m a g e . j p g . 
   
- 
+ ---
+
+## 2026-10-15 — Rider Dashboard & Admin Fleet Wiring Audit & Fixes
+
+### Objective
+Ensure the rider/courier dashboard receives its correct data from Supabase, that the schema supports all fields used by the admin Riders page, and that admin reflects rider performance changes in real time.
+
+### Findings
+1. **Schema gap**: `public.riders` was missing columns referenced by `admin/Riders.tsx` (`name`, `phone`, `email`, `transport_mode`, `emergency_contact`, `performance`, `earnings`, `wallet`, `id_doc_url`, `license_url`, `logbook_url`, `insurance_url`, `profile_photo_url`, `operating_zone`, `inspection_status`, `helmet_verified`, `thermal_bag_verified`).
+2. **Admin Riders page**: Was reading `r.name`, `r.performance`, `r.earnings`, `r.wallet`, `r.id_doc_url`, etc. from columns that did not exist. Performance metrics defaulted to 100% across the board.
+3. **Courier Dashboard**: Performance metrics (`acceptanceRate`, `completionRate`, `onTimeRate`, `reliabilityScore`) were hardcoded to 0 with TODO comments. Settings save wrote `emergency_contact` as a raw string instead of a JSONB object. Vehicle inspection values were hardcoded "Verified & Approved".
+4. **Admin Operations Cockpit**: Rider query only selected `id, is_online, status` — missing name, rating, performance, earnings, wallet.
+
+### Fixes Applied
+- **New migration `supabase/migrations/006_rider_performance_schema.sql`**: Adds all missing columns with sensible defaults, backfills `name`/`phone`/`email` from linked `profiles` table, populates `performance`/`earnings`/`wallet` JSONB blocks from legacy scalar columns.
+- **`src/pages/admin/Riders.tsx`**: Updated rider mapping to read from new JSONB columns (`performance`, `earnings`, `wallet`, `emergency_contact`) with fallback to legacy scalars. Updated `handleSaveRider` to insert `name`, `phone`, `roles`, `performance`, `earnings`, `wallet` on new rider creation.
+- **`src/pages/courier/Dashboard.tsx`**: Added `riderData` state loaded via `riderService.getRider()`. Performance metrics now read from `riderData.performance`. Settings save now sends `emergency_contact` as JSONB `{name, phone}`. Vehicle inspection values now read from `riderData.helmet_verified` / `thermal_bag_verified`. "Today's Shift Haul" now derives from actual wallet ledger credits.
+- **`src/pages/admin/Dashboard.tsx`**: Expanded rider query to include `name, rating, total_deliveries, performance, earnings, wallet`.
+
+### Verification
+- `npx tsc -b` passes with no new errors (6 pre-existing errors in unrelated files: `ProfileModal.tsx` null user, `Approvals.tsx`/`Dashboard.tsx` `sm:size` Lucide prop).
+- Admin Riders page now displays real performance metrics; courier dashboard reflects Supabase rider data; schema migration is idempotent (`ADD COLUMN IF NOT EXISTS`).
+
+### Files Changed
+- `supabase/migrations/006_rider_performance_schema.sql` (new)
+- `src/pages/admin/Riders.tsx`
+- `src/pages/courier/Dashboard.tsx`
+- `src/pages/admin/Dashboard.tsx`
+---
+
+## 2026-10-15 — Auth/Onboarding Mobile Responsiveness Fixes
+
+### Objective
+Make both the courier and merchant onboarding flows fully mobile-responsive.
+
+### Changes Applied
+- **`src/pages/courier/Onboarding.tsx`**:
+  - Header: reduced padding to `px-4 sm:px-6`, logo to `text-xl sm:text-2xl`, step label hidden below sm, Sign Out label hidden below sm, added `min-h-[44px]` touch target.
+  - Step 2 button bar: changed from `flex justify-between` to `flex-col sm:flex-row ... items-stretch sm:items-center gap-3` so Back/Submit stack vertically on mobile.
+  - File upload dropzone: reduced padding to `py-6 sm:py-8 px-4 sm:px-6`.
+- **`src/pages/merchant/Onboarding.tsx`**:
+  - Header: same responsive treatment as courier.
+  - Step 2 button bar: same vertical-stack fix.
+  - File upload dropzone: same responsive padding.
+
+### Verification
+- `npx tsc -b` passes with no new errors (6 pre-existing errors in unrelated files).
+
+### Files Changed
+- `src/pages/courier/Onboarding.tsx`
+- `src/pages/merchant/Onboarding.tsx`

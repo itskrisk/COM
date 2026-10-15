@@ -340,6 +340,7 @@ const signUp = async (
     } finally {
       localStorage.removeItem('muncheez_admin_master');
       localStorage.removeItem('accessToken');
+      sessionStorage.removeItem('muncheez_admin_session');
       setToken(null);
       setUser(null);
       setProfile(null);

@@ -1,154 +1,180 @@
 import { useState, useEffect, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
-import { useAuth } from '../../context/AuthContext';
+import { ArrowLeft, Loader2, Lock } from 'lucide-react';
+
+const ADMIN_CREDENTIALS = {
+    email: 'admin@muncheez.co.ke',
+    password: 'Admin@Muncheez2025!'
+};
+
+const ADMIN_SESSION_KEY = 'muncheez_admin_session';
 
 export default function AdminLogin() {
     const navigate = useNavigate();
-    const { user, profile, loading: authLoading, signIn } = useAuth();
-    const [email, setEmail] = useState('admin@muncheez.co.ke');
-    const [password, setPassword] = useState('Admin@Muncheez');
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
-    // Auto-redirect if already authenticated as admin
+    // Check existing admin session on mount
     useEffect(() => {
-        if (!authLoading && user && profile?.roles?.includes('admin')) {
-            navigate('/admin', { replace: true });
+        const session = sessionStorage.getItem(ADMIN_SESSION_KEY);
+        if (session) {
+            try {
+                const { expiry } = JSON.parse(session);
+                if (Date.now() < expiry) {
+                    navigate('/admin', { replace: true });
+                } else {
+                    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+                }
+            } catch {
+                sessionStorage.removeItem(ADMIN_SESSION_KEY);
+            }
         }
-    }, [authLoading, user, profile, navigate]);
+    }, [navigate]);
 
     const handleLogin = async (e: FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError('');
 
-        try {
-            const result = await signIn(email, password);
-
-            if (result.error) {
-                setError(result.error);
-                return;
-            }
-
-            navigate('/admin', { replace: true });
-        } catch (err: any) {
-            setError(err.message || 'Login failed');
-        } finally {
+        // Simple validation
+        if (!email || !password) {
+            setError('Email and password are required');
             setIsLoading(false);
+            return;
         }
+
+        // Simulate network delay for UX
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        // Hardcoded credential check
+        if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+            // Create session (24 hours)
+            const session = {
+                email: ADMIN_CREDENTIALS.email,
+                role: 'admin',
+                loginTime: Date.now(),
+                expiry: Date.now() + 24 * 60 * 60 * 1000
+            };
+            sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+            navigate('/admin', { replace: true });
+        } else {
+            setError('Invalid credentials. Access denied.');
+        }
+        setIsLoading(false);
     };
 
-    if (authLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen bg-white flex overflow-hidden">
-            {/* Left Side: Editorial Image (Desktop Only) */}
-            <div className="hidden lg:block lg:w-1/2 relative">
-                <img
-                    src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2000"
-                    alt="Muncheez Operations"
-                    className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-black/20" />
-                <div className="absolute bottom-20 left-20 z-10 max-w-lg">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/60 mb-6 block">Restricted Access</span>
-                    <h2 className="text-6xl font-heading font-light text-white leading-[1.1] tracking-tight mb-8">
-                        Command <br />
-                        <span className="italic opacity-50">Center</span>.
-                    </h2>
-                    <p className="text-lg text-white/70 font-light leading-relaxed">
-                        Approvals, merchants, riders, orders, and platform intelligence in one terminal.
-                    </p>
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+            <div className="w-full max-w-sm">
+                {/* Back Button */}
+                <Link
+                    to="/"
+                    className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-gray-400 hover:text-gray-600 transition-colors mb-8 group"
+                >
+                    <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                    Back to Muncheez
+                </Link>
+
+                {/* Apple-style Card */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 sm:p-10">
+                    {/* Header */}
+                    <div className="text-center mb-10">
+                        <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center mx-auto mb-4">
+                            <Lock size={24} className="text-white" />
+                        </div>
+                        <h1 className="text-2xl font-heading font-light tracking-tight text-gray-900 mb-2">
+                            Admin Console
+                        </h1>
+                        <p className="text-sm text-gray-500">
+                            Restricted access. Muncheez operations only.
+                        </p>
+                    </div>
+
+                    {/* Error */}
+                    {error && (
+                        <div className="mb-6 p-3 bg-red-50 border border-red-100 rounded-xl">
+                            <p className="text-xs text-red-600 font-medium flex items-center gap-2">
+                                <Lock size={12} />
+                                {error}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Form */}
+                    <form onSubmit={handleLogin} className="space-y-6">
+                        <div>
+                            <label htmlFor="email" className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                                Email
+                            </label>
+                            <div className="relative">
+                                <input
+                                    id="email"
+                                    type="email"
+                                    required
+                                    autoComplete="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-transparent transition-all text-sm"
+                                    placeholder="admin@muncheez.co.ke"
+                                    disabled={isLoading}
+                                />
+                            </div>
+                        </div>
+
+                        <div>
+                            <label htmlFor="password" className="block text-[10px] font-semibold uppercase tracking-wider text-gray-400 mb-2">
+                                Password
+                            </label>
+                            <div className="relative">
+                                <input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    autoComplete="current-password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-transparent transition-all text-sm pr-12"
+                                    placeholder="••••••••"
+                                    disabled={isLoading}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                >
+                                    {showPassword ? (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                                    ) : (
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                    )}
+                                </button>
+                            </div>
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className="w-full py-4 bg-black text-white rounded-xl text-sm font-semibold uppercase tracking-wider hover:bg-gray-800 active:bg-gray-900 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center gap-2"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <Loader2 size={18} className="animate-spin" />
+                                    <span>Signing in...</span>
+                                </>
+                            ) : (
+                                'Sign In'
+                            )}
+                        </button>
+                    </form>
                 </div>
-            </div>
 
-            {/* Right Side: Auth Form */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative overflow-y-auto">
-                <div className="mb-12 relative">
-                    <Link
-                        to="/"
-                        className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A90E2] mb-8 hover:opacity-70 transition-all group"
-                    >
-                        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                        Back to Selection
-                    </Link>
-                    <div className="flex items-center justify-between mb-8">
-                        <span className="font-heading font-bold text-3xl tracking-tighter text-gray-900">
-                            Muncheez<span className="text-[#4A90E2]">.</span>
-                        </span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">Admin Console</span>
-                    </div>
-                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Admin Sign In.</h1>
-                    <p className="text-sm text-gray-500">Restricted to Muncheez operations staff.</p>
-                </div>
-
-                {error && (
-                    <div className="mb-6 border-b border-red-500 pb-3">
-                        <p className="text-xs text-red-600 font-medium font-mono">{error}</p>
-                    </div>
-                )}
-
-                <form onSubmit={handleLogin} className="space-y-8 max-w-md w-full">
-                    <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                            Admin Email
-                        </label>
-                        <input
-                            id="admin-email"
-                            name="email"
-                            type="email"
-                            required
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
-                            placeholder="admin@muncheez.co.ke"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                            Password
-                        </label>
-                        <input
-                            id="admin-password"
-                            name="password"
-                            type="password"
-                            required
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
-                            placeholder="••••••••"
-                        />
-                    </div>
-
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="group w-full flex justify-between items-center py-5 px-8 rounded-2xl text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-500 uppercase tracking-widest shadow-xl shadow-gray-200"
-                    >
-                        {isLoading ? (
-                            <>
-                                <span>Authenticating...</span>
-                                <Loader2 size={18} className="animate-spin" />
-                            </>
-                        ) : (
-                            <>
-                                <span>Access Console</span>
-                                <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
-                            </>
-                        )}
-                    </button>
-                </form>
-
-                <p className="text-[10px] text-gray-400 mt-12 font-mono uppercase tracking-widest">
-                    Master Admin: admin@muncheez.co.ke / Admin@Muncheez
+                {/* Footer */}
+                <p className="text-[10px] text-gray-400 text-center mt-6 font-medium uppercase tracking-wider">
+                    Muncheez Operations Terminal
                 </p>
             </div>
         </div>

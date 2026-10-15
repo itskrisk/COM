@@ -1,13 +1,14 @@
 import Footer from '../../../components/layout/Footer';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Minus, Search, ShoppingBag, Menu, X, User, Zap, Clock, Star, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Plus, Minus, Search, ShoppingBag, Menu, X, User, Zap, Clock, Star, ArrowLeft, ArrowRight, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../../context/CartContext';
 import LocationModal from '../../../components/marketing/LocationModal';
 import ProfileModal from '../../../components/ui/shared/ProfileModal';
 import GlassCart from '../../../components/ui/shared/GlassCart';
 import { useAuth } from '../../../context/AuthContext';
+import { supabase } from '../../../lib/supabaseClient';
 
 interface SupermarketStoreProps {
     merchant: any;
@@ -40,17 +41,49 @@ const staggerItem = {
 
 export default function SupermarketStore({ merchant = {}, products = [] }: SupermarketStoreProps) {
     const navigate = useNavigate();
-    const { user, profile } = useAuth();
+    const { user, profile, refreshUser } = useAuth();
     const { addItem, updateQuantity, itemCount, items = [] } = useCart();
     const [selectedCategory, setSelectedCategory] = useState('Featured items');
     const [searchTerm, setSearchTerm] = useState('');
     const [activeTab, setActiveTab] = useState('Shop');
     const [viewingCategoryDeepDive, setViewingCategoryDeepDive] = useState<string | null>(null);
+    const [userLocation, setUserLocation] = useState('');
+
+    // Sync location from profile or localStorage on mount/profile change
+    useEffect(() => {
+        const profileLocation = profile?.location_preferences?.neighborhood;
+        const storageLocation = localStorage.getItem('muncheez_delivery_address');
+        const fallback = profileLocation || storageLocation || '';
+        setUserLocation(fallback);
+    }, [profile]);
 
     // Modal & Menu States 
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // Unified location handler - saves to both localStorage and Supabase profile
+    const handleLocationSelect = async (loc: string) => {
+        setUserLocation(loc);
+        localStorage.setItem('muncheez_delivery_address', loc);
+        
+        if (user?.id) {
+            try {
+                await supabase
+                    .from('profiles')
+                    .update({ 
+                        location_preferences: { 
+                            neighborhood: loc,
+                            delivery_notes: profile?.location_preferences?.delivery_notes || ''
+                        } 
+                    })
+                    .eq('id', user.id);
+                refreshUser();
+            } catch (err) {
+                console.error('Failed to save location to profile:', err);
+            }
+        }
+    };
 
     // Taxonomy
     const categoricalTaxonomy = [
@@ -223,17 +256,49 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                 <div className="absolute inset-0 z-[5] opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat mix-blend-overlay" />
 
                 <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 mb-2 relative z-30">
-                    <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-4">
                         <button onClick={() => setIsMenuOpen(true)} className="lg:hidden w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 hover:bg-white/20 transition-colors"><Menu size={20} /></button>
-                        <div onClick={() => navigate('/')} className="cursor-pointer text-2xl font-heading font-bold tracking-tighter">Muncheez<span className="text-[#D4AF37]">.</span></div>
+                        <div onClick={() => navigate('/')} className="cursor-pointer flex items-center gap-0 shrink-0 text-2xl font-heading font-bold tracking-tighter">
+                            Muncheez<span className="text-[#D4AF37]">.</span>
+                        </div>
+
+                        {/* Location - Minimal */}
+                        <button
+                            onClick={() => setIsLocationModalOpen(true)}
+                            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full cursor-pointer hover:bg-white/10 transition-all"
+                            aria-label="Delivery location"
+                        >
+                            <MapPin size={11} className="text-[#D4AF37]" />
+                            <span className="text-[10px] font-medium uppercase tracking-wider truncate max-w-[160px] text-white/90">
+                                {userLocation || 'Delivery location'}
+                            </span>
+                        </button>
                     </div>
-                    <div className="flex-1 max-w-xl relative">
+                    <div className="flex-1 max-w-md relative">
                         <Search size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
                         <input type="text" placeholder="Search the market..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 backdrop-blur-md rounded-full outline-none text-xs placeholder:text-white/20" />
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="relative w-10 h-10 bg-white text-black rounded-lg flex items-center justify-center shadow-lg"><ShoppingBag size={18} />{itemCount > 0 && <span className="absolute -top-2 -right-2 bg-[#D4AF37] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shadow-lg border-2 border-white">{itemCount}</span>}</div>
+                    <div className="flex items-center gap-2">
+                        {/* Cart - Modern with badge */}
+                        <button
+                            onClick={() => navigate('/checkout')}
+                            className="relative w-10 h-10 bg-white text-[#4A90E2] rounded-xl flex items-center justify-center shadow-sm hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
+                            aria-label="View cart"
+                        >
+                            <ShoppingBag size={18} />
+                            {(() => {
+                                const cart = JSON.parse(localStorage.getItem('muncheez_cart_items') || '[]');
+                                const count = cart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
+                                return count > 0 ? (
+                                    <span className="absolute -top-1.5 -right-1.5 bg-[#D4AF37] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                                        {count > 99 ? '99+' : count}
+                                    </span>
+                                ) : null;
+                            })()}
+                        </button>
+
+                        {/* Profile / Account */}
                         <button
                             onClick={() => setIsProfileOpen(true)}
                             aria-label="Open account"
@@ -529,7 +594,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
 
             <Footer />
 
-            <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} onSelectLocation={() => { setIsLocationModalOpen(false); }} />
+            <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} onSelectLocation={handleLocationSelect} />
             <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
 
             {/* NEW GLASS CART (SHARED COMPONENT) */}
