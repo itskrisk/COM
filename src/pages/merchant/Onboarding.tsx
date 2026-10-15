@@ -131,15 +131,22 @@ export default function MerchantOnboarding() {
                         documents: permitDocName ? { permit: permitDocName } : null,
                         created_at: new Date().toISOString()
                     }, { onConflict: 'id' });
+
+                    // Move the profile to pending_approval so ProtectedRoute stops
+                    // bouncing submitted users back to the onboarding form.
+                    await supabase.from('profiles').update({
+                        status: 'PENDING',
+                        account_status: 'pending_approval'
+                    }).eq('id', user.id);
+                }
+                setSubmitted(true);
+            } catch (err) {
+                console.error('Error saving onboarding data:', err);
+                // Still allow proceeding to review state
+                setSubmitted(true);
+            } finally {
+                setLoading(false);
             }
-            setSubmitted(true);
-        } catch (err) {
-            console.error('Error saving onboarding data:', err);
-            // Still allow proceeding to review state
-            setSubmitted(true);
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleLogout = async () => {

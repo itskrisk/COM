@@ -99,7 +99,9 @@ export default function AdminDashboard() {
                         className="p-3 sm:p-2 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl text-gray-500 hover:text-gray-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                         aria-label="Sign out"
                     >
-                        <LogOut size={20} sm:size={18} />
+                        <span className="flex items-center justify-center w-5 h-5 sm:w-4 sm:h-4">
+                        <LogOut size={18} className="w-full h-full" />
+                    </span>
                     </button>
                 </div>
             </div>
@@ -340,7 +342,7 @@ function StatCard({ title, value, subValue, trend, isPositive, icon: Icon, color
     return (
         <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl hover:shadow-gray-200/50 transition-all duration-300 relative group">
             <div className={`absolute top-4 right-4 sm:top-6 sm:right-6 p-2 rounded-xl sm:rounded-2xl ${colorStyles[color]} border transition-transform group-hover:scale-110`}>
-                <Icon size={18} sm:size={20} />
+                <Icon size={20} className="w-full h-full" />
             </div>
 
             <div className="relative pt-2">

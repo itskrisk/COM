@@ -13,7 +13,8 @@ import {
     Filter,
     FileText,
     ExternalLink,
-    AlertTriangle
+    AlertTriangle,
+    Pause
 } from 'lucide-react';
 
 type Tab = 'merchants' | 'riders';
@@ -124,9 +125,14 @@ export default function Approvals() {
 
             if (error) throw error;
 
-            // Sync user profile status
+            // Sync profile status AND account_status. ProtectedRoute gates on
+            // account_status, so updating only the legacy status column leaves
+            // approved users stuck on the pending-approval screen forever.
             try {
-                await supabase.from('profiles').update({ status: 'APPROVED' }).eq('id', id);
+                await supabase.from('profiles').update({
+                    status: 'APPROVED',
+                    account_status: 'active'
+                }).eq('id', id);
             } catch (pErr) {
                 console.warn('Profile sync notice:', pErr);
             }
@@ -159,7 +165,10 @@ export default function Approvals() {
             if (error) throw error;
 
             try {
-                await supabase.from('profiles').update({ status: 'REJECTED' }).eq('id', id);
+                await supabase.from('profiles').update({
+                    status: 'REJECTED',
+                    account_status: 'rejected'
+                }).eq('id', id);
             } catch (pErr) {
                 console.warn('Profile sync notice:', pErr);
             }
@@ -174,6 +183,35 @@ export default function Approvals() {
         } catch (err) {
             console.error('Error rejecting:', err);
             alert('Failed to reject. Please try again.');
+        } finally {
+            setProcessing(null);
+        }
+    };
+
+    const handleSuspend = async (id: string) => {
+        setProcessing(id);
+        try {
+            const table = activeTab === 'merchants' ? 'merchants' : 'riders';
+            const { error } = await supabase
+                .from(table)
+                .update({ status: 'SUSPENDED', is_active: false })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            try {
+                await supabase.from('profiles').update({
+                    status: 'SUSPENDED',
+                    account_status: 'suspended'
+                }).eq('id', id);
+            } catch (pErr) {
+                console.warn('Profile sync notice:', pErr);
+            }
+
+            await loadData();
+        } catch (err) {
+            console.error('Error suspending:', err);
+            alert('Failed to suspend. Please try again.');
         } finally {
             setProcessing(null);
         }
@@ -375,7 +413,9 @@ export default function Approvals() {
                                                 {merchant.logo_url ? (
                                                     <img src={merchant.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
                                                 ) : (
-                                                    <Store size={20} sm:size={24} className="text-gray-400" />
+                                                    <span className="w-5 h-5 sm:w-6 sm:h-6">
+                                                        <Store size={24} className="w-full h-full text-gray-400" />
+                                                    </span>
                                                 )}
                                             </div>
                                             <div className="min-w-0">
@@ -411,6 +451,16 @@ export default function Approvals() {
                                                         <XCircle size={20} />
                                                     </button>
                                                 </div>
+                                            )}
+                                            {merchant.status === 'APPROVED' && (
+                                                <button
+                                                    onClick={() => handleSuspend(merchant.id)}
+                                                    disabled={processing === merchant.id}
+                                                    className="p-2.5 sm:p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    aria-label="Suspend merchant"
+                                                >
+                                                    <Pause size={20} />
+                                                </button>
                                             )}
                                         </div>
                                     </div>
@@ -464,7 +514,9 @@ export default function Approvals() {
                                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                                         <div className="flex items-center gap-3 sm:gap-4 min-w-0">
                                             <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                                                <Bike size={20} sm:size={24} className="text-gray-400" />
+                                                <span className="w-5 h-5 sm:w-6 sm:h-6">
+                                                        <Bike size={24} className="w-full h-full text-gray-400" />
+                                                    </span>
                                             </div>
                                             <div className="min-w-0">
                                                 <h3 className="font-bold text-base sm:text-lg truncate">{rider.vehicle_type} Rider</h3>
@@ -502,6 +554,16 @@ export default function Approvals() {
                                                     </button>
                                                 </div>
                                             )}
+                                            {rider.status === 'APPROVED' && (
+                                                <button
+                                                    onClick={() => handleSuspend(rider.id)}
+                                                    disabled={processing === rider.id}
+                                                    className="p-2.5 sm:p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    aria-label="Suspend rider"
+                                                >
+                                                    <Pause size={20} />
+                                                </button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -533,16 +595,24 @@ export default function Approvals() {
                             ))}
                         </AnimatePresence>
 
-                        {(activeTab === 'merchants' && merchants.length === 0) && (
+{(activeTab === 'merchants' && merchants.length === 0) && (
                             <div className="text-center py-12 sm:py-20">
-                                <Store size={40} sm:size={48} className="mx-auto text-gray-300 mb-4" />
+                                <div className="flex justify-center mb-4">
+                                    <span className="w-10 h-10 sm:w-12 sm:h-12">
+                                        <Store size={48} className="w-full h-full text-gray-300" />
+                                    </span>
+                                </div>
                                 <p className="text-gray-500 font-medium text-sm sm:text-base">No merchants found</p>
                             </div>
                         )}
 
                         {(activeTab === 'riders' && riders.length === 0) && (
                             <div className="text-center py-12 sm:py-20">
-                                <Bike size={40} sm:size={48} className="mx-auto text-gray-300 mb-4" />
+                                <div className="flex justify-center mb-4">
+                                    <span className="w-10 h-10 sm:w-12 sm:h-12">
+                                        <Bike size={48} className="w-full h-full text-gray-300" />
+                                    </span>
+                                </div>
                                 <p className="text-gray-500 font-medium text-sm sm:text-base">No riders found</p>
                             </div>
                         )}

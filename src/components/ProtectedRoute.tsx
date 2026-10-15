@@ -15,6 +15,12 @@ const ONBOARDING_PATHS: Record<string, string> = {
     courier: '/rider/onboarding',
 };
 
+const STATE_SCREEN_PATHS: Record<string, string> = {
+    pending_approval: '/pending-approval',
+    rejected: '/rejected',
+    suspended: '/suspended',
+};
+
 const ADMIN_SESSION_KEY = 'muncheez_admin_session';
 
 const isAdminSessionValid = (): boolean => {
@@ -60,10 +66,48 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
         return <Navigate to={loginPath} state={{ from: location }} replace />;
     }
 
-    // Email confirmation gate: unverified accounts cannot reach protected pages
+    // ── STATE MACHINE ENFORCEMENT ────────────────────────────────────────────
+    // These gates run BEFORE any role check so unverified / unapproved /
+    // incomplete accounts can never reach an operational dashboard.
+
+    // 1. Unverified email → holding screen
     if (user.emailVerified === false) {
         return <Navigate to="/auth/verify" replace />;
     }
+
+    // 2. Email verified but onboarding incomplete → redirect to onboarding
+    const accountStatus = user.accountStatus || user.profile?.account_status || 'pending_email_verification';
+    const isOnboardingRoute =
+        (requiredRole === 'merchant' && location.pathname === ONBOARDING_PATHS.merchant) ||
+        (requiredRole === 'courier' && location.pathname === ONBOARDING_PATHS.courier);
+
+    if (accountStatus === 'pending_onboarding') {
+        const onboardingPath = requiredRole ? ONBOARDING_PATHS[requiredRole] : '/onboarding';
+        if (!isOnboardingRoute) {
+            return <Navigate to={onboardingPath} replace />;
+        }
+        // Allow the onboarding page itself to render
+        return <>{children}</>;
+    }
+
+    // 3. Onboarding submitted, awaiting admin review → status screen
+    if (accountStatus === 'pending_approval') {
+        if (!isOnboardingRoute) {
+            return <Navigate to={STATE_SCREEN_PATHS.pending_approval} replace />;
+        }
+        return <>{children}</>;
+    }
+
+    // 4. Rejected / suspended → status screen
+    if (accountStatus === 'rejected' || accountStatus === 'suspended') {
+        const target = STATE_SCREEN_PATHS[accountStatus] || STATE_SCREEN_PATHS.rejected;
+        if (location.pathname !== target) {
+            return <Navigate to={target} replace />;
+        }
+        return <>{children}</>;
+    }
+
+    // 5. Active → full access (role check below)
 
     // User is logged in but profile not loaded yet — wait
     if (!profile) {
@@ -81,24 +125,6 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     if (requiredRole && !profile.roles?.includes(requiredRole)) {
         const loginPath = LOGIN_PATHS[requiredRole] || '/login';
         return <Navigate to={loginPath} replace />;
-    }
-
-    // Onboarding status enforcement for merchant and courier roles
-    if (requiredRole === 'merchant' || requiredRole === 'courier') {
-        const onboardingPath = ONBOARDING_PATHS[requiredRole];
-        const merchantData = (user as any)?.merchant;
-        const riderData = (user as any)?.rider;
-        const status = requiredRole === 'merchant'
-            ? merchantData?.status
-            : riderData?.status;
-
-        // If onboarding not completed, redirect to onboarding
-        if (status === 'PENDING' || status === 'VERIFICATION_PENDING' || status === 'UNDER_REVIEW') {
-            // Allow access to onboarding page itself
-            if (location.pathname !== onboardingPath) {
-                return <Navigate to={onboardingPath} replace />;
-            }
-        }
     }
 
     return <>{children}</>;

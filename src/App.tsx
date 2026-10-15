@@ -19,6 +19,11 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 import VerifyEmail from "./pages/auth/VerifyEmail";
 
+// ── State Screens ───────────────────────────────────────────────────────────
+import PendingApproval from "./pages/PendingApproval";
+import Rejected from "./pages/Rejected";
+import Suspended from "./pages/Suspended";
+
 // ── Public Corporate Pages ──────────────────────────────────────────────────
 import OurStory from "./pages/common/OurStory";
 import OurTeam from "./pages/common/OurTeam";
@@ -108,6 +113,11 @@ export default function App() {
                 <Route path="/auth/verify" element={<VerifyEmail />} />
                 {/* Supabase OAuth / email callback — do not move this route */}
                 <Route path="/auth/callback" element={<AuthCallback />} />
+
+                {/* ── Onboarding State Screens ──────────────────────────────── */}
+                <Route path="/pending-approval" element={<PendingApproval />} />
+                <Route path="/rejected" element={<Rejected />} />
+                <Route path="/suspended" element={<Suspended />} />
 
                 {/* ═══ 3. PUBLIC CORPORATE ═══ */}
                 <Route path="/company/story" element={<OurStory />} />

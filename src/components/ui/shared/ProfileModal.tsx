@@ -318,6 +318,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
 
     const handleDeleteAccount = async () => {
         if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') return;
+        if (!user) return;
         setIsSaving(true);
         try {
             // Delete profile data from Supabase

@@ -5,19 +5,23 @@ import { supabase } from '../lib/supabaseClient';
 
 export type AppRole = 'customer' | 'merchant' | 'courier' | 'admin';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   fullName: string;
   phone?: string;
   emailVerified: boolean;
   loyaltyTier: string;
+  accountStatus?: string;
+  merchant?: any | null;
+  rider?: any | null;
   profile?: {
     id: string;
     full_name?: string;
     phone?: string;
     roles: string[];
     status: string;
+    account_status?: string;
     avatarUrl?: string;
     [key: string]: any;
   };
@@ -40,6 +44,59 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
+  const { data: profileData } = await profileService.getProfile(authUser.id);
+
+  let merchantData: any = null;
+  let riderData: any = null;
+  try {
+    const { data: m } = await supabase
+      .from('merchants')
+      .select('*')
+      .eq('id', authUser.id)
+      .single();
+    merchantData = m || null;
+  } catch { /* not a merchant yet */ }
+  try {
+    const { data: r } = await supabase
+      .from('riders')
+      .select('*')
+      .eq('id', authUser.id)
+      .single();
+    riderData = r || null;
+  } catch { /* not a rider yet */ }
+
+  const isAdminUser = authUser.email === 'admin@muncheez.co.ke' ||
+                      authUser.email?.endsWith('@muncheez.co.ke') ||
+                      authUser.user_metadata?.role === 'admin' ||
+                      (profileData?.roles && profileData.roles.includes('admin'));
+  const defaultRole = isAdminUser ? 'admin' : (authUser.user_metadata?.role || 'customer');
+  const roles = isAdminUser
+    ? ['admin']
+    : (profileData?.roles && profileData.roles.length > 0 ? profileData.roles : [defaultRole]);
+
+  return {
+    id: authUser.id,
+    email: authUser.email || '',
+    fullName: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+    phone: authUser.user_metadata?.phone,
+    emailVerified: Boolean(authUser.email_confirmed_at),
+    loyaltyTier: 'bronze',
+    accountStatus: profileData?.account_status || 'pending_email_verification',
+    merchant: merchantData,
+    rider: riderData,
+    profile: profileData ? {
+      ...profileData,
+      roles
+    } : {
+      id: authUser.id,
+      roles,
+      status: 'ACTIVE',
+      account_status: 'pending_email_verification'
+    }
+  };
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<any | null>(null);
@@ -50,47 +107,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     let isMounted = true;
 
-    const loadSession = async (authUser: SupabaseUser) => {
-      try {
-        // Fetch profile from Supabase
-        const { data: profileData } = await profileService.getProfile(authUser.id);
-
-        const isAdminUser = authUser.email === 'admin@muncheez.co.ke' ||
-                            authUser.email?.endsWith('@muncheez.co.ke') ||
-                            authUser.user_metadata?.role === 'admin' ||
-                            (profileData?.roles && profileData.roles.includes('admin'));
-        const defaultRole = isAdminUser ? 'admin' : (authUser.user_metadata?.role || 'customer');
-        const roles = isAdminUser
-          ? ['admin']
-          : (profileData?.roles && profileData.roles.length > 0 ? profileData.roles : [defaultRole]);
-        
-        const normalizedUser: User = {
-          id: authUser.id,
-          email: authUser.email || '',
-          fullName: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-          phone: authUser.user_metadata?.phone,
-          emailVerified: Boolean(authUser.email_confirmed_at),
-          loyaltyTier: 'bronze',
-          profile: profileData ? {
-            ...profileData,
-            roles
-          } : {
-            id: authUser.id,
-            roles,
-            status: 'ACTIVE'
-          }
-        };
-
-        if (isMounted) {
-          setUser(normalizedUser);
-          setProfile(normalizedUser.profile);
-        }
-      } catch (err) {
-        console.error('[AuthContext] Profile load failed:', err);
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+    const hydrate = async (authUser: SupabaseUser) => {
+      const normalizedUser = await buildNormalizedUser(authUser);
+      if (isMounted) {
+        setUser(normalizedUser);
+        setProfile(normalizedUser.profile);
       }
     };
 
@@ -99,7 +120,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         setToken(session.access_token);
         localStorage.setItem('accessToken', session.access_token);
-        loadSession(session.user);
+        hydrate(session.user);
       } else {
         if (isMounted) {
           setUser(null);
@@ -118,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         setToken(session.access_token);
         localStorage.setItem('accessToken', session.access_token);
-        await loadSession(session.user);
+        await hydrate(session.user);
       } else if (event === 'SIGNED_OUT') {
         if (isMounted) {
           setUser(null);
@@ -146,33 +167,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return;
       }
 
-      const { data: profileData } = await profileService.getProfile(authUser.id);
-      const isAdminUser = authUser.email === 'admin@muncheez.co.ke' ||
-                          authUser.email?.endsWith('@muncheez.co.ke') ||
-                          authUser.user_metadata?.role === 'admin' ||
-                          (profileData?.roles && profileData.roles.includes('admin'));
-      const defaultRole = isAdminUser ? 'admin' : (authUser.user_metadata?.role || 'customer');
-      const roles = isAdminUser
-        ? ['admin']
-        : (profileData?.roles && profileData.roles.length > 0 ? profileData.roles : [defaultRole]);
-
-      const normalizedUser: User = {
-        id: authUser.id,
-        email: authUser.email || '',
-        fullName: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-        phone: authUser.user_metadata?.phone,
-        emailVerified: Boolean(authUser.email_confirmed_at),
-        loyaltyTier: 'bronze',
-        profile: profileData ? {
-          ...profileData,
-          roles
-        } : {
-          id: authUser.id,
-          roles,
-          status: 'ACTIVE'
-        }
-      };
-
+      const normalizedUser = await buildNormalizedUser(authUser);
       setUser(normalizedUser);
       setProfile(normalizedUser.profile);
     } catch (err) {
@@ -181,7 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(null);
       setProfile(null);
     }
-  }, []);
+  }, [buildNormalizedUser]);
 
   const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
     try {
@@ -234,33 +229,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('[AuthContext] Session tracking record warning:', sessionErr);
       }
 
-      // Get profile
-      const { data: profileData } = await profileService.getProfile(data.user.id);
-      const isAdminUser = data.user.email === 'admin@muncheez.co.ke' ||
-                          data.user.email?.endsWith('@muncheez.co.ke') ||
-                          data.user.user_metadata?.role === 'admin' ||
-                          (profileData?.roles && profileData.roles.includes('admin'));
-      const defaultRole = isAdminUser ? 'admin' : (data.user.user_metadata?.role || 'customer');
-      const roles = isAdminUser
-        ? ['admin']
-        : (profileData?.roles && profileData.roles.length > 0 ? profileData.roles : [defaultRole]);
-
-      const normalizedUser: User = {
-        id: data.user.id,
-        email: data.user.email || '',
-        fullName: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
-        phone: data.user.user_metadata?.phone,
-        emailVerified: Boolean(data.user.email_confirmed_at),
-        loyaltyTier: 'bronze',
-        profile: profileData ? {
-          ...profileData,
-          roles
-        } : {
-          id: data.user.id,
-          roles,
-          status: 'ACTIVE'
-        }
-      };
+      // Get profile and build normalized user (also loads linked merchant/rider rows)
+      const normalizedUser = await buildNormalizedUser(data.user);
 
       setUser(normalizedUser);
       setProfile(normalizedUser.profile);
@@ -301,27 +271,8 @@ const signUp = async (
                 return { error: 'Signup failed. No user data returned.' };
             }
 
-            // Get profile
-            const { data: profileData } = await profileService.getProfile(data.user.id);
-            const isAdminUser = email === 'admin@muncheez.co.ke' || role === 'admin';
-            const roles = isAdminUser ? ['admin'] : (profileData?.roles || [role]);
-
-            const normalizedUser: User = {
-                id: data.user.id,
-                email: data.user.email || '',
-                fullName: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'User',
-                phone: data.user.user_metadata?.phone,
-                emailVerified: data.user.email_confirmed_at ? true : false,
-                loyaltyTier: 'bronze',
-                profile: profileData ? {
-                    ...profileData,
-                    roles
-                } : {
-                    id: data.user.id,
-                    roles,
-                    status: 'ACTIVE'
-                }
-            };
+            // Build normalized user (loads profile + linked merchant/rider rows)
+            const normalizedUser = await buildNormalizedUser(data.user);
 
             setUser(normalizedUser);
             setProfile(normalizedUser.profile);

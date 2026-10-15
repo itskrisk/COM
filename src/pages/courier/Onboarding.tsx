@@ -114,14 +114,21 @@ export default function CourierOnboarding() {
                         },
                         created_at: new Date().toISOString()
                     }, { onConflict: 'id' });
+
+                    // Move the profile to pending_approval so ProtectedRoute stops
+                    // bouncing submitted riders back to the onboarding form.
+                    await supabase.from('profiles').update({
+                        status: 'PENDING',
+                        account_status: 'pending_approval'
+                    }).eq('id', user.id);
+                }
+                setSubmitted(true);
+            } catch (err) {
+                console.error('Error saving courier onboarding data:', err);
+                setSubmitted(true);
+            } finally {
+                setLoading(false);
             }
-            setSubmitted(true);
-        } catch (err) {
-            console.error('Error saving courier onboarding data:', err);
-            setSubmitted(true);
-        } finally {
-            setLoading(false);
-        }
     };
 
     const handleLogout = async () => {

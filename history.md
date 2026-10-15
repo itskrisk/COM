@@ -1412,6 +1412,99 @@ Vercel CLI multi-service build detected the Express framework inside ackend/ di
 
 ---
 
+## [2026-10-15] State-Driven Onboarding Pipeline Implementation
+
+### Prompt / Request:
+> "Act as a senior full-stack developer working on Muncheez (Muncheez Technologies Limited). We need to implement a state-driven onboarding pipeline for Merchants and Riders. Most of the UI components are already created, but we need to wire up the exact logic, backend state flow, and any missing pages following our brand's strict design language."
+
+User lifecycle states requested: `pending_email_verification` → `pending_onboarding` → `pending_approval` → `active` → `rejected` → `suspended`. Enforcement: unverified email blocks all protected routes and directs to `/verify-email`; verified-but-incomplete redirects to onboarding; submitted-but-unapproved shows "Application Under Review"; active unlocks full dashboard.
+
+### Actions Taken:
+1. **AuthContext.tsx — User interface extended**: Added `accountStatus?: string`, `merchant?: any | null`, and `rider?: any | null` to the exported `User` interface so the normalized user object carries onboarding/approval state and linked entity records.
+2. **AuthContext.tsx — Shared `buildNormalizedUser` helper**: Extracted the profile/merchant/rider normalization logic into a single module-scoped async function. It fetches the `profiles` row plus the linked `merchants` and `riders` rows by user id, derives `accountStatus` from `profileData.account_status`, and returns a fully populated `User` object. Used by session hydration, `refreshUser`, `signIn`, and `signUp` — eliminating duplicated logic.
+3. **ProtectedRoute.tsx — Full state machine rewrite**: Replaced the broken onboarding check (which read from non-existent `user.merchant`/`user.rider` fields) with a complete lifecycle gate that runs BEFORE any role check:
+   - `emailVerified === false` → redirect to `/auth/verify`
+   - `accountStatus === 'pending_onboarding'` → redirect to onboarding route (allowing the onboarding page itself to render)
+   - `accountStatus === 'pending_approval'` → redirect to `/pending-approval`
+   - `accountStatus === 'rejected'` or `'suspended'` → redirect to the matching state screen
+   - `active` → fall through to role check and render children
+4. **State screen components created** (minimalist black/white/blue brand style, hairline dividers, no card boxes):
+   - `src/pages/PendingApproval.tsx` — "Application Under Review" with Clock icon, dual action buttons
+   - `src/pages/Rejected.tsx` — "We were unable to proceed" with XCircle icon
+   - `src/pages/Suspended.tsx` — "Account temporarily suspended" with ShieldAlert icon
+5. **AuthCallback.tsx — Status-based routing**: Updated the email verification callback to call `refreshUser()` after confirmation, then read `user.accountStatus` from the AuthContext and route via a switch statement: `pending_onboarding` → role login, `pending_approval` → `/pending-approval`, `rejected` → `/rejected`, `suspended` → `/suspended`, `active` → role login. Password-reset recovery flow preserved.
+6. **App.tsx — Route wiring**: Imported the three new state screen components and registered `/pending-approval`, `/rejected`, and `/suspended` routes in the authentication section.
+
+### Verification:
+- Ran `npx tsc --noEmit` — **0 TypeScript errors** across the entire codebase.
+
+### Files Modified / Created:
+- `src/context/AuthContext.tsx` — User interface, shared `buildNormalizedUser` helper, all auth paths use it
+- `src/components/ProtectedRoute.tsx` — full state machine enforcement
+- `src/pages/auth/AuthCallback.tsx` — status-based routing after email verification
+- `src/App.tsx` — imports + state screen routes
+- `src/pages/PendingApproval.tsx` — new
+- `src/pages/Rejected.tsx` — new
+- `src/pages/Suspended.tsx` — new
+
+### Remaining (not yet done):
+- ~~Migration 007 (`007_onboarding_state_pipeline.sql`) exists on disk but has **not been applied** to the live Supabase database. The frontend now reads `account_status`, but the column and RLS policies only take effect once this migration is run in the Supabase SQL Editor.~~
+
+### Migration 007 — Applied Successfully (2026-10-15)
+The migration was run in the Supabase SQL Editor and succeeded after three fixes:
+
+| Error | Root Cause | Fix |
+|-------|-----------|-----|
+| `column p.email_verified does not exist` | Backfill referenced a column that doesn't exist on `profiles` | Derive email-verified state from `auth.users.email_confirmed_at` instead, the canonical source Supabase maintains |
+| `cross-database references are not implemented: "public.auth.users"` | Wrote `public.auth.users`, which Postgres parses as database `public` / schema `auth` / table `users` — a cross-database reference. `auth` is its own schema, not under `public`. | Changed to `auth.users` |
+| `relation "public.promotions" does not exist` | RLS policy blocks assumed every operational table existed; this project's schema doesn't have `promotions` | Wrapped every operational-table policy in a `DO $$ ... IF to_regclass(...) IS NOT NULL` block so missing tables are skipped instead of failing |
+
+The migration is idempotent: `CREATE TYPE`/`ADD COLUMN`/`CREATE INDEX` all use `IF NOT EXISTS`, and policies use `DROP POLICY IF EXISTS` before recreating.
+
+### Final State — Pipeline Live End-to-End
+- `account_status` enum + column on `profiles`, backfilled from `auth.users.email_confirmed_at`
+- `set_initial_account_status` trigger sets new signups to `pending_email_verification`
+- `on_email_confirmed` trigger moves confirmed emails to `pending_onboarding`
+- `is_active_merchant()` / `is_active_rider()` helper functions gate RLS
+- RLS policies block unapproved merchants/riders from `products`, `orders`, `categories`, `promotions`, `dispatch_offers` (only for tables present in the schema)
+- Frontend `ProtectedRoute` enforces the full state machine; `AuthCallback` routes by status after email verification
+- `npx tsc --noEmit` passes with 0 errors
+
+### Critical Bug Found & Fixed in Admin Approvals (2026-10-15)
+**Root cause:** `src/pages/admin/Approvals.tsx` approve/reject handlers updated `status` on the merchant/rider rows and `profiles.status`, but never touched `profiles.account_status` — the field `ProtectedRoute` gates on. An approved user's `account_status` stayed `pending_approval` forever, so they were bounced back to the "Application Under Review" screen even after approval. The state machine was wired but the admin action that transitions state didn't write the column the frontend reads.
+
+**Fixes applied to `Approvals.tsx`:**
+- `handleApprove` now sets `account_status: 'active'` on the profile row alongside `status: 'APPROVED'`
+- `handleReject` now sets `account_status: 'rejected'` alongside `status: 'REJECTED'`
+- Added `handleSuspend` — previously absent entirely, despite the state machine having a `suspended` state and a `/suspended` screen. Sets `account_status: 'suspended'` alongside `status: 'SUSPENDED'`
+- Added a `Pause` icon import
+- Approved merchants and riders now show a **Suspend** button (amber); pending entries keep Approve/Reject
+
+**Verification:** `npx tsc --noEmit` — 0 errors.
+
+### Second Bug: Onboarding Submit Never Transitioned `account_status` (2026-10-15)
+**Root cause:** `handleSubmitOnboarding` in `merchant/Onboarding.tsx` and `courier/Onboarding.tsx` wrote `status: 'PENDING'` and `onboarding_completed: true` to the merchant/rider rows, but never touched `profiles.account_status`. That column was set to `pending_onboarding` by the email-confirmation trigger and stayed there. `ProtectedRoute` reads `account_status` first, so a user who submitted onboarding was routed straight back to the onboarding form — the `pending_approval` screen was unreachable.
+
+**Fixes applied:**
+- `src/pages/merchant/Onboarding.tsx` — after the merchants upsert, updates `profiles` to `status: 'PENDING', account_status: 'pending_approval'`
+- `src/pages/courier/Onboarding.tsx` — same update against `profiles` after the riders upsert
+
+**Note on the earlier `onboarding_completed` flag:** I had flagged it as potentially dead weight without checking. That was wrong — grep showed it is actively read by both onboarding pages to decide whether to render the form or the waiting screen, and written on submit. It is consistent. No change needed.
+
+**Verification:** `npx tsc --noEmit` — 0 errors.
+
+### Vercel Build Fix (2026-10-15)
+Vercel runs `tsc -b && vite build` (project references), which is stricter than a bare `npx tsc --noEmit`. It surfaced 7 errors my isolated check had skipped:
+
+| File | Error | Fix |
+|------|-------|-----|
+| `admin/Approvals.tsx` (4 sites) | `sm:size` is not a real Lucide prop — it was a broken responsive hack | Replaced each `<Icon size={N} sm:size={M} />` with a sized `<span>` wrapper holding the icon at the larger size |
+| `admin/Dashboard.tsx` (2 sites) | Same `sm:size` issue on `LogOut` and `StatCard`'s `Icon` | Same span-wrapper fix |
+| `components/ui/shared/ProfileModal.tsx:324` | `user.id` accessed without null-guard | Added `if (!user) return;` at the top of `handleDeleteAccount` |
+| `context/AuthContext.tsx:78` | Shared `buildNormalizedUser` helper dropped `loyaltyTier`, which is required on the `User` interface | Restored `loyaltyTier: 'bronze'` |
+
+**Verification:** `npm run build` (`tsc -b && vite build`) — built in 21.36s, 0 errors. Chunk-size warnings are pre-existing and unrelated.
+
 ## [2026-09-15] Implementation of Glovo-Style Merchant & Adaptive Courier Onboarding
 
 ### Prompt / Request:
