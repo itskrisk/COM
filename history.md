@@ -3709,3 +3709,31 @@ Continue from where you left off. Also make sure that those emails are reflectin
    - Executed npm run build (tsc -b && vite build) - Passed with 0 errors.
 
 ---
+
+## Task: Integration of Resend API & DNS Verification Setup for muncheez.co.ke
+
+### Prompt
+Integrated user's real Resend API key (re_REDACTED_KEY), added the exact DNS records for domain verification of muncheez.co.ke on Resend, and added programmatic Resend sending code to the project.
+
+### Actions Taken
+1. **Configured Environment Variables**:
+   - Added `RESEND_API_KEY=re_REDACTED_KEY` to `.env`.
+   - Added placeholder `RESEND_API_KEY=re_xxxxxxxxx` to `.env.example`.
+2. **Installed Resend SDK**:
+   - Installed `resend` in root project dependencies.
+   - Added `resend` to `backend/package.json` dependencies.
+3. **Created Backend Email Service (`backend/src/services/emailService.js`)**:
+   - Initialized Resend with `process.env.RESEND_API_KEY`.
+   - Added `sendEmail({ to, subject, html, text, from })`.
+   - Added `sendTemplateEmail(templateFileName, { to, subject, variables, from })` with dynamic `emailtemp/` resolution.
+4. **Created CLI Test Script & Verified Delivery (`scripts/send_test_email.js`)**:
+   - Executed test transmission using Resend SDK to `kriskamau25@gmail.com`.
+   - Verified success: Message ID `01a14500-7d9c-7de5-b127-3ebaa91ea7d6`.
+5. **Updated Setup Guide (`SUPABASE_EMAIL_SETUP.md`)**:
+   - Updated Custom SMTP settings with host (`smtp.resend.com`), port (`465`/`587`), username (`resend`), and password.
+   - Added exact DKIM (`TXT`), SPF (`CNAME`), and DMARC (`TXT`) DNS verification values for `muncheez.co.ke`.
+   - Added code documentation for programmatic email usage.
+6. **Build Verification**:
+   - Executed `npm run build` (`tsc -b && vite build`) — 0 errors.
+
+---

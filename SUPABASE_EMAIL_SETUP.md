@@ -57,44 +57,83 @@ http://localhost:3000/**
 
 ---
 
-## 3. Custom SMTP Setup for `muncheez.co.ke`
+## 3. Custom SMTP Setup for `muncheez.co.ke` via Resend
 
-In Supabase Dashboard, navigate to:
+In the Supabase Dashboard, navigate to:
 **Authentication → Email Settings** (or **Authentication → Emails → SMTP Settings**)
 
-Toggle **Enable Custom SMTP** to **ON**.
+Toggle **Enable Custom SMTP** to **ON**, then enter:
 
-### Recommended Provider: Resend (Fastest & Free 3,000 emails/month)
-1. Sign up at [resend.com](https://resend.com)
-2. Add your domain: `muncheez.co.ke`
-3. Add the DNS records provided by Resend (MX, TXT/DKIM, SPF) to your domain DNS registrar (Cloudflare, cPanel, or GoDaddy).
-4. Create an API Key in Resend.
-5. In Supabase, fill in:
-   - **Sender email**: `noreply@muncheez.co.ke` (or `marketing@muncheez.co.ke`)
-   - **Sender name**: `Muncheez`
-   - **Host**: `smtp.resend.com`
-   - **Port**: `465` (SSL) or `587` (TLS)
-   - **Minimum TLS version**: `TLSv1.2`
-   - **Username**: `resend`
-   - **Password**: `re_your_api_key_here`
-
-### Alternative Provider: cPanel / Hostinger / Webmail
-If using your hosting server's direct SMTP:
-- **Sender email**: `noreply@muncheez.co.ke`
+- **Sender email**: `noreply@muncheez.co.ke` (or `onboarding@resend.dev` until DNS verification completes)
 - **Sender name**: `Muncheez`
-- **Host**: `mail.muncheez.co.ke` (or host server IP/domain)
+- **Host**: `smtp.resend.com`
 - **Port**: `465` (SSL) or `587` (TLS)
-- **Username**: `noreply@muncheez.co.ke`
-- **Password**: `your_webmail_password`
+- **Minimum TLS version**: `TLSv1.2`
+- **Username**: `resend`
+- **Password**: `[Your Resend API Key from resend.com/api-keys]` (Replace `re_xxxxxxxxx` with your real key)
 
-### DNS Verification Checklist for `muncheez.co.ke`
-To ensure 100% inbox delivery and avoid the spam folder:
-- **SPF Record**: `v=spf1 include:resend.com ~all` (or your SMTP provider's SPF)
-- **DKIM Record**: Provided in your SMTP provider dashboard (CNAME or TXT)
-- **DMARC Record**: `TXT` record at `_dmarc.muncheez.co.ke`:
-  ```
-  v=DMARC1; p=none; rua=mailto:dmarc@muncheez.co.ke
-  ```
+### Resend DNS Records for `muncheez.co.ke`
+Add these exact DNS records at your domain registrar (e.g. Cloudflare, cPanel, GoDaddy, Safaricom Domains) for `muncheez.co.ke`:
+
+1. **DKIM** (DomainKeys Identified Mail):
+   - **Type**: `TXT`
+   - **Name**: `resend._domainkey` (or `resend._domainkey.muncheez.co.ke`)
+   - **Value**: `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCv3nOdfxDniXs6WvzU/Gqib62YnGF2WpT03GmTSS2XAvjZVE6/Y329hU7UJsbhiLefCyantpwtla/9GOW6uJZRGtaUfTkbxcmI8WYkIp8vBCX7pDs1fqRYZJTthI+BDJBRAFITUUi0ueMRWoSTq7gAHD6YelnXS54T8LpOgQvlgwIDAQAB`
+   - **TTL**: `Auto` (or `3600`)
+
+2. **SPF** (Sender Policy Framework):
+   - **Record 1**:
+     - **Type**: `CNAME`
+     - **Name**: `rsend` (or `rsend.muncheez.co.ke`)
+     - **Value**: `rsend-apne1.forge.rmta.net`
+     - **TTL**: `60`
+   - **Record 2**:
+     - **Type**: `CNAME`
+     - **Name**: `send` (or `send.muncheez.co.ke`)
+     - **Value**: `send.forge.rmta.net`
+     - **TTL**: `60`
+
+3. **DMARC** (Domain-based Message Authentication):
+   - **Type**: `TXT`
+   - **Name**: `_dmarc` (or `_dmarc.muncheez.co.ke`)
+   - **Value**: `v=DMARC1; p=none;`
+   - **TTL**: `Auto` (or `3600`)
+
+Once added, open your [Resend Domains Dashboard](https://resend.com/domains) and click **Verify Domain**.
+
+---
+
+## 4. Programmatic Email Sending (Resend Node.js SDK)
+
+For transactional or custom marketing emails, the project now includes the official `resend` SDK:
+
+### Backend Service: `backend/src/services/emailService.js`
+```javascript
+const { sendEmail, sendTemplateEmail } = require('../services/emailService');
+
+// Send custom email
+await sendEmail({
+  to: 'customer@example.com',
+  subject: 'Order Confirmation',
+  html: '<h1>Your order is on the way!</h1>'
+});
+
+// Or send any template from emailtemp/
+await sendTemplateEmail('welcome.html', {
+  to: 'newuser@example.com',
+  subject: 'Welcome to Muncheez',
+  variables: {
+    ConfirmationURL: 'https://muncheez.co.ke/auth/callback'
+  }
+});
+```
+
+### CLI Test Script: `scripts/send_test_email.js`
+You can verify delivery anytime by running:
+```bash
+node scripts/send_test_email.js
+```
+
 
 ---
 
