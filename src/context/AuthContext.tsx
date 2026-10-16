@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { authService, profileService } from '../lib/supabaseService';
 import { supabase } from '../lib/supabaseClient';
 
 export type AppRole = 'customer' | 'merchant' | 'courier' | 'admin';
@@ -33,8 +32,8 @@ interface AuthContextType {
   profile: any | null;
   loading: boolean;
   token: string | null;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
-  signUp: (email: string, password: string, metadata?: Record<string, any>) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User | null; profile?: any | null }>;
+  signUp: (email: string, password: string, metadata?: Record<string, any>) => Promise<{ error: string | null; user?: User | null; profile?: any | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   addRole: (role: AppRole) => Promise<{ error: string | null }>;
@@ -44,37 +43,63 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Full DB hydration — used for session restore on page load (user already waiting) and background enrichment
 const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
-  const { data: profileData } = await profileService.getProfile(authUser.id);
+  let profileData: any = null;
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+    profileData = data;
+  } catch { /* profile table may not exist yet */ }
 
   let merchantData: any = null;
   let riderData: any = null;
   try {
-    const { data: m } = await supabase
-      .from('merchants')
-      .select('*')
-      .eq('id', authUser.id)
-      .single();
+    const { data: m } = await supabase.from('merchants').select('*').eq('id', authUser.id).maybeSingle();
     merchantData = m || null;
-  } catch { /* not a merchant yet */ }
+  } catch { /* not a merchant */ }
   try {
-    const { data: r } = await supabase
-      .from('riders')
-      .select('*')
-      .eq('id', authUser.id)
-      .single();
+    const { data: r } = await supabase.from('riders').select('*').eq('id', authUser.id).maybeSingle();
     riderData = r || null;
-  } catch { /* not a rider yet */ }
+  } catch { /* not a rider */ }
 
-  const isAdminUser = authUser.email === 'admin@muncheez.co.ke' ||
-                      authUser.email?.endsWith('@muncheez.co.ke') ||
-                      authUser.user_metadata?.role === 'admin' ||
-                      (profileData?.roles && profileData.roles.includes('admin'));
-  const defaultRole = isAdminUser ? 'admin' : (authUser.user_metadata?.role || 'customer');
-  const roles = isAdminUser
+  const isAdmin = authUser.email === 'admin@muncheez.co.ke' ||
+                  authUser.email?.endsWith('@muncheez.co.ke') ||
+                  authUser.user_metadata?.role === 'admin' ||
+                  (profileData?.roles && profileData.roles.includes('admin'));
+  const defaultRole = isAdmin ? 'admin' : (authUser.user_metadata?.role || 'customer');
+  const roles = isAdmin
     ? ['admin']
     : (profileData?.roles && profileData.roles.length > 0 ? profileData.roles : [defaultRole]);
 
+  return {
+    id: authUser.id,
+    email: authUser.email || '',
+    fullName: authUser.user_metadata?.full_name || profileData?.full_name || authUser.email?.split('@')[0] || 'User',
+    phone: authUser.user_metadata?.phone || profileData?.phone,
+    emailVerified: Boolean(authUser.email_confirmed_at),
+    loyaltyTier: profileData?.loyalty_tier || 'bronze',
+    accountStatus: profileData?.account_status || (authUser.email_confirmed_at ? 'pending_onboarding' : 'pending_email_verification'),
+    merchant: merchantData,
+    rider: riderData,
+    profile: profileData ? { ...profileData, roles } : {
+      id: authUser.id,
+      roles,
+      status: 'ACTIVE',
+      account_status: authUser.email_confirmed_at ? 'pending_onboarding' : 'pending_email_verification'
+    }
+  };
+};
+
+// Build minimal user from auth metadata only — zero DB queries, always instant
+const buildMinimalUser = (authUser: SupabaseUser): User => {
+  const isAdmin = authUser.email === 'admin@muncheez.co.ke' ||
+                  authUser.email?.endsWith('@muncheez.co.ke') ||
+                  authUser.user_metadata?.role === 'admin';
+  const role = isAdmin ? 'admin' : (authUser.user_metadata?.role || 'customer');
   return {
     id: authUser.id,
     email: authUser.email || '',
@@ -82,17 +107,14 @@ const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
     phone: authUser.user_metadata?.phone,
     emailVerified: Boolean(authUser.email_confirmed_at),
     loyaltyTier: 'bronze',
-    accountStatus: profileData?.account_status || 'pending_email_verification',
-    merchant: merchantData,
-    rider: riderData,
-    profile: profileData ? {
-      ...profileData,
-      roles
-    } : {
+    accountStatus: 'pending_onboarding',
+    merchant: null,
+    rider: null,
+    profile: {
       id: authUser.id,
-      roles,
+      roles: [role],
       status: 'ACTIVE',
-      account_status: 'pending_email_verification'
+      account_status: 'pending_onboarding',
     }
   };
 };
@@ -103,51 +125,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState<string | null>(localStorage.getItem('accessToken'));
 
-  // SINGLE SESSION ENFORCEMENT & SESSION HYDRATION
   useEffect(() => {
     let isMounted = true;
 
-    const hydrate = async (authUser: SupabaseUser) => {
-      const normalizedUser = await buildNormalizedUser(authUser);
-      if (isMounted) {
-        setUser(normalizedUser);
-        setProfile(normalizedUser.profile);
-      }
-    };
-
-    // Get current session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Restore existing session on page load
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!isMounted) return;
       if (session?.user) {
         setToken(session.access_token);
         localStorage.setItem('accessToken', session.access_token);
-        hydrate(session.user);
+        // Set minimal user immediately so app doesn't block, then enrich from DB
+        const minimal = buildMinimalUser(session.user);
+        setUser(minimal);
+        setProfile(minimal.profile);
+        setLoading(false);
+        // Background DB enrichment
+        buildNormalizedUser(session.user).then(full => {
+          if (isMounted) { setUser(full); setProfile(full.profile); }
+        }).catch(() => {});
       } else {
-        if (isMounted) {
-          setUser(null);
-          setProfile(null);
-          setToken(null);
-          setLoading(false);
-        }
+        setUser(null);
+        setProfile(null);
+        setToken(null);
+        setLoading(false);
       }
     }).catch(err => {
       console.error('[AuthContext] Session init error:', err);
       if (isMounted) setLoading(false);
     });
 
-    // Listen to Supabase auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
+    // Auth state listener — handles token refresh, sign out, etc.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!isMounted) return;
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setProfile(null);
+        setToken(null);
+        localStorage.removeItem('accessToken');
+        setLoading(false);
+      } else if (event === 'TOKEN_REFRESHED' && session) {
         setToken(session.access_token);
         localStorage.setItem('accessToken', session.access_token);
-        await hydrate(session.user);
-      } else if (event === 'SIGNED_OUT') {
-        if (isMounted) {
-          setUser(null);
-          setProfile(null);
-          setToken(null);
-          localStorage.removeItem('accessToken');
-          setLoading(false);
-        }
       }
     });
 
@@ -159,133 +177,163 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const refreshUser = useCallback(async () => {
     try {
-      const { data: { user: authUser } } = await authService.getUser();
-      
-      if (!authUser) {
-        setUser(null);
-        setProfile(null);
-        return;
-      }
-
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) { setUser(null); setProfile(null); return; }
       const normalizedUser = await buildNormalizedUser(authUser);
       setUser(normalizedUser);
       setProfile(normalizedUser.profile);
     } catch (err) {
-      console.error('[AuthContext] Failed to refresh user:', err);
-      localStorage.removeItem('accessToken');
+      console.error('[AuthContext] refreshUser failed:', err);
       setUser(null);
       setProfile(null);
     }
-  }, [buildNormalizedUser]);
+  }, []);
 
-  const signIn = async (email: string, password: string): Promise<{ error: string | null }> => {
+  /**
+   * signIn — NEVER queries the database.
+   *
+   * Returns immediately after Supabase auth with user built from auth metadata only.
+   * DB profile/merchant/rider data loads asynchronously in the background AFTER
+   * the login page has already navigated. This is what prevents button-stuck-loading.
+   */
+  const signIn = async (
+    email: string,
+    password: string
+  ): Promise<{ error: string | null; user?: User | null; profile?: any | null }> => {
+    const cleanEmail = email.trim().toLowerCase();
     try {
-      const { data, error } = await authService.signIn(email, password);
-      
-      if (error) {
-        return { error: error.message || 'Login failed.' };
-      }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
 
-      if (!data.user) {
-        return { error: 'Login failed. No user data returned.' };
-      }
-
-      // EMAIL CONFIRMATION GATE: one CANNOT log in until the email is confirmed.
-      // If Supabase issued a session for an unconfirmed account, clear it and block login.
-      if (!data.user.email_confirmed_at) {
-        try {
-          await authService.signOut();
-        } catch (e) {
-          console.warn('[AuthContext] Signout after unconfirmed login failed:', e);
+        if (error) {
+          const msg = error.message || '';
+          const lower = msg.toLowerCase();
+          if (lower.includes('invalid login credentials') || lower.includes('invalid credentials') || lower.includes('wrong email or password')) {
+            return { error: 'This account does not exist or the password is incorrect. If you do not have an account, please sign up.' };
+          }
+          if (msg.toLowerCase().includes('email not confirmed')) {
+            return { error: "Your email hasn't been verified yet. Please check your inbox for the verification link." };
+          }
+          return { error: msg || 'Login failed. Please try again.' };
         }
-        localStorage.removeItem('accessToken');
-        setToken(null);
-        setUser(null);
-        setProfile(null);
-        return { error: 'Email not confirmed. Please check your inbox and confirm your email address before logging in.' };
+
+      if (!data?.user) {
+        return { error: 'Login failed. No account found.' };
       }
 
+      // Block unverified users
+      if (!data.user.email_confirmed_at) {
+        supabase.auth.signOut().catch(() => {});
+        return { error: "Your email hasn't been verified yet. Please check your inbox for the verification link before signing in." };
+      }
+
+      // Set token immediately
       if (data.session) {
         localStorage.setItem('accessToken', data.session.access_token);
         setToken(data.session.access_token);
       }
 
-      // Safely record active session if available
-      try {
-        const isAdminUser = data.user.email === 'admin@muncheez.co.ke' ||
-                            data.user.email?.endsWith('@muncheez.co.ke') ||
-                            data.user.user_metadata?.role === 'admin';
-        const primaryRole = isAdminUser ? 'admin' : (data.user.user_metadata?.role || 'customer');
-        await supabase
-          .from('active_sessions')
-          .upsert({
-            user_id: data.user.id,
-            session_token: data.session?.access_token || '',
-            primary_role: primaryRole,
-            all_roles: [primaryRole],
-            updated_at: new Date().toISOString()
-          });
-      } catch (sessionErr) {
-        console.warn('[AuthContext] Session tracking record warning:', sessionErr);
-      }
+      // Build user from auth metadata ONLY — zero DB queries — always instant
+      const minimalUser = buildMinimalUser(data.user);
+      setUser(minimalUser);
+      setProfile(minimalUser.profile);
 
-      // Get profile and build normalized user (also loads linked merchant/rider rows)
-      const normalizedUser = await buildNormalizedUser(data.user);
+      // Background DB enrichment — non-blocking, runs after login page navigates
+      const sessionToken = data.session?.access_token || '';
+      const role = minimalUser.profile!.roles[0];
+      buildNormalizedUser(data.user).then(fullUser => {
+        setUser(fullUser);
+        setProfile(fullUser.profile);
+        supabase.from('active_sessions').upsert({
+          user_id: data.user.id,
+          session_token: sessionToken,
+          primary_role: role,
+          all_roles: [role],
+          updated_at: new Date().toISOString()
+        }).then(({ error: e }) => {
+          if (e) console.warn('[AuthContext] active_sessions:', e.message);
+        });
+      }).catch(() => {});
 
-      setUser(normalizedUser);
-      setProfile(normalizedUser.profile);
-      return { error: null };
+      return { error: null, user: minimalUser, profile: minimalUser.profile };
     } catch (err: any) {
-      return { error: err.message || 'Login failed.' };
+      return { error: err.message || 'Login failed. Please check your connection and try again.' };
     }
   };
 
-const signUp = async (
-        email: string,
-        password: string,
-        metadata?: Record<string, any>
-    ): Promise<{ error: string | null }> => {
-        try {
-            const role = metadata?.role || 'customer';
+  const signUp = async (
+    email: string,
+    password: string,
+    metadata?: Record<string, any>
+  ): Promise<{ error: string | null; user?: User | null; profile?: any | null }> => {
+    const cleanEmail = email.trim().toLowerCase();
+    try {
+      const role = metadata?.role || 'customer';
+      const cleanPhone = metadata?.phone?.trim() || undefined;
 
-            const cleanPhone = metadata?.phone?.trim() ? metadata.phone.trim() : undefined;
-            const { data, error } = await authService.signUp(email, password, {
-                full_name: metadata?.name || email.split('@')[0],
-                phone: cleanPhone,
-                role: role,
-                merchant_type: metadata?.merchantType || 'Restaurant',
-                vehicle_type: metadata?.vehicleType || 'Motorbike'
-            });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Connection timed out. Please try again.')), 15000)
+      );
 
-            if (error) {
-                console.error('[AuthContext] signUp error:', error);
-                return { error: (error as any)?.message || JSON.stringify(error) || 'Signup failed.' };
+      const { data, error } = await Promise.race([
+        supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            data: {
+              full_name: metadata?.name || cleanEmail.split('@')[0],
+              phone: cleanPhone,
+              role,
+              merchant_type: metadata?.merchantType || 'Restaurant',
+              vehicle_type: metadata?.vehicleType || 'Motorbike',
             }
+          }
+        }),
+        timeoutPromise
+      ]);
 
-            if (data.session) {
-                localStorage.setItem('accessToken', data.session.access_token);
-                setToken(data.session.access_token);
-            }
-
-            if (!data.user) {
-                return { error: 'Signup failed. No user data returned.' };
-            }
-
-            // Build normalized user (loads profile + linked merchant/rider rows)
-            const normalizedUser = await buildNormalizedUser(data.user);
-
-            setUser(normalizedUser);
-            setProfile(normalizedUser.profile);
-            return { error: null };
-        } catch (err: any) {
-            console.error('[AuthContext] signUp exception:', err);
-            return { error: err?.message || JSON.stringify(err) || 'Signup failed.' };
+        if (error) {
+          const msg = (error as any)?.message || '';
+          const lower = msg.toLowerCase();
+          if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('user already registered') || lower.includes('email in use')) {
+            return { error: 'This email is already registered. Please proceed to login instead.' };
+          }
+          return { error: msg || 'Signup failed. Please try again.' };
         }
-    };
+
+      if (!data?.user) {
+        return { error: 'Signup failed. Please try again.' };
+      }
+
+      // Standard flow: email confirmation required — navigate to verify immediately
+      if (!data.user.email_confirmed_at) {
+        supabase.auth.signOut().catch(() => {});
+        localStorage.removeItem('accessToken');
+        setToken(null);
+        setUser(null);
+        setProfile(null);
+        return { error: null, user: null, profile: null };
+      }
+
+      // Rare: email confirmation disabled
+      if (data.session) {
+        localStorage.setItem('accessToken', data.session.access_token);
+        setToken(data.session.access_token);
+      }
+      const normalizedUser = await buildNormalizedUser(data.user);
+      setUser(normalizedUser);
+      setProfile(normalizedUser.profile);
+      return { error: null, user: normalizedUser, profile: normalizedUser.profile };
+    } catch (err: any) {
+      return { error: err?.message || 'Signup failed. Please try again.' };
+    }
+  };
 
   const signOut = async () => {
     try {
-      await authService.signOut();
+      await supabase.auth.signOut();
     } catch (err) {
       console.error('[AuthContext] Logout error:', err);
     } finally {
@@ -300,7 +348,7 @@ const signUp = async (
 
   const resetPassword = async (email: string): Promise<{ error: string | null }> => {
     try {
-      const { error } = await authService.resetPassword(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
       return { error: error?.message || null };
     } catch (err: any) {
       return { error: err.message || 'Password reset failed.' };
@@ -309,30 +357,22 @@ const signUp = async (
 
   const addRole = async (role: AppRole): Promise<{ error: string | null }> => {
     try {
-      // ONE EMAIL = ONE ROLE: Cannot add a role if user already has one
       const currentRoles = profile?.roles || [];
       if (currentRoles.length > 0) {
         const currentRole = currentRoles[0];
         if (currentRole !== role) {
-          return { error: `Your account already has the "${currentRole}" role. One email can only have one role. Please use a different email for ${role} access, or log out and sign up with a new email.` };
+          return { error: `Your account already has the "${currentRole}" role. One email can only have one role.` };
         }
         return { error: `You already have the "${role}" role.` };
       }
-
-      if (!user) {
-        return { error: 'You must be logged in to add a role.' };
-      }
-
-      // Add the role to the profile
-      const { error: updateError } = await profileService.updateProfile(user.id, {
-        roles: [role]
-      });
-
-      if (updateError) {
-        return { error: updateError.message || 'Failed to add role.' };
-      }
-
-      // Refresh user data
+      if (!user) return { error: 'You must be logged in to add a role.' };
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ roles: [role] })
+        .eq('id', user.id)
+        .select()
+        .single();
+      if (updateError) return { error: updateError.message || 'Failed to add role.' };
       await refreshUser();
       return { error: null };
     } catch (err: any) {
@@ -340,9 +380,7 @@ const signUp = async (
     }
   };
 
-  const updateToken = (newToken: string | null) => {
-    setToken(newToken);
-  };
+  const updateToken = (newToken: string | null) => setToken(newToken);
 
   return (
     <AuthContext.Provider value={{ user, profile, loading, token, signIn, signUp, signOut, resetPassword, addRole, refreshUser, updateToken }}>

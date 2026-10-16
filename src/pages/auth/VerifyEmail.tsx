@@ -83,11 +83,7 @@ export default function VerifyEmail() {
                         Please click the link in your email to verify your address, then continue to your {portalLabel.toLowerCase()}.
                     </p>
 
-                    <div className="border-t border-b border-gray-100 py-4 my-6">
-                        <p className="text-xs font-mono text-gray-500 uppercase tracking-wider">
-                            Once confirmed, sign in to continue to document onboarding and approval.
-                        </p>
-                    </div>
+
 
                     {resendMessage && (
                         <div className="border-b border-gray-200 pb-3 mb-6">
