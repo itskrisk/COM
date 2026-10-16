@@ -128,6 +128,9 @@ export default function MerchantDashboard() {
     const [bulkPurchaseLimit, setBulkPurchaseLimit] = useState(10);
     const [operatingHours, setOperatingHours] = useState('');
     const [mpesaTill, setMpesaTill] = useState('');
+    // Store cover / card image
+    const [storeCoverUrl, setStoreCoverUrl] = useState('');
+    const [isUploadingCover, setIsUploadingCover] = useState(false);
 
     // Loading state
     const [isLoading, setIsLoading] = useState(true);
@@ -162,6 +165,8 @@ export default function MerchantDashboard() {
                 if (data.mpesa_till) setMpesaTill(data.mpesa_till);
                 if (data.is_active !== undefined) setIsStoreOpen(data.is_active);
                 if (data.operating_hours?.hours) setOperatingHours(data.operating_hours.hours);
+                // Load store cover image
+                setStoreCoverUrl(data.cover_url || data.logo_url || data.branding?.bannerUrl || '');
             }
         }).catch(() => {
             if (profile.status === 'PENDING') {
@@ -195,7 +200,10 @@ export default function MerchantDashboard() {
                 pack_time_min: packTimeMin,
                 bulk_limit: bulkPurchaseLimit,
                 low_stock_threshold: lowStockThreshold,
-                is_active: isStoreOpen
+                is_active: isStoreOpen,
+                // Store card / cover image saved to both fields for compatibility
+                cover_url: storeCoverUrl.trim() || undefined,
+                logo_url: storeCoverUrl.trim() || undefined,
             };
             localStorage.setItem('muncheez_merchant_settings', JSON.stringify(updated));
             if (merchantId) {
@@ -285,6 +293,8 @@ export default function MerchantDashboard() {
             if (data?.mpesa_till) setMpesaTill(data.mpesa_till);
             if (data?.is_active !== undefined) setIsStoreOpen(data.is_active);
             if (data?.operating_hours?.hours) setOperatingHours(data.operating_hours.hours);
+            // Load cover image
+            setStoreCoverUrl(data?.cover_url || data?.logo_url || data?.branding?.bannerUrl || '');
             if (data?.address) {
                 const parts = data.address.split(' - ');
                 if (parts.length >= 2) {
@@ -365,23 +375,24 @@ export default function MerchantDashboard() {
     const [newMinBasket, setNewMinBasket] = useState('1000');
     const [newExpiry, setNewExpiry] = useState('2026-12-31');
 
-    // Comprehensive supermarket categories taxonomy matching SupermarketStore.tsx
+    // Comprehensive supermarket categories taxonomy matching SupermarketStore.tsx exactly
     const categories = [
         'All',
+        'Shop your list',
         'Fruits & Vegetables',
         'Bakery',
-        'Fresh Food',
         'Beverages',
         'Alcohol',
-        'Food Cupboard',
+        'Fresh Food',
         'Cleaning & Household',
         'Frozen Food',
+        'Food Cupboard',
         'Delicatessen',
-        'Delicatessen Counter',
         'Beauty & Personal Care',
         'Bio & Organic Food',
         'Baby Products',
         'Health & Fitness',
+        'Delicatessen Counter',
         'Electronics & Appliances',
         'Pet Supplies',
         'Stationery & School Supplies',
@@ -1636,6 +1647,80 @@ export default function MerchantDashboard() {
                                     placeholder="Brief description of your supermarket products and standards..."
                                     className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-xs text-black outline-none resize-none"
                                 />
+                            </div>
+
+                            {/* STORE CARD / COVER IMAGE */}
+                            <div className="space-y-3 border-t border-neutral-100 pt-6">
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                            Store Card Image (Cover Photo)
+                                        </span>
+                                        <span className="text-[10px] text-neutral-400 block mt-0.5">
+                                            Displayed on the market listing page as the store card thumbnail.
+                                        </span>
+                                    </div>
+                                    {isUploadingCover && (
+                                        <span className="text-[10px] font-mono text-black uppercase animate-pulse">Uploading...</span>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                                    {/* Preview */}
+                                    <div className="w-full sm:w-40 h-24 border border-neutral-200 bg-neutral-100 overflow-hidden shrink-0">
+                                        {storeCoverUrl ? (
+                                            <img src={storeCoverUrl} alt="Store Cover" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-neutral-400 text-[10px] font-mono text-center gap-1">
+                                                <ImageIcon size={16} />
+                                                No cover set
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex-1 space-y-3 w-full">
+                                        {/* Upload file */}
+                                        <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-2.5 px-3 flex items-center justify-center gap-2 cursor-pointer text-center">
+                                            <UploadCloud size={14} className="text-neutral-500" />
+                                            <span className="text-[11px] font-mono text-neutral-700">
+                                                {isUploadingCover ? 'Uploading...' : 'Upload Cover Image'}
+                                            </span>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                disabled={isUploadingCover}
+                                                onChange={async (e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    setIsUploadingCover(true);
+                                                    try {
+                                                        const res = await uploadFile('documents', `stores/${merchantId || 'temp'}`, file);
+                                                        if (res.url) setStoreCoverUrl(res.url);
+                                                    } catch (err) {
+                                                        console.error('Cover upload failed:', err);
+                                                    } finally {
+                                                        setIsUploadingCover(false);
+                                                    }
+                                                }}
+                                                className="hidden"
+                                            />
+                                        </label>
+
+                                        {/* Direct URL */}
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                                                Or paste a direct image URL
+                                            </label>
+                                            <input
+                                                type="url"
+                                                placeholder="https://images.unsplash.com/..."
+                                                value={storeCoverUrl}
+                                                onChange={(e) => setStoreCoverUrl(e.target.value)}
+                                                className="w-full py-1.5 bg-transparent border-b border-neutral-300 focus:border-black text-xs text-black outline-none font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

@@ -119,7 +119,7 @@ export default function StoreListing() {
             departments: m.branding?.departments || ['market'],
             tags: m.branding?.tags || [],
             actionText: 'Order Now',
-            image: m.cover_url || 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800',
+            image: m.cover_url || m.logo_url || m.branding?.bannerUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800',
             isTopRated: m.rating >= 4.5
         }));
     }, [stores]);
