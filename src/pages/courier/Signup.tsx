@@ -1,13 +1,15 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { authApi } from '../../lib/api';
 import { supabase } from '../../lib/supabaseClient';
+import { useAuth } from '../../context/AuthContext';
 import courierImg from '../../assets/images/courierloginndsignup.jpg';
 
 export default function CourierSignup() {
     const navigate = useNavigate();
+    const { user, profile, signOut, loading: authLoading } = useAuth();
     const [fullName, setFullName] = useState('');
     const [email, setEmail] = useState('');
     const [phone, setPhone] = useState('');
@@ -16,11 +18,34 @@ export default function CourierSignup() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [portalHint, setPortalHint] = useState<{ message: string; link: string; label: string } | null>(null);
+    const [loggingOut, setLoggingOut] = useState(false);
+
+    const currentRole = profile?.roles?.[0] || user?.profile?.roles?.[0] || 'courier';
+    const isOtherRoleActive = Boolean(user && currentRole !== 'courier');
+    const currentRoleLabel = currentRole === 'courier' ? 'Rider' : currentRole === 'merchant' ? 'Merchant' : currentRole === 'admin' ? 'Admin' : 'Customer';
+    const currentPortalUrl = currentRole === 'customer' ? '/stores' : currentRole === 'merchant' ? '/merchant/dashboard' : currentRole === 'admin' ? '/admin' : '/rider/dashboard';
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        setError(null);
+        setPortalHint(null);
+        try {
+            await signOut();
+        } finally {
+            setLoggingOut(false);
+        }
+    };
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
         setPortalHint(null);
+
+        // Guard: One email = one role, and one active session at a time
+        if (user) {
+            setError(`You are currently signed in as ${user.email} (${currentRoleLabel}). One email can only be used for one role. Please log out first to create a new fleet account.`);
+            return;
+        }
 
         if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
             setError('Please fill in all required fields.');
@@ -77,9 +102,15 @@ export default function CourierSignup() {
             });
         } catch (err: any) {
             let message = err.message || 'An error occurred during signup.';
-            if (message.toLowerCase().includes('already registered') || message.toLowerCase().includes('already exists') || message.toLowerCase().includes('email in use')) {
-                setError("An account with this email already exists. Please sign in.");
-            } else if (message.toLowerCase().includes('rate limit')) {
+            const lower = message.toLowerCase();
+            if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('email in use')) {
+                setPortalHint({
+                    message: 'This email is already registered. Each email can only be used for one role.',
+                    link: '/rider/login',
+                    label: 'Proceed to Fleet Terminal Login'
+                });
+                setError("An account with this email already exists. Each email can only be used for one role.");
+            } else if (lower.includes('rate limit')) {
                 setError("Email rate limit reached. Please wait a moment before trying again, or use a different email.");
             } else {
                 setError(message);
@@ -88,6 +119,15 @@ export default function CourierSignup() {
             setLoading(false);
         }
     };
+
+    // Redirect if already authenticated as courier
+    if (!authLoading && user) {
+        const roles = profile?.roles || (profile?.role ? [profile.role] : []);
+        if (roles.includes('courier')) {
+            navigate('/rider/dashboard', { replace: true });
+            return null;
+        }
+    }
 
     return (
         <div className="min-h-screen bg-white flex overflow-hidden">
@@ -145,9 +185,58 @@ export default function CourierSignup() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
-                    {error && (
+                    {/* Active Session Notice: Strict unboxed editorial layout */}
+                    {user && (
+                        <div className="mb-8 border-b border-amber-500 pb-5">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div className="space-y-3">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 block">
+                                            Active Session Detected
+                                        </span>
+                                        <p className="text-xs text-gray-700 mt-1 leading-relaxed">
+                                            You are currently signed in as <strong className="text-black">{user.email}</strong> ({currentRoleLabel}).
+                                            {isOtherRoleActive
+                                                ? " One email can only be used for one role. You must log out first before creating a new fleet account."
+                                                : " You already have an active session."}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            disabled={loggingOut}
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 underline disabled:opacity-50"
+                                        >
+                                            {loggingOut ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                                            Log Out Current Session
+                                        </button>
+                                        <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                        <Link
+                                            to={currentPortalUrl}
+                                            className="text-xs font-bold uppercase tracking-widest text-[#2563EB] hover:underline"
+                                        >
+                                            Continue to {currentRoleLabel} &rarr;
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {portalHint && (
+                        <div className="mb-6 border-b border-blue-500 pb-3">
+                            <p className="text-xs text-blue-600 font-medium mb-2">{portalHint.message}</p>
+                            <Link to={portalHint.link} className="text-xs font-bold text-blue-700 hover:underline uppercase tracking-widest block">
+                                {portalHint.label} &rarr;
+                            </Link>
+                        </div>
+                    )}
+
+                    {error && !portalHint && (
                         <div className="mb-6 border-b border-red-500 pb-3">
-                            <p className="text-xs text-red-600 font-medium font-mono">{error}</p>
+                            <p className="text-xs text-red-600 font-medium">{error}</p>
                         </div>
                     )}
 
@@ -160,9 +249,10 @@ export default function CourierSignup() {
                                 id="courier-signup-name"
                                 type="text"
                                 required
+                                disabled={Boolean(user)}
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="Enter your full name"
                             />
                         </div>
@@ -175,9 +265,10 @@ export default function CourierSignup() {
                                 id="courier-signup-email"
                                 type="email"
                                 required
+                                disabled={Boolean(user)}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="rider@email.com"
                             />
                         </div>
@@ -190,9 +281,10 @@ export default function CourierSignup() {
                                 id="courier-signup-phone"
                                 type="tel"
                                 required
+                                disabled={Boolean(user)}
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="+254 700 000 000"
                             />
                         </div>
@@ -206,9 +298,10 @@ export default function CourierSignup() {
                                     id="courier-signup-pass"
                                     type="password"
                                     required
+                                    disabled={Boolean(user)}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -220,9 +313,10 @@ export default function CourierSignup() {
                                     id="courier-signup-confirmpass"
                                     type="password"
                                     required
+                                    disabled={Boolean(user)}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                     placeholder="••••••••"
                                 />
                             </div>
@@ -234,8 +328,8 @@ export default function CourierSignup() {
 
                         <button
                             type="submit"
-                            disabled={loading}
-                            className="group w-full flex justify-between items-center py-5 px-8 rounded-2xl text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-500 uppercase tracking-widest shadow-xl shadow-gray-200"
+                            disabled={loading || Boolean(user)}
+                            className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-black hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
                         >
                             {loading ? (
                                 <>

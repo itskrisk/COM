@@ -27,12 +27,27 @@ export interface User {
   [key: string]: any;
 }
 
+export interface RoleMismatchInfo {
+  currentRole: AppRole;
+  expectedRole: AppRole;
+  portalLink: string;
+  portalLabel: string;
+}
+
+export interface SignInResult {
+  error: string | null;
+  user?: User | null;
+  profile?: any | null;
+  roleMismatch?: RoleMismatchInfo | null;
+  activeSessionConflict?: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   profile: any | null;
   loading: boolean;
   token: string | null;
-  signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User | null; profile?: any | null }>;
+  signIn: (email: string, password: string, expectedRole?: AppRole) => Promise<SignInResult>;
   signUp: (email: string, password: string, metadata?: Record<string, any>) => Promise<{ error: string | null; user?: User | null; profile?: any | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -43,7 +58,17 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Full DB hydration — used for session restore on page load (user already waiting) and background enrichment
+// Helper to resolve single role consistently
+export const resolveRole = (roleStr?: string): AppRole => {
+  if (!roleStr) return 'customer';
+  const lower = roleStr.toLowerCase();
+  if (lower === 'admin') return 'admin';
+  if (lower === 'merchant') return 'merchant';
+  if (lower === 'courier' || lower === 'rider') return 'courier';
+  return 'customer';
+};
+
+// Full DB hydration — used for session restore on page load and background enrichment
 const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
   let profileData: any = null;
   try {
@@ -70,10 +95,32 @@ const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
                   authUser.email?.endsWith('@muncheez.co.ke') ||
                   authUser.user_metadata?.role === 'admin' ||
                   (profileData?.roles && profileData.roles.includes('admin'));
-  const defaultRole = isAdmin ? 'admin' : (authUser.user_metadata?.role || 'customer');
-  const roles = isAdmin
-    ? ['admin']
-    : (profileData?.roles && profileData.roles.length > 0 ? profileData.roles : [defaultRole]);
+
+  let primaryRole: AppRole = 'customer';
+  if (isAdmin) {
+    primaryRole = 'admin';
+  } else if (merchantData || profileData?.roles?.includes('merchant') || authUser.user_metadata?.role === 'merchant') {
+    primaryRole = 'merchant';
+  } else if (riderData || profileData?.roles?.includes('courier') || profileData?.roles?.includes('rider') || authUser.user_metadata?.role === 'courier' || authUser.user_metadata?.role === 'rider') {
+    primaryRole = 'courier';
+  } else {
+    primaryRole = 'customer';
+  }
+
+  const isPartner = primaryRole === 'merchant' || primaryRole === 'courier';
+  // Customers NEVER undergo onboarding. Only merchants and couriers can be pending_onboarding.
+  let accountStatus: string = 'active';
+  if (isPartner) {
+    if (merchantData?.onboarding_completed || riderData?.onboarding_completed) {
+      accountStatus = profileData?.account_status || 'pending_approval';
+    } else {
+      accountStatus = profileData?.account_status || (authUser.email_confirmed_at ? 'pending_onboarding' : 'pending_email_verification');
+    }
+  } else {
+    accountStatus = authUser.email_confirmed_at ? 'active' : 'pending_email_verification';
+  }
+
+  const roles = [primaryRole];
 
   return {
     id: authUser.id,
@@ -82,14 +129,14 @@ const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
     phone: authUser.user_metadata?.phone || profileData?.phone,
     emailVerified: Boolean(authUser.email_confirmed_at),
     loyaltyTier: profileData?.loyalty_tier || 'bronze',
-    accountStatus: profileData?.account_status || (authUser.email_confirmed_at ? 'pending_onboarding' : 'pending_email_verification'),
+    accountStatus,
     merchant: merchantData,
     rider: riderData,
-    profile: profileData ? { ...profileData, roles } : {
+    profile: profileData ? { ...profileData, roles, account_status: accountStatus } : {
       id: authUser.id,
       roles,
       status: 'ACTIVE',
-      account_status: authUser.email_confirmed_at ? 'pending_onboarding' : 'pending_email_verification'
+      account_status: accountStatus
     }
   };
 };
@@ -99,7 +146,13 @@ const buildMinimalUser = (authUser: SupabaseUser): User => {
   const isAdmin = authUser.email === 'admin@muncheez.co.ke' ||
                   authUser.email?.endsWith('@muncheez.co.ke') ||
                   authUser.user_metadata?.role === 'admin';
-  const role = isAdmin ? 'admin' : (authUser.user_metadata?.role || 'customer');
+  const rawRole = isAdmin ? 'admin' : (authUser.user_metadata?.role || 'customer');
+  const role = resolveRole(rawRole);
+  const isPartner = role === 'merchant' || role === 'courier';
+
+  // Customers are ALWAYS active once verified. Only partners are pending_onboarding.
+  const accountStatus = isPartner ? 'pending_onboarding' : 'active';
+
   return {
     id: authUser.id,
     email: authUser.email || '',
@@ -107,14 +160,14 @@ const buildMinimalUser = (authUser: SupabaseUser): User => {
     phone: authUser.user_metadata?.phone,
     emailVerified: Boolean(authUser.email_confirmed_at),
     loyaltyTier: 'bronze',
-    accountStatus: 'pending_onboarding',
+    accountStatus,
     merchant: null,
     rider: null,
     profile: {
       id: authUser.id,
       roles: [role],
       status: 'ACTIVE',
-      account_status: 'pending_onboarding',
+      account_status: accountStatus,
     }
   };
 };
@@ -198,8 +251,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
    */
   const signIn = async (
     email: string,
-    password: string
-  ): Promise<{ error: string | null; user?: User | null; profile?: any | null }> => {
+    password: string,
+    expectedRole?: AppRole
+  ): Promise<SignInResult> => {
+    // 1. Active Session Collision Guard: If already signed in, require explicit logout
+    if (user) {
+      const currentRole = profile?.roles?.[0] || user.profile?.roles?.[0] || 'customer';
+      const currentRoleLabel = currentRole === 'courier' ? 'Rider' : currentRole === 'merchant' ? 'Merchant' : currentRole === 'admin' ? 'Admin' : 'Customer';
+      return {
+        error: `You are currently signed in as ${user.email} (${currentRoleLabel}). Please log out first before signing into another account.`,
+        activeSessionConflict: true
+      };
+    }
+
     const cleanEmail = email.trim().toLowerCase();
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -207,17 +271,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         password,
       });
 
-        if (error) {
-          const msg = error.message || '';
-          const lower = msg.toLowerCase();
-          if (lower.includes('invalid login credentials') || lower.includes('invalid credentials') || lower.includes('wrong email or password')) {
-            return { error: 'This account does not exist or the password is incorrect. If you do not have an account, please sign up.' };
-          }
-          if (msg.toLowerCase().includes('email not confirmed')) {
-            return { error: "Your email hasn't been verified yet. Please check your inbox for the verification link." };
-          }
-          return { error: msg || 'Login failed. Please try again.' };
+      if (error) {
+        const msg = error.message || '';
+        const lower = msg.toLowerCase();
+        if (lower.includes('invalid login credentials') || lower.includes('invalid credentials') || lower.includes('wrong email or password')) {
+          return { error: 'This account does not exist or the password is incorrect. If you do not have an account, please sign up.' };
         }
+        if (msg.toLowerCase().includes('email not confirmed')) {
+          return { error: "Your email hasn't been verified yet. Please check your inbox for the verification link." };
+        }
+        return { error: msg || 'Login failed. Please try again.' };
+      }
 
       if (!data?.user) {
         return { error: 'Login failed. No account found.' };
@@ -229,28 +293,77 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return { error: "Your email hasn't been verified yet. Please check your inbox for the verification link before signing in." };
       }
 
+      // 2. Resolve single role with strict DB checks
+      const isAdmin = data.user.email === 'admin@muncheez.co.ke' ||
+                      data.user.email?.endsWith('@muncheez.co.ke') ||
+                      data.user.user_metadata?.role === 'admin';
+
+      let resolvedRole: AppRole = isAdmin ? 'admin' : resolveRole(data.user.user_metadata?.role);
+
+      if (!isAdmin) {
+        try {
+          const { data: prof } = await supabase.from('profiles').select('roles, role').eq('id', data.user.id).maybeSingle();
+          if (prof?.roles && prof.roles.length > 0) resolvedRole = resolveRole(prof.roles[0]);
+          else if (prof?.role) resolvedRole = resolveRole(prof.role);
+        } catch {}
+        try {
+          const { data: m } = await supabase.from('merchants').select('id').eq('id', data.user.id).maybeSingle();
+          if (m) resolvedRole = 'merchant';
+        } catch {}
+        try {
+          const { data: r } = await supabase.from('riders').select('id').eq('id', data.user.id).maybeSingle();
+          if (r) resolvedRole = 'courier';
+        } catch {}
+      }
+
+      // 3. Role Mismatch Enforcement: One email = One role. Cannot log in to wrong portal!
+      if (expectedRole && resolvedRole !== expectedRole && resolvedRole !== 'admin') {
+        // Discard session immediately — never leave user authenticated in wrong portal
+        await supabase.auth.signOut().catch(() => {});
+        localStorage.removeItem('accessToken');
+        setToken(null);
+        setUser(null);
+        setProfile(null);
+
+        const roleLabel = resolvedRole === 'merchant' ? 'Merchant' : resolvedRole === 'courier' ? 'Rider' : 'Customer';
+        const portalLabel = resolvedRole === 'merchant' ? 'Merchant Portal' : resolvedRole === 'courier' ? 'Fleet Terminal' : 'Customer App';
+        const portalLink = resolvedRole === 'merchant' ? '/merchant/login' : resolvedRole === 'courier' ? '/rider/login' : '/login';
+
+        return {
+          error: `This account is registered as a ${roleLabel}. Please sign in via the ${portalLabel}.`,
+          roleMismatch: {
+            currentRole: resolvedRole,
+            expectedRole,
+            portalLabel,
+            portalLink
+          }
+        };
+      }
+
       // Set token immediately
       if (data.session) {
         localStorage.setItem('accessToken', data.session.access_token);
         setToken(data.session.access_token);
       }
 
-      // Build user from auth metadata ONLY — zero DB queries — always instant
+      // Build user
       const minimalUser = buildMinimalUser(data.user);
+      if (minimalUser.profile) {
+        minimalUser.profile.roles = [resolvedRole];
+      }
       setUser(minimalUser);
       setProfile(minimalUser.profile);
 
-      // Background DB enrichment — non-blocking, runs after login page navigates
+      // Background DB enrichment — non-blocking
       const sessionToken = data.session?.access_token || '';
-      const role = minimalUser.profile!.roles[0];
       buildNormalizedUser(data.user).then(fullUser => {
         setUser(fullUser);
         setProfile(fullUser.profile);
         supabase.from('active_sessions').upsert({
           user_id: data.user.id,
           session_token: sessionToken,
-          primary_role: role,
-          all_roles: [role],
+          primary_role: resolvedRole,
+          all_roles: [resolvedRole],
           updated_at: new Date().toISOString()
         }).then(({ error: e }) => {
           if (e) console.warn('[AuthContext] active_sessions:', e.message);
@@ -358,29 +471,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addRole = async (role: AppRole): Promise<{ error: string | null }> => {
-    try {
-      const currentRoles = profile?.roles || [];
-      if (currentRoles.length > 0) {
-        const currentRole = currentRoles[0];
-        if (currentRole !== role) {
-          return { error: `Your account already has the "${currentRole}" role. One email can only have one role.` };
-        }
-        return { error: `You already have the "${role}" role.` };
-      }
-      if (!user) return { error: 'You must be logged in to add a role.' };
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ roles: [role] })
-        .eq('id', user.id)
-        .select()
-        .single();
-      if (updateError) return { error: updateError.message || 'Failed to add role.' };
-      await refreshUser();
-      return { error: null };
-    } catch (err: any) {
-      return { error: err.message || 'Failed to add role.' };
-    }
+  const addRole = async (_role: AppRole): Promise<{ error: string | null }> => {
+    return { error: 'Each email can only be used for one role. Multi-role accounts are not permitted.' };
   };
 
   const updateToken = (newToken: string | null) => setToken(newToken);

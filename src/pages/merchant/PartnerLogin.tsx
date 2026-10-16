@@ -1,20 +1,22 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, RoleMismatchInfo } from '../../context/AuthContext';
 import merchantImg from '../../assets/images/merchantloginpic.jpg';
 
 export default function PartnerLogin() {
     const navigate = useNavigate();
-    const { user, profile, loading: authLoading, signIn } = useAuth();
+    const { user, profile, loading: authLoading, signIn, signOut } = useAuth();
 
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [roleMismatch, setRoleMismatch] = useState<RoleMismatchInfo | null>(null);
+    const [loggingOut, setLoggingOut] = useState(false);
 
-    // Auto-redirect if already authenticated
+    // Auto-redirect ONLY if already authenticated as merchant or admin
     useEffect(() => {
         if (!authLoading && user && profile) {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
@@ -29,24 +31,56 @@ export default function PartnerLogin() {
                 } else {
                     navigate('/merchant/onboarding', { replace: true });
                 }
+            } else if (roles.includes('admin')) {
+                navigate('/admin', { replace: true });
             }
         }
     }, [authLoading, user, profile, navigate]);
 
+    const currentRole = profile?.roles?.[0] || user?.profile?.roles?.[0] || 'merchant';
+    const isOtherRoleActive = Boolean(user && currentRole !== 'merchant');
+    const currentRoleLabel = currentRole === 'courier' ? 'Rider' : currentRole === 'customer' ? 'Customer' : currentRole === 'admin' ? 'Admin' : 'Merchant';
+    const currentPortalUrl = currentRole === 'customer' ? '/stores' : currentRole === 'courier' ? '/rider/dashboard' : currentRole === 'admin' ? '/admin' : '/merchant/dashboard';
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        setError(null);
+        setRoleMismatch(null);
+        try {
+            await signOut();
+        } finally {
+            setLoggingOut(false);
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError(null);
+        setRoleMismatch(null);
+
+        // Guard: Prevent logging in if another session is already active
+        if (user) {
+            setError(`You already have an active session as ${user.email} (${currentRoleLabel}). Please log out first before signing into another account.`);
+            return;
+        }
+
         setIsLoading(true);
 
         try {
             const cleanEmail = email.trim();
-            const { error: loginError, profile: loggedProfile } = await signIn(cleanEmail, password);
+            const { error: loginError, profile: loggedProfile, roleMismatch: mismatch } = await signIn(cleanEmail, password, 'merchant');
+
             if (loginError) {
-                setError(loginError);
+                if (mismatch) {
+                    setRoleMismatch(mismatch);
+                    setError(loginError);
+                } else {
+                    setError(loginError);
+                }
                 return;
             }
 
-            // Immediately route
+            // Immediately route merchant based on account status
             const status = loggedProfile?.account_status || loggedProfile?.status;
             if (status === 'active' || status === 'APPROVED') {
                 navigate('/merchant/dashboard', { replace: true });
@@ -87,14 +121,14 @@ export default function PartnerLogin() {
             </div>
 
             {/* Right Side: Auth Form */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative">
+            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative overflow-y-auto">
                 <div className="mb-12 relative">
                     <Link
                         to="/"
                         className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#2563EB] mb-8 hover:opacity-70 transition-all group"
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                        Back to Selection
+                        Back to Home
                     </Link>
                     <div className="flex items-center justify-between mb-8">
                         <Link to="/" className="inline-block">
@@ -118,11 +152,81 @@ export default function PartnerLogin() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
-                    {error && (
+                    {/* Active Session Notice: Strict unboxed editorial layout */}
+                    {user && (
+                        <div className="mb-8 border-b border-amber-500 pb-5">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div className="space-y-3">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 block">
+                                            Active Session Detected
+                                        </span>
+                                        <p className="text-xs text-gray-700 mt-1 leading-relaxed">
+                                            You are currently signed in as <strong className="text-black">{user.email}</strong> ({currentRoleLabel}).
+                                            {isOtherRoleActive
+                                                ? " One email can only be used for one role. You must log out first before signing in to the Merchant Portal."
+                                                : " You already have an active session."}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            disabled={loggingOut}
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 underline disabled:opacity-50"
+                                        >
+                                            {loggingOut ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                                            Log Out Current Session
+                                        </button>
+                                        <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                        <Link
+                                            to={currentPortalUrl}
+                                            className="text-xs font-bold uppercase tracking-widest text-[#2563EB] hover:underline"
+                                        >
+                                            Continue to {currentRoleLabel} &rarr;
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Role Mismatch Error: Unboxed inline layout */}
+                    {roleMismatch && (
+                        <div className="mb-6 border-b border-amber-500 pb-4">
+                            <div className="flex items-start gap-2.5">
+                                <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-xs text-amber-800 font-medium leading-relaxed">{error}</p>
+                                    <Link
+                                        to={roleMismatch.portalLink}
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#2563EB] hover:underline mt-2 block"
+                                    >
+                                        Open {roleMismatch.portalLabel} &rarr;
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Standard Inline Error: Unboxed bottom-bordered */}
+                    {error && !roleMismatch && (
                         <div className="mb-6 border-b border-red-500 pb-3">
                             <div className="flex items-start gap-2.5">
                                 <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                                <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+                                <div className="space-y-2">
+                                    <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+                                    {user && (
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            className="text-xs font-bold uppercase tracking-widest text-red-700 hover:underline block"
+                                        >
+                                            Log Out Now
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -136,9 +240,10 @@ export default function PartnerLogin() {
                                 id="merchant-email"
                                 type="email"
                                 required
+                                disabled={Boolean(user)}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="merchant@business.com"
                             />
                         </div>
@@ -156,16 +261,17 @@ export default function PartnerLogin() {
                                 id="merchant-password"
                                 type="password"
                                 required
+                                disabled={Boolean(user)}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="••••••••"
                             />
                         </div>
 
                         <button
                             type="submit"
-                            disabled={isLoading}
+                            disabled={isLoading || Boolean(user)}
                             className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-black hover:bg-[#2563EB] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
                         >
                             {isLoading ? (

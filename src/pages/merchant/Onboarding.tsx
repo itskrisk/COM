@@ -62,6 +62,12 @@ export default function MerchantOnboarding() {
             return;
         }
 
+        const roles: string[] = profile?.roles || (profile?.role ? [profile.role] : []);
+        if (profile && !roles.includes('merchant') && !roles.includes('admin')) {
+            navigate('/merchant/login', { replace: true });
+            return;
+        }
+
         if (profile) {
             if (profile.full_name && !storeName) setStoreName(profile.full_name);
             if (profile.phone && !phone) setPhone(profile.phone);

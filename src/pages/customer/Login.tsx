@@ -1,83 +1,86 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth, RoleMismatchInfo } from '../../context/AuthContext';
 import customerLoginImg from '../../assets/images/customerloginpic.jpg';
 
 export default function Login() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user, profile, loading: authLoading, signIn } = useAuth();
+    const { user, profile, loading: authLoading, signIn, signOut } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [roleMismatch, setRoleMismatch] = useState<RoleMismatchInfo | null>(null);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     // Destination fallback
     const from = (location.state as any)?.from?.pathname || "/stores";
 
-    // Auto-redirect if already authenticated
+    // Auto-redirect ONLY if authenticated as customer or admin
     useEffect(() => {
         if (!authLoading && user && profile) {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
             if (roles.includes('customer')) {
                 navigate(from, { replace: true });
-            } else if (roles.includes('merchant')) {
-                navigate('/merchant/dashboard', { replace: true });
-            } else if (roles.includes('courier')) {
-                navigate('/rider/dashboard', { replace: true });
             } else if (roles.includes('admin')) {
                 navigate('/admin', { replace: true });
             }
+            // Merchants and Couriers are NOT auto-redirected; they see the active session notice with a prompt to log out.
         }
     }, [authLoading, user, profile, navigate, from]);
 
+    const currentRole = profile?.roles?.[0] || user?.profile?.roles?.[0] || 'customer';
+    const isOtherRoleActive = Boolean(user && currentRole !== 'customer');
+    const currentRoleLabel = currentRole === 'courier' ? 'Rider' : currentRole === 'merchant' ? 'Merchant' : currentRole === 'admin' ? 'Admin' : 'Customer';
+    const currentPortalUrl = currentRole === 'merchant' ? '/merchant/dashboard' : currentRole === 'courier' ? '/rider/dashboard' : currentRole === 'admin' ? '/admin' : '/stores';
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        setError(null);
+        setRoleMismatch(null);
+        try {
+            await signOut();
+        } finally {
+            setLoggingOut(false);
+        }
+    };
+
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setError(null);
+        setRoleMismatch(null);
+
+        // Guard: Prevent logging in if another session is already active
+        if (user) {
+            setError(`You already have an active session as ${user.email} (${currentRoleLabel}). Please log out first before signing into another account.`);
+            return;
+        }
+
+        setLoading(true);
 
         try {
             const cleanEmail = email.trim();
-            const { error: loginError, user: loggedUser, profile: loggedProfile } = await signIn(cleanEmail, password);
+            const { error: loginError, roleMismatch: mismatch } = await signIn(cleanEmail, password, 'customer');
 
             if (loginError) {
-                setError(loginError);
-                // Add inline guidance for specific cases
-                if (loginError.includes('does not exist')) {
+                if (mismatch) {
+                    setRoleMismatch(mismatch);
+                    setError(loginError);
+                } else if (loginError.includes('does not exist')) {
                     setError('This account does not exist. Please sign up to create an account.');
                 } else if (loginError.includes('password') || loginError.includes('Invalid')) {
                     setError('Incorrect email or password. Please try again or sign up if you don\'t have an account.');
+                } else {
+                    setError(loginError);
                 }
                 return;
             }
 
-            // Route immediately based on role
-            const roles: string[] = loggedProfile?.roles || (loggedProfile?.role ? [loggedProfile.role] : ['customer']);
-            if (roles.includes('admin')) {
-                navigate('/admin', { replace: true });
-            } else if (roles.includes('merchant')) {
-                const status = loggedProfile?.account_status || loggedProfile?.status;
-                if (status === 'active' || status === 'APPROVED') {
-                    navigate('/merchant/dashboard', { replace: true });
-                } else if (status === 'pending_approval') {
-                    navigate('/pending-approval', { replace: true });
-                } else {
-                    navigate('/merchant/onboarding', { replace: true });
-                }
-            } else if (roles.includes('courier')) {
-                const status = loggedProfile?.account_status || loggedProfile?.status;
-                if (status === 'active' || status === 'APPROVED') {
-                    navigate('/rider/dashboard', { replace: true });
-                } else if (status === 'pending_approval') {
-                    navigate('/pending-approval', { replace: true });
-                } else {
-                    navigate('/rider/onboarding', { replace: true });
-                }
-            } else {
-                navigate(from, { replace: true });
-            }
+            // Customer successfully authenticated — go straight to shopping. Customers NEVER have onboarding!
+            navigate(from, { replace: true });
         } catch (err: any) {
             setError(err.message || 'Incorrect email or password.');
         } finally {
@@ -108,7 +111,7 @@ export default function Login() {
             </div>
 
             {/* Right Side: Auth Form */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative">
+            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative overflow-y-auto">
                 {/* Logo & Header */}
                 <div className="mb-12 relative">
                     <Link
@@ -116,7 +119,7 @@ export default function Login() {
                         className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#2563EB] mb-8 hover:opacity-70 transition-all group"
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                        Back to Selection
+                        Back to Home
                     </Link>
                     <div className="flex items-center justify-between mb-8">
                         <Link to="/" className="inline-block">
@@ -125,7 +128,7 @@ export default function Login() {
                             </span>
                         </Link>
                     </div>
-                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Welcome Back.</h1>
+                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Customer Login.</h1>
                     <p className="text-sm text-gray-500">
                         Don't have an account?{' '}
                         <Link to="/signup" className="font-medium text-[#2563EB] hover:underline transition-all">
@@ -140,11 +143,81 @@ export default function Login() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
-                    {error && (
+                    {/* Active Session Notice: Strict unboxed editorial layout */}
+                    {user && (
+                        <div className="mb-8 border-b border-amber-500 pb-5">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div className="space-y-3">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 block">
+                                            Active Session Detected
+                                        </span>
+                                        <p className="text-xs text-gray-700 mt-1 leading-relaxed">
+                                            You are currently signed in as <strong className="text-black">{user.email}</strong> ({currentRoleLabel}).
+                                            {isOtherRoleActive
+                                                ? " One email can only be used for one role. You must log out first before signing in as a Customer."
+                                                : " You already have an active session."}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            disabled={loggingOut}
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 underline disabled:opacity-50"
+                                        >
+                                            {loggingOut ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                                            Log Out Current Session
+                                        </button>
+                                        <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                        <Link
+                                            to={currentPortalUrl}
+                                            className="text-xs font-bold uppercase tracking-widest text-[#2563EB] hover:underline"
+                                        >
+                                            Continue to {currentRoleLabel} &rarr;
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Role Mismatch Error: Unboxed inline layout */}
+                    {roleMismatch && (
+                        <div className="mb-6 border-b border-amber-500 pb-4">
+                            <div className="flex items-start gap-2.5">
+                                <AlertCircle size={16} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="text-xs text-amber-800 font-medium leading-relaxed">{error}</p>
+                                    <Link
+                                        to={roleMismatch.portalLink}
+                                        className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-[#2563EB] hover:underline mt-2 block"
+                                    >
+                                        Open {roleMismatch.portalLabel} &rarr;
+                                    </Link>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Standard Inline Error: Unboxed bottom-bordered */}
+                    {error && !roleMismatch && (
                         <div className="mb-6 border-b border-red-500 pb-3">
                             <div className="flex items-start gap-2.5">
                                 <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
-                                <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+                                <div className="space-y-2">
+                                    <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+                                    {user && (
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            className="text-xs font-bold uppercase tracking-widest text-red-700 hover:underline block"
+                                        >
+                                            Log Out Now
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -152,15 +225,16 @@ export default function Login() {
                     <form onSubmit={handleLogin} className="space-y-8">
                         <div>
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                                Email Address
+                                Customer Email Address
                             </label>
                             <input
                                 id="customer-email"
                                 type="email"
                                 required
+                                disabled={Boolean(user)}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="name@email.com"
                             />
                         </div>
@@ -178,16 +252,17 @@ export default function Login() {
                                 id="customer-password"
                                 type="password"
                                 required
+                                disabled={Boolean(user)}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="••••••••"
                             />
                         </div>
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || Boolean(user)}
                             className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-black hover:bg-[#2563EB] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
                         >
                             {loading ? (
@@ -197,7 +272,7 @@ export default function Login() {
                                 </>
                             ) : (
                                 <>
-                                    <span>Sign In</span>
+                                    <span>Sign In as Customer</span>
                                     <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                 </>
                             )}

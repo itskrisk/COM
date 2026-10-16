@@ -3353,7 +3353,8 @@ Continuing from the previous session's audit. The remaining pending items were:
 
 ### Status:
 - Committed as `9099e61` on `main`. Pushed to `origin/main`.
-# #   S u m m a r y   o f   C h a n g e s \ n \ n -   U p d a t e d   f a v i c o n   t o   u s e   M u n c h e e z l o g o m o b i l e w h i t e . p n g   ( c h a n g e d   f r o m   . j p g   t o   . p n g   f o r   b e t t e r   t r a n s p a r e n c y )   i n   i n d e x . h t m l . \ n -   U p d a t e d   o g : i m a g e   a n d   t w i t t e r : i m a g e   t o   u s e   t h e   s a m e   . p n g   i m a g e . \ n -   U p d a t e d   J S O N - L D   l o g o   t o   u s e   t h e   . p n g   i m a g e . \ n -   E n s u r e d   t h e   i m a g e   i s   u s e d   f o r   b r o w s e r   t a b   ( f a v i c o n )   a n d   U R L   s h a r i n g   ( s o c i a l   m e d i a   p r e v i e w s ) . \ n \ n N o t e :   T h e   i m a g e   i t s e l f   i s   a s s u m e d   t o   b e   c i r c u l a r   a n d   p a d d e d   a s   p e r   u s e r   r e q u e s t ;   n o   i m a g e   p r o c e s s i n g   w a s   p e r f o r m e d .  
+# #   S u m m a r y   o f   C h a n g e s \ n \ n -   U p d a t e d   f a v i c o n   t o   u s e   M u n c h e e z l o g o m o b i l e w h i t e . p n g   ( c h a n g e d   f r o m   . j p g   t o   . p n g   f o r   b e t t e r   t r a n s p a r e n c y )   i n   i n d e x . h t m l . \ n -   U p d a t e d   o g : i m a g e   a n d   t w i t t e r : i m a g e   t o   u s e   t h e   s a m e   . p n g   i m a g e . \ n -   U p d a t e d   J S O N - L D   l o g o   t o   u s e   t h e   . p n g   i m a g e . \ n -   E n s u r e d   t h e   i m a g e   i s   u s e d   f o r   b r o w s e r   t a b   ( f a v i c o n )   a n d   U R L   s h a r i n g   ( s o c i a l   m e d i a   p r e v i e w s ) . \ n \ n N o t e :   T h e   i m a g e   i t s e l f   i s   a s s u m e d   t o   b e   c i r c u l a r   a n d   p a d d e d   a s   p e r   u s e r   r e q u e s t ;   n o   i m a g e   p r o c e s s i n g   w a s   p e r f o r m e d . 
+ 
  
  # #   B r o w s e r   T a b   a n d   U R L   I m a g e   S e t u p   -   F i n a l   S t a t e 
  -   B r o w s e r   t a b   f a v i c o n :   / l o g o s / m u n c h e e z l o g o m o b i l e w h i t e . p n g   ( P N G   f i l e ) 
@@ -3362,7 +3363,8 @@ Continuing from the previous session's audit. The remaining pending items were:
  -   J S O N - L D   l o g o :   / l o g o s / m u n c h e e z l o g o m o b i l e w h i t e . p n g 
  
  T h e   b r o w s e r   t a b   u s e s   t h e   P N G   i m a g e   a s   r e q u e s t e d ,   a n d   U R L   s h a r i n g   u s e s   t h e   s e p a r a t e   J P G   i m a g e . 
-  
+ 
+ 
  
  # #   F i n a l   I m a g e   C o n f i g u r a t i o n   ( a s   o f   2 0 2 6 - 1 0 - 1 4 T 1 3 : 4 8 : 0 0 Z ) 
  -   B r o w s e r   T a b   F a v i c o n :   / l o g o s / b r o w s e r i m a g e . p n g   ( P N G   f i l e ) 
@@ -3371,7 +3373,8 @@ Continuing from the previous session's audit. The remaining pending items were:
  -   J S O N - L D   L o g o :   / l o g o s / m u n c h e e z l o g o m o b i l e w h i t e . p n g   ( P N G   f i l e ) 
  
  T h e   b r o w s e r   t a b   n o w   u s e s   b r o w s e r i m a g e . p n g   a s   r e q u e s t e d ,   a n d   U R L   s h a r i n g   c o n t i n u e s   t o   u s e   u r l i m a g e . j p g . 
-  
+ 
+ 
  ---
 
 ## 2026-10-15 — Rider Dashboard & Admin Fleet Wiring Audit & Fixes
@@ -3735,5 +3738,56 @@ Integrated user's real Resend API key (re_REDACTED_KEY), added the exact DNS rec
    - Added code documentation for programmatic email usage.
 6. **Build Verification**:
    - Executed `npm run build` (`tsc -b && vite build`) — 0 errors.
+
+---
+
+## Task: Strict Role-Based Portal Isolation, Customer Onboarding Elimination, and Single Active Session Collision Enforcement
+
+### Prompt
+The onboarding page should only appear in the rider section and in the merchant section, never in customer login. When one session is active, another session shouldn't be — one email can only be used for one role (if used for customer, cannot be used for rider or merchant). When logged in as customer, cannot log in as rider with a different email without logging out first. Required inline errors, inline messaging, and robust error handling.
+
+### Actions Taken
+1. **Elimination of Onboarding in Customer Login (`src/pages/customer/Login.tsx`)**:
+   - Removed all routing branches navigating customers or logins to `/merchant/onboarding` or `/rider/onboarding`.
+   - Verified that customer accounts are immediately active upon verification and never marked as `pending_onboarding`. Customers route directly to their shopping destination (`/stores`).
+   - Hardened Merchant Onboarding (`src/pages/merchant/Onboarding.tsx`) and Rider Onboarding (`src/pages/courier/Onboarding.tsx`) with explicit role guards kicking out non-merchant and non-courier accounts.
+
+2. **Core Single-Role & Portal Enforcement (`src/context/AuthContext.tsx`)**:
+   - Extended `signIn(email, password, expectedRole?: AppRole)` with:
+     - **Active Session Collision Guard**: Blocks login attempts if another user session is already active in the browser, returning an explicit conflict error (`activeSessionConflict: true`).
+     - **Single-Role Resolution**: Determines the user's primary role across metadata, profiles, merchants, and riders tables.
+     - **Role Mismatch Enforcement**: If an account registered for one role (e.g. Merchant or Rider) tries to log in on another portal (e.g. Customer Login), Supabase session is immediately discarded and an explicit inline error is returned with direct link to the appropriate portal.
+   - Updated `addRole` to strictly disallow multi-role assignments (`'Each email can only be used for one role. Multi-role accounts are not permitted.'`).
+   - Fixed `buildMinimalUser` and `buildNormalizedUser` so customers receive `accountStatus: 'active'` instead of `pending_onboarding`.
+
+3. **Active Session Notice & Inline Collision Handling on All Logins**:
+   - **Customer Login (`src/pages/customer/Login.tsx`)**:
+     - When signed in under another role (Merchant or Rider), renders an unboxed editorial Active Session Notice displaying current email and role, with a 1-click **Log Out Current Session** button and a link to return to their dashboard.
+     - If credentials for a Merchant or Rider are entered, displays inline error: *"This account is registered as a [Role]. Please sign in via the [Portal]."* with direct link.
+   - **Merchant Login (`src/pages/merchant/PartnerLogin.tsx`)**:
+     - Added Active Session Notice and form guard preventing cross-role login without logging out first.
+     - Enforces `expectedRole: 'merchant'`, blocking Customer and Rider accounts with direct portal links.
+   - **Fleet Terminal Login (`src/pages/courier/Login.tsx`)**:
+     - Added Active Session Notice and form guard preventing cross-role login without logging out first.
+     - Enforces `expectedRole: 'courier'`, blocking Customer and Merchant accounts with direct portal links.
+
+4. **Single-Role Enforcement on Signups**:
+   - **Customer Signup (`src/pages/customer/Signup.tsx`)**:
+     - Removed previous `addRole` multi-role logic.
+     - Added Active Session Guard blocking creation of another account while signed in.
+     - Added inline error handling if the email is already registered to any role.
+   - **Merchant Signup (`src/pages/merchant/PartnerSignup.tsx`) & Courier Signup (`src/pages/courier/Signup.tsx`)**:
+     - Added Active Session Guards and one-role error messaging.
+     - Replaced rounded container buttons (`rounded-2xl`, drop shadows) with compliant editorial styling.
+
+5. **Strict Design Rule Adherence**:
+   - Zero card containers, rounded-2xl boxes, or padded container backgrounds (`bg-white/10 p-8`) were used.
+   - All warnings, mismatch banners, and error messages use edge-to-edge section dividers (`border-b border-amber-500 pb-4` / `border-b border-red-500 pb-3`) with crisp uppercase tracking typography and transparent bottom-line inputs.
+
+### Failures Encountered & Resolution
+- **TS18048**: In `AuthContext.tsx`, `minimalUser.profile` was flagged as possibly undefined by TypeScript during `minimalUser.profile.roles = [resolvedRole]`. Resolved by adding `if (minimalUser.profile) minimalUser.profile.roles = [resolvedRole];`.
+
+### Verification
+- Executed full production build: `npm run build` (`tsc -b && vite build`) — Passed with 0 errors.
 
 ---

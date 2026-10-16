@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2, LogOut } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
@@ -7,7 +7,7 @@ import customerLoginImg from '../../assets/images/customerloginpic.jpg';
 
 export default function Signup() {
     const navigate = useNavigate();
-    const { user, profile, signOut, loading: authLoading, addRole, signUp } = useAuth();
+    const { user, profile, signOut, loading: authLoading, signUp } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,74 +16,81 @@ export default function Signup() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [portalHint, setPortalHint] = useState<{ message: string; link: string; label: string } | null>(null);
-    const [addingRole, setAddingRole] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
+
+    const currentRole = profile?.roles?.[0] || user?.profile?.roles?.[0] || 'customer';
+    const isOtherRoleActive = Boolean(user && currentRole !== 'customer');
+    const currentRoleLabel = currentRole === 'courier' ? 'Rider' : currentRole === 'merchant' ? 'Merchant' : currentRole === 'admin' ? 'Admin' : 'Customer';
+    const currentPortalUrl = currentRole === 'merchant' ? '/merchant/dashboard' : currentRole === 'courier' ? '/rider/dashboard' : currentRole === 'admin' ? '/admin' : '/stores';
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        setError(null);
+        setPortalHint(null);
+        try {
+            await signOut();
+        } finally {
+            setLoggingOut(false);
+        }
+    };
 
     const handleSignup = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
         setError(null);
         setPortalHint(null);
 
+        // Guard: One email = one role, and one active session at a time
+        if (user) {
+            setError(`You are currently signed in as ${user.email} (${currentRoleLabel}). One email can only be used for one role. Please log out first to create a new account.`);
+            return;
+        }
+
         if (!fullName.trim() || !email.trim() || !password) {
             setError('Please fill in all required fields.');
-            setLoading(false);
             return;
         }
 
         if (password !== confirmPassword) {
             setError("Passwords do not match.");
-            setLoading(false);
             return;
         }
 
         if (password.length < 6) {
             setError('Password must be at least 6 characters long.');
-            setLoading(false);
             return;
         }
 
+        setLoading(true);
+
         try {
-            if (user) {
-                // User is already logged in — add customer role to their existing account
-                setAddingRole(true);
-                const { error: addRoleError } = await addRole('customer');
+            const { error: signupError } = await signUp(email, password, {
+                name: fullName.trim(),
+                phone: phone.trim() || undefined,
+                role: 'customer',
+            });
 
-                if (addRoleError) throw new Error(addRoleError);
+            if (signupError) throw new Error(signupError);
 
-                navigate('/stores', { replace: true });
-            } else {
-                // New user signup
-                const { error: signupError } = await signUp(email, password, {
-                    name: fullName.trim(),
-                    phone: phone.trim() || undefined,
-                    role: 'customer',
-                });
-
-                if (signupError) throw new Error(signupError);
-
-                navigate('/auth/verify', {
-                    state: { email: email.trim() }
-                });
-                return;
-            }
+            navigate('/auth/verify', {
+                state: { email: email.trim() }
+            });
         } catch (err: any) {
             let message = err.message || 'An error occurred during signup.';
-            if (message.toLowerCase().includes('already registered') || message.toLowerCase().includes('already exists') || message.toLowerCase().includes('email in use') || message.toLowerCase().includes('already registered.')) {
+            const lower = message.toLowerCase();
+            if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('email in use')) {
                 setPortalHint({
-                    message: 'This email is registered. Proceed to login.',
+                    message: 'This email is already registered. Each email can only be used for one role.',
                     link: '/login',
-                    label: 'Proceed to login'
+                    label: 'Proceed to Customer Login'
                 });
-                setError('This email is registered. Please proceed to login.');
-            } else if (message.toLowerCase().includes('rate limit')) {
-                message = "Email rate limit reached. Please wait a while before trying again, or use a different email.";
-                setError(message);
+                setError('This email is already registered. Each email can only be used for one role.');
+            } else if (lower.includes('rate limit')) {
+                setError("Email rate limit reached. Please wait a moment before trying again, or use a different email.");
             } else {
                 setError(message);
             }
         } finally {
             setLoading(false);
-            setAddingRole(false);
         }
     };
 
@@ -151,14 +158,55 @@ export default function Signup() {
                     transition={{ duration: 0.8 }}
                     className="max-w-md w-full"
                 >
+                    {/* Active Session Notice: Strict unboxed editorial layout */}
+                    {user && (
+                        <div className="mb-8 border-b border-amber-500 pb-5">
+                            <div className="flex items-start gap-3">
+                                <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                                <div className="space-y-3">
+                                    <div>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 block">
+                                            Active Session Detected
+                                        </span>
+                                        <p className="text-xs text-gray-700 mt-1 leading-relaxed">
+                                            You are currently signed in as <strong className="text-black">{user.email}</strong> ({currentRoleLabel}).
+                                            {isOtherRoleActive
+                                                ? " One email can only be used for one role. You must log out first to create a new customer account."
+                                                : " You already have an active session."}
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-4 pt-1">
+                                        <button
+                                            type="button"
+                                            onClick={handleLogout}
+                                            disabled={loggingOut}
+                                            className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-red-600 hover:text-red-700 underline disabled:opacity-50"
+                                        >
+                                            {loggingOut ? <Loader2 size={12} className="animate-spin" /> : <LogOut size={12} />}
+                                            Log Out Current Session
+                                        </button>
+                                        <span className="w-1 h-1 rounded-full bg-gray-300" />
+                                        <Link
+                                            to={currentPortalUrl}
+                                            className="text-xs font-bold uppercase tracking-widest text-[#2563EB] hover:underline"
+                                        >
+                                            Continue to {currentRoleLabel} &rarr;
+                                        </Link>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {portalHint && (
                         <div className="mb-6 border-b border-blue-500 pb-3">
                             <p className="text-xs text-blue-600 font-medium mb-2">{portalHint.message}</p>
-                            <Link to={portalHint.link} className="text-xs font-bold text-blue-700 hover:underline uppercase tracking-widest">
-                                {portalHint.label}
+                            <Link to={portalHint.link} className="text-xs font-bold text-blue-700 hover:underline uppercase tracking-widest block">
+                                {portalHint.label} &rarr;
                             </Link>
                         </div>
                     )}
+
                     {error && !portalHint && (
                         <div className="mb-6 border-b border-red-500 pb-3">
                             <p className="text-xs text-red-600 font-medium">{error}</p>
@@ -174,9 +222,10 @@ export default function Signup() {
                                 id="customer-name"
                                 type="text"
                                 required
+                                disabled={Boolean(user)}
                                 value={fullName}
                                 onChange={(e) => setFullName(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="Enter your name"
                             />
                         </div>
@@ -188,9 +237,10 @@ export default function Signup() {
                             <input
                                 id="customer-signup-phone"
                                 type="tel"
+                                disabled={Boolean(user)}
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="+254 700 000 000"
                             />
                         </div>
@@ -203,9 +253,10 @@ export default function Signup() {
                                 id="customer-signup-email"
                                 type="email"
                                 required
+                                disabled={Boolean(user)}
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="name@email.com"
                             />
                         </div>
@@ -218,9 +269,10 @@ export default function Signup() {
                                 id="customer-signup-password"
                                 type="password"
                                 required
+                                disabled={Boolean(user)}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="Create a password"
                             />
                         </div>
@@ -233,9 +285,10 @@ export default function Signup() {
                                 id="customer-signup-confirm-password"
                                 type="password"
                                 required
+                                disabled={Boolean(user)}
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                                 placeholder="Confirm your password"
                             />
                         </div>
@@ -246,7 +299,7 @@ export default function Signup() {
 
                         <button
                             type="submit"
-                            disabled={loading}
+                            disabled={loading || Boolean(user)}
                             className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
                         >
                             {loading ? (
@@ -262,19 +315,6 @@ export default function Signup() {
                             )}
                         </button>
                     </form>
-
-                    <div className="mt-12 pt-8 border-t border-gray-50">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-6">Or join using</span>
-                        <button className="w-full flex items-center justify-center gap-4 py-4 border-b border-gray-100 hover:opacity-70 transition-all text-sm font-bold text-gray-700 group">
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
-                                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                            </svg>
-                            <span className="tracking-tight group-hover:text-black">Sign up with Google</span>
-                        </button>
-                    </div>
                 </motion.div>
             </div>
         </div>

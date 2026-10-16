@@ -58,6 +58,12 @@ export default function CourierOnboarding() {
             return;
         }
 
+        const roles: string[] = profile?.roles || (profile?.role ? [profile.role] : []);
+        if (profile && !roles.includes('courier') && !roles.includes('admin')) {
+            navigate('/rider/login', { replace: true });
+            return;
+        }
+
         if (profile) {
             if (profile.full_name && !fullName) setFullName(profile.full_name);
             if (profile.phone && !phone) {
