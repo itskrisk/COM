@@ -3610,3 +3610,102 @@ px tsc -b passed with exit code 0 â€” zero TypeScript errors.
 
 ### Verification:
 - `npx tsc -b` exited with code 0 — 0 TypeScript errors.
+
+---
+
+## [2026-10-16] — Storefront Product Normalization, Full Aisle Taxonomy & Store Cover Image Upload
+
+### Prompt Summary
+User requested three things:
+1. Merchant dashboard must give authority over the 22 canonical aisles (Shop your list, Deals, Fruits & Vegetables, etc.) when creating/editing products.
+2. Products must be visible on the customer storefront (SupermarketStore.tsx) with correct images and categories.
+3. Merchants must be able to set their store card cover image in the dashboard so the market listing stops showing a generic fallback.
+
+### Actions Taken
+
+#### 1. StoreFront.tsx — Product Field Normalization (CRITICAL FIX)
+- Root cause identified: Supabase returns snake_case DB fields (image_url, category_id, stock_level, is_available, is_featured), but SupermarketStore.tsx expected camelCase (imageUrl, categoryId, stockLevel, isAvailable, isFeatured).
+- StoreFront.tsx was previously passing raw DB rows directly into the component, causing undefined imageUrl (broken/fallback images), undefined categoryId (products not mapping to any aisle), and undefined stockLevel/isAvailable (wrong availability badges).
+- Fix: Added a .map() normalization step in loadStore() that maps all snake_case DB fields to the correct camelCase interface keys before passing to setMerchantProducts().
+
+#### 2. Dashboard.tsx — Full 22-Aisle Taxonomy
+- The categories array was missing 'Shop your list' (the first canonical aisle).
+- Reordered and completed the list to match the exact SupermarketStore.tsx taxonomy:
+  All, Shop your list, Fruits & Vegetables, Bakery, Beverages, Alcohol, Fresh Food, Cleaning & Household, Frozen Food, Food Cupboard, Delicatessen, Beauty & Personal Care, Bio & Organic Food, Baby Products, Health & Fitness, Delicatessen Counter, Electronics & Appliances, Pet Supplies, Stationery & School Supplies, Automotive, Home & Garden, Kiosk, Deals
+- This list controls both the inventory filter dropdown AND the Aisle Category select in the product creation/edit modal.
+
+#### 3. Dashboard.tsx — Store Card / Cover Image Upload
+- Added storeCoverUrl and isUploadingCover state.
+- Populated storeCoverUrl from data.cover_url || data.logo_url || data.branding?.bannerUrl on both the approval-gate useEffect and the main loadDashboardData useEffect.
+- Added a new "Store Card Image (Cover Photo)" section in Settings ? 01 · Storefront Identity & Branding with:
+  - Live thumbnail preview box
+  - File upload button (uploads to Supabase storage: documents/stores/{merchantId})
+  - Direct URL paste input
+- handleSaveStoreSettings now persists cover_url and logo_url to the merchants table via merchantService.updateMerchant().
+
+#### 4. StoreListing.tsx — Extended Image Fallback Chain
+- Updated store card image selection from: m.cover_url || fallback
+- To: m.cover_url || m.logo_url || m.branding?.bannerUrl || fallback
+- Ensures the store card on the market listing shows the correct branding image whichever field is populated.
+
+### Result
+- TypeScript compile: 0 errors.
+- Git commit: e5c2932 pushed to main branch on GitHub (itskrisk/COM).
+- Products now render correctly on the customer storefront with images, correct aisle assignment, stock levels, and availability.
+- Merchants can upload and set their store card image from the Settings tab.
+- All 22 canonical aisles are available in the merchant product creation modal.
+
+---
+
+## Task: Supabase Email Templates, Custom SMTP (muncheez.co.ke), and Smart Multi-Portal Routing
+
+### Prompt
+Continue from where you left off. Also make sure that those emails are reflecting whether its merchant, rider, or customer... And if that is not possible, lets make it such that it is generalized, and we have the routing from the link working, whether they are directed to customer login, merchant login, or rider login.
+
+### Actions Taken
+1. **Smart Role-Based Callback Routing (src/pages/auth/AuthCallback.tsx)**:
+   - Supabase Auth triggers a single universal template per event (e.g. Confirm sign up) across all user types.
+   - Enhanced AuthCallback.tsx with deep role and state machine resolution upon clicking {{ .ConfirmationURL }}:
+     - Checks verifiedUser.user_metadata.role.
+     - Queries profiles table for roles and role.
+     - Queries merchants table for record existence, status, and onboarding_completed.
+     - Queries riders table for record existence, status, and onboarding_completed.
+   - Dynamic routing destinations:
+     - Customer: Navigates to /login with state { verified: true } or shopping storefront.
+     - Merchant: Routes directly to /merchant/dashboard if approved; /pending-approval if onboarding submitted; /merchant/onboarding if new.
+     - Courier / Rider: Routes directly to /rider/dashboard if approved; /pending-approval if onboarding submitted; /rider/onboarding if new.
+     - Password Recovery: Routes directly to /auth/reset-password.
+     - Session / Token Error Fallback: Displays dedicated, high-contrast links for Customer Login, Merchant Login, and Rider Login so no user is stranded.
+
+2. **Explicit Redirect URLs on Client Signups**:
+   - Updated AuthContext.tsx and supabaseService.ts (authService.signUp) to supply emailRedirectTo: window.location.origin + '/auth/callback'.
+   - Updated authService.resetPassword in supabaseService.ts and AuthContext.tsx to supply redirectTo: window.location.origin + '/auth/reset-password'.
+
+3. **Created All 13 Supabase Email Templates (emailtemp/)**:
+   - Designed with high-end Muncheez editorial aesthetic (Google Fonts Outfit + Inter, #1A1A1A, #4A90E2, pill buttons, responsive 600px tables, 2026 copyright).
+   - Generalized with luxury network branding (Customer, Merchant & Courier Network):
+     - confirm_signup.html (Confirm sign up - {{ .ConfirmationURL }} button + {{ .Token }} OTP code)
+     - invite_user.html (Invite user - {{ .ConfirmationURL }})
+     - magic_link.html (Magic link or OTP - {{ .ConfirmationURL }} button + {{ .Token }} OTP code)
+     - change_email.html (Change email address - {{ .ConfirmationURL }})
+     - reset_password.html (Reset password - {{ .ConfirmationURL }})
+     - reauthentication.html (Reauthentication - {{ .Token }})
+     - security_password_changed.html (Password changed alert)
+     - security_email_changed.html (Email address changed alert)
+     - security_phone_changed.html (Phone number changed alert)
+     - security_signin_linked.html (Sign-in method linked alert)
+     - security_signin_removed.html (Sign-in method removed alert)
+     - security_mfa_added.html (MFA method added alert)
+     - security_mfa_removed.html (MFA method removed alert)
+
+4. **Created Master Setup Documentation (SUPABASE_EMAIL_SETUP.md)**:
+   - Comprehensive guide detailing:
+     - URL configuration (Site URL: https://muncheez.co.ke, Redirect URLs list).
+     - Custom SMTP settings for muncheez.co.ke via Resend / cPanel with port, TLS, and DNS records (SPF, DKIM, DMARC).
+     - Template mapping table with exact Supabase dashboard names, subjects, and file paths.
+     - Verification test steps.
+
+5. **Build & Type Verification**:
+   - Executed npm run build (tsc -b && vite build) - Passed with 0 errors.
+
+---

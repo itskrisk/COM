@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirm Your Muncheez Account</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;700&family=Inter:wght@400;600&display=swap');
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #F8F9FA;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: #1A1A1A;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .wrapper {
+            width: 100%;
+            table-layout: fixed;
+            background-color: #F8F9FA;
+            padding: 40px 0 60px 0;
+        }
+
+        .main {
+            background-color: #ffffff;
+            margin: 0 auto;
+            width: 100%;
+            max-width: 600px;
+            border-spacing: 0;
+            border-collapse: collapse;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.04);
+        }
+
+        .header-image {
+            width: 100%;
+            height: 320px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .content {
+            padding: 55px 45px;
+            text-align: center;
+        }
+
+        .brand-label {
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.45em;
+            color: #4A90E2;
+            margin-bottom: 22px;
+            display: block;
+        }
+
+        h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 40px;
+            font-weight: 300;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+            margin: 0 0 24px 0;
+            color: #1A1A1A;
+        }
+
+        .italic {
+            font-style: italic;
+            opacity: 0.55;
+        }
+
+        .dot {
+            color: #4A90E2;
+        }
+
+        p {
+            font-size: 15px;
+            line-height: 1.65;
+            color: #555555;
+            margin: 0 0 36px 0;
+            font-weight: 400;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 20px 48px;
+            background-color: #1A1A1A;
+            color: #ffffff !important;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.35em;
+            border-radius: 100px;
+        }
+
+        .otp-box {
+            margin-top: 32px;
+            padding: 16px 24px;
+            background-color: #F8F9FA;
+            border-top: 1px solid #EEEEEE;
+            border-bottom: 1px solid #EEEEEE;
+            display: inline-block;
+        }
+
+        .otp-label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: #888888;
+            margin-bottom: 6px;
+        }
+
+        .otp-code {
+            font-family: 'Courier New', monospace;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 0.3em;
+            color: #1A1A1A;
+        }
+
+        .footer {
+            padding: 35px 45px;
+            text-align: center;
+            background-color: #F8F9FA;
+            border-top: 1px solid #F0F0F0;
+        }
+
+        .footer-logo {
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 18px;
+            margin-bottom: 16px;
+            color: #1A1A1A;
+        }
+
+        .footer-text {
+            font-size: 10px;
+            color: #888888;
+            letter-spacing: 0.1em;
+            line-height: 1.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <table class="main" width="100%" align="center" cellpadding="0" cellspacing="0">
+            <tr>
+                <td>
+                    <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1200" alt="Muncheez Experience" class="header-image">
+                </td>
+            </tr>
+            <tr>
+                <td class="content">
+                    <span class="brand-label">Welcome to Muncheez</span>
+                    <h1>Confirm your <br><span class="italic">Account</span><span class="dot">.</span></h1>
+                    <p>
+                        Thank you for joining Muncheez. Whether you are ordering your favorites, running your storefront, or delivering across Nairobi, please confirm your email address to activate your access.
+                    </p>
+                    <a href="{{ .ConfirmationURL }}" class="button" target="_blank">Confirm Email Address</a>
+
+                    <div style="margin-top: 36px;">
+                        <div class="otp-box">
+                            <div class="otp-label">Or use verification code</div>
+                            <div class="otp-code">{{ .Token }}</div>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td class="footer">
+                    <div class="footer-logo">Muncheez<span class="dot">.</span></div>
+                    <div class="footer-text">
+                        CUSTOMER &bullet; MERCHANT &bullet; COURIER NETWORK &bullet; NAIROBI, KENYA<br>
+                        If you did not sign up for Muncheez, you can safely disregard this email.<br>
+                        &copy; 2026 Muncheez. All rights reserved.
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

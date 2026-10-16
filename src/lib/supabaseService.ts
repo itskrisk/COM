@@ -150,6 +150,7 @@ export const authService = {
       email,
       password,
       options: {
+        emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : 'https://muncheez.co.ke'}/auth/callback`,
         data: metadata
       }
     });
@@ -180,7 +181,9 @@ export const authService = {
   },
 
   async resetPassword(email: string) {
-    const { data, error } = await supabase.auth.resetPasswordForEmail(email);
+    const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${typeof window !== 'undefined' ? window.location.origin : 'https://muncheez.co.ke'}/auth/reset-password`
+    });
     return { data, error };
   },
 

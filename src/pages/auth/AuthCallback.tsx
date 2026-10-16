@@ -58,50 +58,91 @@ export default function AuthCallback() {
                     return;
                 }
 
-                const role = verifiedUser.user_metadata?.role || 'customer';
                 const emailConfirmed = Boolean(verifiedUser.email_confirmed_at);
-
                 if (!emailConfirmed) {
                     setStatus('error');
                     setMessage('Email not confirmed yet. Please click the link in your email again.');
                     return;
                 }
 
-                // Get profile for account_status routing
+                // Deep check: resolve role from metadata, profiles, merchants, or riders tables
+                let detectedRole = verifiedUser.user_metadata?.role;
+
+                // 1. Check profiles
                 const { data: profileRow } = await supabase
                     .from('profiles')
-                    .select('account_status')
+                    .select('account_status, roles, role')
                     .eq('id', verifiedUser.id)
                     .maybeSingle();
+
+                if (!detectedRole) {
+                    if (profileRow?.role) {
+                        detectedRole = profileRow.role;
+                    } else if (profileRow?.roles && profileRow.roles.length > 0) {
+                        detectedRole = profileRow.roles[0];
+                    }
+                }
+
+                // 2. Check merchants table
+                const { data: merchantRow } = await supabase
+                    .from('merchants')
+                    .select('status, onboarding_completed')
+                    .eq('id', verifiedUser.id)
+                    .maybeSingle();
+
+                if (merchantRow) {
+                    detectedRole = 'merchant';
+                }
+
+                // 3. Check riders table
+                const { data: riderRow } = await supabase
+                    .from('riders')
+                    .select('status, onboarding_completed')
+                    .eq('id', verifiedUser.id)
+                    .maybeSingle();
+
+                if (riderRow) {
+                    detectedRole = 'courier';
+                }
+
+                // Default fallback
+                const role = detectedRole || 'customer';
                 const accountStatus = profileRow?.account_status || 'pending_onboarding';
 
                 setStatus('success');
-                setMessage('Email verified successfully! Redirecting...');
+                setMessage('Email verified successfully! Directing you to your portal...');
 
                 setTimeout(() => {
                     if (cancelled) return;
 
-                    // Route by role + account state machine
-                    if (role === 'customer') {
-                        navigate('/login', { replace: true });
-                    } else if (role === 'merchant') {
-                        if (accountStatus === 'pending_approval') {
-                            navigate('/pending-approval', { replace: true });
-                        } else if (accountStatus === 'active' || accountStatus === 'APPROVED') {
+                    // Route by detected role and portal status
+                    if (role === 'merchant') {
+                        const isApproved = merchantRow?.status === 'APPROVED' || accountStatus === 'active' || accountStatus === 'APPROVED';
+                        const isPending = merchantRow?.onboarding_completed || accountStatus === 'pending_approval' || merchantRow?.status === 'PENDING';
+                        
+                        if (isApproved) {
                             navigate('/merchant/dashboard', { replace: true });
-                        } else {
-                            navigate('/merchant/login', { replace: true });
-                        }
-                    } else if (role === 'courier') {
-                        if (accountStatus === 'pending_approval') {
+                        } else if (isPending) {
                             navigate('/pending-approval', { replace: true });
-                        } else if (accountStatus === 'active' || accountStatus === 'APPROVED') {
-                            navigate('/rider/dashboard', { replace: true });
                         } else {
-                            navigate('/rider/login', { replace: true });
+                            navigate('/merchant/onboarding', { replace: true });
                         }
+                    } else if (role === 'courier' || role === 'rider') {
+                        const isApproved = riderRow?.status === 'APPROVED' || accountStatus === 'active' || accountStatus === 'APPROVED';
+                        const isPending = riderRow?.onboarding_completed || accountStatus === 'pending_approval' || riderRow?.status === 'PENDING';
+                        
+                        if (isApproved) {
+                            navigate('/rider/dashboard', { replace: true });
+                        } else if (isPending) {
+                            navigate('/pending-approval', { replace: true });
+                        } else {
+                            navigate('/rider/onboarding', { replace: true });
+                        }
+                    } else if (role === 'admin') {
+                        navigate('/admin/dashboard', { replace: true });
                     } else {
-                        navigate(ROLE_DESTINATIONS[role] || '/login', { replace: true });
+                        // Customer
+                        navigate('/login', { replace: true, state: { verified: true } });
                     }
                 }, 1600);
 
@@ -166,16 +207,24 @@ export default function AuthCallback() {
                     <div className="flex flex-col gap-3 mt-6">
                         <a
                             href="/login"
-                            className="w-full py-4 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#2563EB] transition-colors text-center block"
+                            className="w-full py-3.5 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#2563EB] transition-colors text-center block"
                         >
-                            Continue to Login
+                            Customer Login
                         </a>
-                        <a
-                            href="/signup"
-                            className="w-full py-4 px-6 text-xs font-mono uppercase tracking-widest text-gray-600 border border-gray-200 hover:border-black transition-colors text-center block"
-                        >
-                            Sign Up Again
-                        </a>
+                        <div className="grid grid-cols-2 gap-2">
+                            <a
+                                href="/merchant/login"
+                                className="py-3 px-3 text-[11px] font-mono uppercase tracking-wider text-gray-700 border border-gray-200 hover:border-black transition-colors text-center block"
+                            >
+                                Merchant Login
+                            </a>
+                            <a
+                                href="/rider/login"
+                                className="py-3 px-3 text-[11px] font-mono uppercase tracking-wider text-gray-700 border border-gray-200 hover:border-black transition-colors text-center block"
+                            >
+                                Rider Login
+                            </a>
+                        </div>
                     </div>
                 )}
             </div>

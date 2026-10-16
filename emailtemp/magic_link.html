@@ -124,10 +124,16 @@
                     <span class="brand-label">Instant Access</span>
                     <h1>Your entrance <br><span class="italic">is Ready</span><span class="dot">.</span></h1>
                     <p>
-                        Click the button below to sign in instantly. No password required. We're waiting for you inside
-                        the Collective.
+                        Click the button below to sign in instantly without a password, or enter the 6-digit code on the sign-in screen.
                     </p>
-                    <a href="{{ .ConfirmationURL }}" class="button">Log In Instantly</a>
+                    <a href="{{ .ConfirmationURL }}" class="button">Sign In Instantly</a>
+
+                    <div style="margin-top: 36px;">
+                        <div style="display: inline-block; padding: 16px 24px; background-color: #F8F9FA; border-top: 1px solid #EEEEEE; border-bottom: 1px solid #EEEEEE;">
+                            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.25em; color: #888888; margin-bottom: 6px;">One-Time Password (OTP)</div>
+                            <div style="font-family: 'Courier New', monospace; font-size: 24px; font-weight: 700; letter-spacing: 0.3em; color: #1A1A1A;">{{ .Token }}</div>
+                        </div>
+                    </div>
                 </td>
             </tr>
             <tr>
@@ -136,9 +142,9 @@
                         style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 18px; margin-bottom: 20px;">
                         Muncheez<span class="dot">.</span></div>
                     <div class="footer-text">
-                        LOGISTICS &bullet; NAIROBI, KENYA<br>
-                        If you didn't request this link, you can ignore it.<br>
-                        © 2024 Muncheez. All rights reserved.
+                        CUSTOMER &bullet; MERCHANT &bullet; COURIER NETWORK &bullet; NAIROBI, KENYA<br>
+                        If you didn't request this sign-in link, you can safely ignore this email.<br>
+                        &copy; 2026 Muncheez. All rights reserved.
                     </div>
                 </td>
             </tr>
