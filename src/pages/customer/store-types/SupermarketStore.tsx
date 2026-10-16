@@ -8,6 +8,7 @@ import LocationModal from '../../../components/marketing/LocationModal';
 import ProfileModal from '../../../components/ui/shared/ProfileModal';
 import GlassCart from '../../../components/ui/shared/GlassCart';
 import { useAuth } from '../../../context/AuthContext';
+import { useProfileGuard } from '../../../hooks/useProfileGuard';
 import { supabase } from '../../../lib/supabaseClient';
 
 interface SupermarketStoreProps {
@@ -57,9 +58,9 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
         setUserLocation(fallback);
     }, [profile]);
 
-    // Modal & Menu States 
+// Modal & Menu States
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const { isOpen: isProfileOpen, open: openProfile, close: closeProfile } = useProfileGuard();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // Unified location handler - saves to both localStorage and Supabase profile
@@ -95,8 +96,13 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
     ];
 
     const availableCategories = Array.from(new Set((products || []).map(p => p.categoryId || 'General')));
-    const categories = Array.from(new Set([...categoricalTaxonomy, ...availableCategories]));
+    // Categories with products take priority, with taxonomy available if categories are present
+    const categoriesWithProducts = Array.from(new Set((products || []).map(p => p.categoryId).filter(Boolean)));
+    const categories = categoriesWithProducts.length > 0
+        ? categoriesWithProducts
+        : Array.from(new Set([...categoricalTaxonomy, ...availableCategories]));
     const featuredItems = (products || []).filter(p => p.categoryId === 'Featured items' || p.isFeatured);
+    const hasProducts = (products || []).length > 0;
     const isManualScrolling = useRef(false);
 
     useEffect(() => {
@@ -300,7 +306,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
 
                         {/* Profile / Account */}
                         <button
-                            onClick={() => setIsProfileOpen(true)}
+                            onClick={() => openProfile()}
                             aria-label="Open account"
                             className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
                         >
@@ -386,7 +392,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                             <div className="flex flex-col gap-3 mt-8">
                                 {user ? (
                                     <button
-                                        onClick={() => { setIsMenuOpen(false); setIsProfileOpen(true); }}
+                                        onClick={() => { setIsMenuOpen(false); openProfile(); }}
                                         className="w-full py-3.5 px-6 bg-[#4A90E2] text-white rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-between shadow-lg"
                                     >
                                         <span>{profile?.full_name || user.email?.split('@')[0] || 'My Profile'}</span>
@@ -415,21 +421,41 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
 
                 <div className="max-w-7xl mx-auto relative z-20 mb-8">
                     <motion.h1 key={viewingCategoryDeepDive || 'main'} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="text-5xl md:text-8xl font-heading font-light tracking-tighter text-white leading-[0.85]">
-                        {viewingCategoryDeepDive === 'Almost anything, delivered' ? 'Specials' : (viewingCategoryDeepDive || merchant.name || 'Carrefour')}<span className="text-[#D4AF37]">,</span><br />
-                        {viewingCategoryDeepDive ? 'Selection' : (merchant.address?.split(',')[0] || 'Valley Arcade')}<span className="text-[#D4AF37]">.</span>
+                        {viewingCategoryDeepDive === 'Almost anything, delivered' ? 'Specials' : (viewingCategoryDeepDive || merchant.name || merchant.business_name || 'Market')}<span className="text-[#D4AF37]">,</span><br />
+                        {viewingCategoryDeepDive ? 'Selection' : (merchant.address?.split(' - ')[0]?.split(',')[0] || 'Nairobi')}<span className="text-[#D4AF37]">.</span>
                     </motion.h1>
                     <div className="flex flex-wrap items-center gap-x-8 gap-y-4 mt-12 text-white/70">
                         <div className="flex items-center gap-3">
                             <Clock size={16} style={{ color: merchant.branding?.secondaryColor || '#D4AF37' }} />
-                            <div><span className="block text-[8px] font-black uppercase opacity-40">Arrival</span><span className="text-[10px] font-bold">{merchant.customSettings?.arrivalTime || '11:03 AM'}</span></div>
+                            <div>
+                                <span className="block text-[8px] font-black uppercase opacity-40">Arrival</span>
+                                <span className="text-[10px] font-bold">
+                                    {merchant.customSettings?.arrivalTime || merchant.operating_hours?.hours || merchant.operatingHours || (() => {
+                                        const now = new Date();
+                                        const buffer = (merchant.customSettings?.kitchenPrepTimeMin || merchant.pack_time_min || 20) + 15;
+                                        now.setMinutes(now.getMinutes() + buffer);
+                                        return now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                    })()}
+                                </span>
+                            </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <Zap size={16} style={{ color: merchant.branding?.secondaryColor || '#D4AF37' }} />
-                            <div><span className="block text-[8px] font-black uppercase opacity-40">Priority</span><span className="text-[10px] font-bold">{merchant.customSettings?.priorityLabel || '23 min'}</span></div>
+                            <div>
+                                <span className="block text-[8px] font-black uppercase opacity-40">Priority</span>
+                                <span className="text-[10px] font-bold">
+                                    {merchant.customSettings?.priorityLabel || `${(merchant.customSettings?.kitchenPrepTimeMin || merchant.pack_time_min || 20)} min`}
+                                </span>
+                            </div>
                         </div>
                         <div className="flex items-center gap-3">
                             <Star size={16} style={{ color: merchant.branding?.secondaryColor || '#D4AF37' }} />
-                            <div><span className="block text-[8px] font-black uppercase opacity-40">Ratings</span><span className="text-[10px] font-bold">{merchant.customSettings?.rating || '4.5 (2k+)'}</span></div>
+                            <div>
+                                <span className="block text-[8px] font-black uppercase opacity-40">Ratings</span>
+                                <span className="text-[10px] font-bold">
+                                    {merchant.customSettings?.rating || (merchant.rating ? `${merchant.rating} (${merchant.reviewCount || merchant.review_count || '0'}+)` : 'New Partner')}
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -529,61 +555,77 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                                 ) : (
                                     /* MAIN STORE VIEW */
                                     <motion.div key="mainstore" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                                        {/* HORIZONTAL FEATURED SECTION */}
-                                        <div id="section-Almost anything, delivered" className="mb-32">
-                                            <div className="flex items-center justify-between mb-8">
-                                                <h2 className="text-2xl md:text-3xl font-heading font-black tracking-tight uppercase text-black">{merchant.customSettings?.specialsTitle || 'Market Specials'}</h2>
-                                                <button onClick={() => setViewingCategoryDeepDive('Almost anything, delivered')} className="group flex items-center gap-4 py-2 relative">
-                                                    <span className="text-[9px] font-black uppercase tracking-[0.4em] text-black/60 group-hover:text-black transition-colors whitespace-nowrap">
-                                                        Explore {merchant.customSettings?.specialsTitle || 'Specials'}
-                                                    </span>
-                                                    <div className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all">
-                                                        <ArrowRight size={14} />
-                                                    </div>
-                                                </button>
+                                        {!hasProducts ? (
+                                            <div className="py-24 text-center border-t border-b border-black/10 my-12">
+                                                <ShoppingBag size={36} className="mx-auto text-black/30 mb-4 stroke-1" />
+                                                <h3 className="font-heading font-black text-2xl uppercase tracking-tight text-black mb-2">
+                                                    No Products in this Store Yet
+                                                </h3>
+                                                <p className="text-xs font-mono uppercase tracking-widest text-black/50 max-w-md mx-auto">
+                                                    The merchant has not added items to this catalog yet. Please check back shortly or browse other approved stores.
+                                                </p>
                                             </div>
+                                        ) : (
+                                            <>
+                                                {/* HORIZONTAL FEATURED SECTION */}
+                                                {featuredItems.length > 0 && (
+                                                    <div id="section-Almost anything, delivered" className="mb-32">
+                                                        <div className="flex items-center justify-between mb-8">
+                                                            <h2 className="text-2xl md:text-3xl font-heading font-black tracking-tight uppercase text-black">{merchant.customSettings?.specialsTitle || 'Market Specials'}</h2>
+                                                            <button onClick={() => setViewingCategoryDeepDive('Almost anything, delivered')} className="group flex items-center gap-4 py-2 relative">
+                                                                <span className="text-[9px] font-black uppercase tracking-[0.4em] text-black/60 group-hover:text-black transition-colors whitespace-nowrap">
+                                                                    Explore {merchant.customSettings?.specialsTitle || 'Specials'}
+                                                                </span>
+                                                                <div className="w-8 h-8 rounded-full border border-black/10 flex items-center justify-center group-hover:bg-black group-hover:text-white transition-all">
+                                                                    <ArrowRight size={14} />
+                                                                </div>
+                                                            </button>
+                                                        </div>
 
-                                            <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-8 flex-nowrap -mx-2 px-2">
-                                                {featuredItems.map((product) => (
-                                                    <div key={product.id} className="shrink-0 w-[240px] md:w-[280px] snap-start">
-                                                        {renderProductCard(product, true)}
+                                                        <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-8 flex-nowrap -mx-2 px-2">
+                                                            {featuredItems.map((product) => (
+                                                                <div key={product.id} className="shrink-0 w-[240px] md:w-[280px] snap-start">
+                                                                    {renderProductCard(product, true)}
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
-                                                ))}
-                                            </div>
-                                        </div>
+                                                )}
 
-                                        {/* SECTIONS: CATEGORIES (UNIVERSAL BENCHMARK) */}
-                                        <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-32">
-                                            {categories.filter(c => c !== 'Featured items' && c !== 'Almost anything, delivered').map(cat => {
-                                                const categoryProducts = products.filter(p => p.categoryId === cat && (searchTerm === '' || p.name.toLowerCase().includes(searchTerm.toLowerCase())));
-                                                const itemsToDisplay = categoryProducts.length > 0 ? categoryProducts.slice(0, 20) : [];
+                                                {/* SECTIONS: CATEGORIES (UNIVERSAL BENCHMARK) */}
+                                                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-32">
+                                                    {categories.filter(c => c !== 'Featured items' && c !== 'Almost anything, delivered').map(cat => {
+                                                        const categoryProducts = products.filter(p => p.categoryId === cat && (searchTerm === '' || p.name.toLowerCase().includes(searchTerm.toLowerCase())));
+                                                        const itemsToDisplay = categoryProducts.length > 0 ? categoryProducts.slice(0, 20) : [];
 
-                                                if (itemsToDisplay.length === 0) return null;
+                                                        if (itemsToDisplay.length === 0) return null;
 
-                                                return (
-                                                    <motion.div key={cat} id={`section-${cat}`} variants={staggerItem} className="scroll-mt-24 pt-2">
-                                                        <div
-                                                            className="lg:sticky lg:top-0 mb-8 lg:border-b border-black/5 pb-4 lg:backdrop-blur-md -mx-4 px-4 overflow-visible z-10"
-                                                            style={{ backgroundColor: `${merchant.branding?.secondaryColor || '#D4AF37'}E6` }}
-                                                        >
-                                                            <div className="flex items-center justify-between">
-                                                                <h2 className="text-2xl md:text-3xl font-heading font-black tracking-tight uppercase text-black">{cat}</h2>
-                                                                <button
-                                                                    onClick={() => setViewingCategoryDeepDive(cat)}
-                                                                    className="group flex items-center gap-3 py-1 relative"
+                                                        return (
+                                                            <motion.div key={cat} id={`section-${cat}`} variants={staggerItem} className="scroll-mt-24 pt-2">
+                                                                <div
+                                                                    className="lg:sticky lg:top-0 mb-8 lg:border-b border-black/5 pb-4 lg:backdrop-blur-md -mx-4 px-4 overflow-visible z-10"
+                                                                    style={{ backgroundColor: `${merchant.branding?.secondaryColor || '#D4AF37'}E6` }}
                                                                 >
-                                                                    <span className="text-[8px] font-black uppercase tracking-[0.3em] text-black/40 group-hover:text-black transition-colors">See all {cat}</span>
-                                                                    <ArrowRight size={12} className="text-black/20 group-hover:translate-x-1 transition-all" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                                                            {itemsToDisplay.map(product => renderProductCard(product, false))}
-                                                        </div>
-                                                    </motion.div>
-                                                );
-                                            })}
-                                        </motion.div>
+                                                                    <div className="flex items-center justify-between">
+                                                                        <h2 className="text-2xl md:text-3xl font-heading font-black tracking-tight uppercase text-black">{cat}</h2>
+                                                                        <button
+                                                                            onClick={() => setViewingCategoryDeepDive(cat)}
+                                                                            className="group flex items-center gap-3 py-1 relative"
+                                                                        >
+                                                                            <span className="text-[8px] font-black uppercase tracking-[0.3em] text-black/40 group-hover:text-black transition-colors">See all {cat}</span>
+                                                                            <ArrowRight size={12} className="text-black/20 group-hover:translate-x-1 transition-all" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                                                                    {itemsToDisplay.map(product => renderProductCard(product, false))}
+                                                                </div>
+                                                            </motion.div>
+                                                        );
+                                                    })}
+                                                </motion.div>
+                                            </>
+                                        )}
                                     </motion.div>
                                 )}
                             </AnimatePresence>
@@ -595,7 +637,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
             <Footer />
 
             <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} onSelectLocation={handleLocationSelect} />
-            <ProfileModal isOpen={isProfileOpen} onClose={() => setIsProfileOpen(false)} />
+            <ProfileModal isOpen={isProfileOpen} onClose={() => closeProfile()} />
 
             {/* NEW GLASS CART (SHARED COMPONENT) */}
             <GlassCart merchant={merchant} />

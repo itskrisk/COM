@@ -115,6 +115,9 @@ CREATE TABLE public.profiles (
   -- Verification flags
   email_verified  BOOLEAN NOT NULL DEFAULT false,
   phone_verified  BOOLEAN NOT NULL DEFAULT false,
+  -- Role-specific metadata carried from signup (merchant_type, vehicle_type)
+  merchant_type    TEXT,
+  vehicle_type     TEXT,
   -- Timestamps
   created_at      TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at      TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -128,17 +131,28 @@ CREATE TRIGGER profiles_updated_at
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 BEGIN
-  INSERT INTO public.profiles (id, full_name, email, phone, roles, email_verified)
-  VALUES (
+  INSERT INTO public.profiles (
+    id, full_name, email, phone, roles, email_verified,
+    merchant_type, vehicle_type, loyalty_tier
+  ) VALUES (
     NEW.id,
     COALESCE(NEW.raw_user_meta_data->>'full_name',
              SPLIT_PART(NEW.email, '@', 1)),
     NEW.email,
     NEW.raw_user_meta_data->>'phone',
     ARRAY[COALESCE(NEW.raw_user_meta_data->>'role', 'customer')],
-    COALESCE(NEW.email_confirmed_at IS NOT NULL, false)
+    COALESCE(NEW.email_confirmed_at IS NOT NULL, false),
+    NEW.raw_user_meta_data->>'merchant_type',
+    NEW.raw_user_meta_data->>'vehicle_type',
+    'bronze'
   )
-  ON CONFLICT (id) DO NOTHING;
+  ON CONFLICT (id) DO UPDATE SET
+    full_name      = EXCLUDED.full_name,
+    phone          = COALESCE(EXCLUDED.phone, public.profiles.phone),
+    roles          = EXCLUDED.roles,
+    email_verified = EXCLUDED.email_verified,
+    merchant_type  = COALESCE(EXCLUDED.merchant_type, public.profiles.merchant_type),
+    vehicle_type   = COALESCE(EXCLUDED.vehicle_type, public.profiles.vehicle_type);
   RETURN NEW;
 END;
 $$;

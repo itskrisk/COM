@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { uploadFile } from '../../lib/storageService';
 
 export default function CourierOnboarding() {
     const navigate = useNavigate();
@@ -89,41 +90,63 @@ export default function CourierOnboarding() {
         }
     }, [profile, navigate, user, fullName, phone]);
 
+    const [idDocFile, setIdDocFile] = useState<File | null>(null);
+
     const handleSubmitOnboarding = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
 
         try {
             if (user?.id) {
+                // Upload ID document if provided
+                let docUrl = '';
+                if (idDocFile) {
+                    const uploadRes = await uploadFile('documents', `riders/${user.id}`, idDocFile);
+                    if (uploadRes.url) {
+                        docUrl = uploadRes.url;
+                    }
+                }
+
+                const docsPayload: Record<string, any> = {};
+                if (idDocName || docUrl) {
+                    docsPayload.id = {
+                        url: docUrl,
+                        filename: idDocName || 'National ID / License',
+                        uploadedAt: new Date().toISOString()
+                    };
+                }
+
                 await supabase
                     .from('riders')
                     .upsert({
                         id: user.id,
                         vehicle_type: vehicleType,
+                        name: fullName.trim() || profile?.full_name || '',
+                        phone: phone.trim() || profile?.phone || '',
+                        email: user.email || '',
+                        national_id: idNumber.trim(),
                         vehicle_plate: vehiclePlate.trim().toUpperCase(),
                         status: 'PENDING',
                         onboarding_completed: true,
                         is_online: false,
                         has_helmet: hasHelmet,
                         has_thermal_bag: hasThermalBag,
-                        has_id_doc: Boolean(idDocName || idNumber),
+                        has_id_doc: Boolean(idDocName || idNumber || docUrl),
                         has_license: Boolean(licenseDocName),
-                        documents: {
-                            id_doc: idDocName,
-                            license: licenseDocName
-                        },
+                        id_doc_url: docUrl || null,
+                        documents: docsPayload,
                         created_at: new Date().toISOString()
                     }, { onConflict: 'id' });
 
-                    // Move the profile to pending_approval so ProtectedRoute stops
-                    // bouncing submitted riders back to the onboarding form.
-                    await supabase.from('profiles').update({
-                        status: 'PENDING',
-                        account_status: 'pending_approval'
-                    }).eq('id', user.id);
-                }
-                setSubmitted(true);
-            } catch (err) {
+                // Move the profile to pending_approval so ProtectedRoute stops
+                // bouncing submitted riders back to the onboarding form.
+                await supabase.from('profiles').update({
+                    status: 'PENDING',
+                    account_status: 'pending_approval'
+                }).eq('id', user.id);
+            }
+            setSubmitted(true);
+        } catch (err) {
                 console.error('Error saving courier onboarding data:', err);
                 setSubmitted(true);
             } finally {
@@ -256,15 +279,18 @@ export default function CourierOnboarding() {
                     Muncheez<span className="text-[#00BCD4]">.</span>
                 </Link>
                 <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+                    <span className="text-[9px] uppercase font-mono tracking-widest text-neutral-400 sm:hidden">
+                        Step {step}/2
+                    </span>
                     <span className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-neutral-400 hidden sm:inline">
                         Step {step} of 2 · Courier Fleet Enrollment
                     </span>
                     <button
-                        onClick={() => signOut()}
+                        onClick={handleLogout}
                         className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors px-3 py-2 min-h-[44px]"
                     >
                         <LogOut size={13} />
-                        <span className="hidden sm:inline">Sign Out</span>
+                        <span className="hidden sm:inline">Logout</span>
                     </button>
                 </div>
             </header>
@@ -428,7 +454,10 @@ export default function CourierOnboarding() {
                                         accept=".pdf,image/*"
                                         onChange={(e) => {
                                             const file = e.target.files?.[0];
-                                            if (file) setIdDocName(file.name);
+                                            if (file) {
+                                                setIdDocName(file.name);
+                                                setIdDocFile(file);
+                                            }
                                         }}
                                         className="hidden"
                                     />

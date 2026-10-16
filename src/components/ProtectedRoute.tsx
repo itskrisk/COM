@@ -47,7 +47,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-black">
-                <div className="w-8 h-8 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+                <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
@@ -67,61 +67,53 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredRole 
     }
 
     // ── STATE MACHINE ENFORCEMENT ────────────────────────────────────────────
-    // These gates run BEFORE any role check so unverified / unapproved /
-    // incomplete accounts can never reach an operational dashboard.
-
-    // 1. Unverified email → holding screen
+    // 1. Unverified email → holding screen (Customer, Merchant, Rider)
     if (user.emailVerified === false) {
-        return <Navigate to="/auth/verify" replace />;
+        return <Navigate to="/auth/verify" state={{ email: user.email, portal: requiredRole || 'customer' }} replace />;
     }
 
-    // 2. Email verified but onboarding incomplete → redirect to onboarding
-    const accountStatus = user.accountStatus || user.profile?.account_status || 'pending_email_verification';
+    // 2. Partner / Courier onboarding state machine
+    const accountStatus = user.accountStatus || user.profile?.account_status || 'active';
+    const isPartnerRole = requiredRole === 'merchant' || requiredRole === 'courier';
     const isOnboardingRoute =
         (requiredRole === 'merchant' && location.pathname === ONBOARDING_PATHS.merchant) ||
         (requiredRole === 'courier' && location.pathname === ONBOARDING_PATHS.courier);
 
-    if (accountStatus === 'pending_onboarding') {
-        const onboardingPath = requiredRole ? ONBOARDING_PATHS[requiredRole] : '/onboarding';
-        if (!isOnboardingRoute) {
-            return <Navigate to={onboardingPath} replace />;
+    if (isPartnerRole) {
+        if (accountStatus === 'pending_onboarding') {
+            const onboardingPath = ONBOARDING_PATHS[requiredRole];
+            if (!isOnboardingRoute) {
+                return <Navigate to={onboardingPath} replace />;
+            }
+            return <>{children}</>;
         }
-        // Allow the onboarding page itself to render
-        return <>{children}</>;
+
+        if (accountStatus === 'pending_approval') {
+            if (!isOnboardingRoute) {
+                return <Navigate to={STATE_SCREEN_PATHS.pending_approval} replace />;
+            }
+            return <>{children}</>;
+        }
+
+        if (accountStatus === 'rejected' || accountStatus === 'suspended') {
+            const target = STATE_SCREEN_PATHS[accountStatus] || STATE_SCREEN_PATHS.rejected;
+            if (location.pathname !== target) {
+                return <Navigate to={target} replace />;
+            }
+            return <>{children}</>;
+        }
     }
 
-    // 3. Onboarding submitted, awaiting admin review → status screen
-    if (accountStatus === 'pending_approval') {
-        if (!isOnboardingRoute) {
-            return <Navigate to={STATE_SCREEN_PATHS.pending_approval} replace />;
-        }
-        return <>{children}</>;
-    }
-
-    // 4. Rejected / suspended → status screen
-    if (accountStatus === 'rejected' || accountStatus === 'suspended') {
-        const target = STATE_SCREEN_PATHS[accountStatus] || STATE_SCREEN_PATHS.rejected;
-        if (location.pathname !== target) {
-            return <Navigate to={target} replace />;
-        }
-        return <>{children}</>;
-    }
-
-    // 5. Active → full access (role check below)
-
-    // User is logged in but profile not loaded yet — wait
+    // 3. User is logged in but profile not loaded yet — wait
     if (!profile) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#FDFBF7]">
-                <div className="w-8 h-8 border-4 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-black">
+                <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin" />
             </div>
         );
     }
 
-    // Role check: The silo layouts handle the UX for wrong-role users who
-    // navigate to a portal *page*. ProtectedRoute handles blocking access
-    // to the actual *dashboards* — so we redirect to the correct login for
-    // the required role, not the user's own dashboard, to avoid ping-ponging.
+    // 4. Role check
     if (requiredRole && !profile.roles?.includes(requiredRole)) {
         const loginPath = LOGIN_PATHS[requiredRole] || '/login';
         return <Navigate to={loginPath} replace />;

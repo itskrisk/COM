@@ -46,24 +46,29 @@ export default function AdminLogin() {
             return;
         }
 
-        // Simulate network delay for UX
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            // Simulate network delay for UX
+            await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Hardcoded credential check
-        if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
-            // Create session (24 hours)
-            const session = {
-                email: ADMIN_CREDENTIALS.email,
-                role: 'admin',
-                loginTime: Date.now(),
-                expiry: Date.now() + 24 * 60 * 60 * 1000
-            };
-            sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
-            navigate('/admin', { replace: true });
-        } else {
-            setError('Invalid credentials. Access denied.');
+            // Hardcoded credential check
+            if (email === ADMIN_CREDENTIALS.email && password === ADMIN_CREDENTIALS.password) {
+                // Create session (24 hours)
+                const session = {
+                    email: ADMIN_CREDENTIALS.email,
+                    role: 'admin',
+                    loginTime: Date.now(),
+                    expiry: Date.now() + 24 * 60 * 60 * 1000
+                };
+                sessionStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+                navigate('/admin', { replace: true });
+            } else {
+                setError('Invalid credentials. Access denied.');
+            }
+        } catch (err: any) {
+            setError(err.message || 'Login failed');
+        } finally {
+            setIsLoading(false);
         }
-        setIsLoading(false);
     };
 
     return (
@@ -115,12 +120,11 @@ export default function AdminLogin() {
                                     type="email"
                                     required
                                     autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-transparent transition-all text-sm"
-                                    placeholder="admin@muncheez.co.ke"
-                                    disabled={isLoading}
-                                />
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-transparent transition-all text-sm"
+                            placeholder="admin@muncheez.co.ke"
+                        />
                             </div>
                         </div>
 
@@ -131,19 +135,18 @@ export default function AdminLogin() {
                             <div className="relative">
                                 <input
                                     id="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    required
-                                    autoComplete="current-password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-transparent transition-all text-sm pr-12"
-                                    placeholder="••••••••"
-                                    disabled={isLoading}
-                                />
+                            type={showPassword ? 'text' : 'password'}
+                            required
+                            autoComplete="current-password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full px-4 py-3.5 bg-gray-50 border border-gray-100 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-black/10 focus:border-transparent transition-all text-sm pr-12"
+                            placeholder="••••••••"
+                        />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                                 >
                                     {showPassword ? (

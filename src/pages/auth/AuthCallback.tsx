@@ -15,7 +15,7 @@ type Status = 'loading' | 'success' | 'error';
 
 export default function AuthCallback() {
     const navigate = useNavigate();
-    const { refreshUser, user } = useAuth();
+    const { refreshUser } = useAuth();
     const [status, setStatus] = useState<Status>('loading');
     const [message, setMessage] = useState('Confirming your account...');
 
@@ -24,7 +24,14 @@ export default function AuthCallback() {
 
         async function handleCallback() {
             try {
-                // Check for token in URL hash (from password reset or email verification)
+                // 1. Check for PKCE exchange code in search query params
+                const code = new URLSearchParams(window.location.search).get('code');
+                if (code) {
+                    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                    if (exchangeError) throw exchangeError;
+                }
+
+                // 2. Check for token in URL hash
                 const hash = window.location.hash;
                 const params = new URLSearchParams(hash.substring(1));
                 const accessToken = params.get('access_token');
@@ -33,7 +40,6 @@ export default function AuthCallback() {
                 if (cancelled) return;
 
                 if (accessToken && type === 'recovery') {
-                    // Password reset flow - redirect to reset password page
                     setStatus('success');
                     setMessage('Password reset link confirmed. Redirecting...');
                     setTimeout(() => {
@@ -42,25 +48,32 @@ export default function AuthCallback() {
                     return;
                 }
 
-                // Email verification complete. Refresh the session so AuthContext
-                // picks up the newly-confirmed email and the updated profile status.
+                // Refresh user state in AuthContext
                 await refreshUser();
 
                 const { data: { user: verifiedUser } } = await supabase.auth.getUser();
                 if (!verifiedUser) {
                     setStatus('error');
-                    setMessage('Session not found. Please sign in again.');
+                    setMessage('Session not found. Please sign in with your credentials.');
                     return;
                 }
 
                 const role = verifiedUser.user_metadata?.role || 'customer';
                 const emailConfirmed = Boolean(verifiedUser.email_confirmed_at);
 
-                // account_status is loaded by AuthContext.buildNormalizedUser.
-                // Fall back to the raw profile if the context user hasn't updated yet.
-                const accountStatus = user?.accountStatus
-                    || user?.profile?.account_status
-                    || 'pending_email_verification';
+                if (!emailConfirmed) {
+                    setStatus('error');
+                    setMessage('Email not confirmed yet. Please click the link in your email again.');
+                    return;
+                }
+
+                // Get profile for account_status routing
+                const { data: profileRow } = await supabase
+                    .from('profiles')
+                    .select('account_status')
+                    .eq('id', verifiedUser.id)
+                    .maybeSingle();
+                const accountStatus = profileRow?.account_status || 'pending_onboarding';
 
                 setStatus('success');
                 setMessage('Email verified successfully! Redirecting...');
@@ -68,84 +81,83 @@ export default function AuthCallback() {
                 setTimeout(() => {
                     if (cancelled) return;
 
-                    if (!emailConfirmed) {
-                        navigate('/auth/verify', { replace: true });
-                        return;
-                    }
-
-                    // Route by state machine
-                    switch (accountStatus) {
-                        case 'pending_onboarding':
-                            navigate(ROLE_DESTINATIONS[role] || '/login', { replace: true });
-                            break;
-                        case 'pending_approval':
+                    // Route by role + account state machine
+                    if (role === 'customer') {
+                        navigate('/login', { replace: true });
+                    } else if (role === 'merchant') {
+                        if (accountStatus === 'pending_approval') {
                             navigate('/pending-approval', { replace: true });
-                            break;
-                        case 'rejected':
-                            navigate('/rejected', { replace: true });
-                            break;
-                        case 'suspended':
-                            navigate('/suspended', { replace: true });
-                            break;
-                        case 'active':
-                        default:
-                            navigate(ROLE_DESTINATIONS[role] || '/login', { replace: true });
-                            break;
+                        } else if (accountStatus === 'active' || accountStatus === 'APPROVED') {
+                            navigate('/merchant/dashboard', { replace: true });
+                        } else {
+                            navigate('/merchant/login', { replace: true });
+                        }
+                    } else if (role === 'courier') {
+                        if (accountStatus === 'pending_approval') {
+                            navigate('/pending-approval', { replace: true });
+                        } else if (accountStatus === 'active' || accountStatus === 'APPROVED') {
+                            navigate('/rider/dashboard', { replace: true });
+                        } else {
+                            navigate('/rider/login', { replace: true });
+                        }
+                    } else {
+                        navigate(ROLE_DESTINATIONS[role] || '/login', { replace: true });
                     }
-                }, 1800);
+                }, 1600);
 
             } catch (err: any) {
                 if (!cancelled) {
                     setStatus('error');
-                    setMessage(err.message || 'Something went wrong. Please try again.');
+                    setMessage(err.message || 'Something went wrong verifying your account. Please try signing in.');
                 }
             }
         }
 
         handleCallback();
         return () => { cancelled = true; };
-    }, [navigate, refreshUser, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run once on mount only — user in deps causes infinite re-render loop
 
     return (
         <div className="min-h-screen bg-white flex items-center justify-center px-6">
             <div className="max-w-md w-full text-center">
                 <div className="mb-12">
                     <span className="font-heading font-bold text-3xl tracking-tighter text-gray-900">
-                        Muncheez<span className="text-[#4A90E2]">.</span>
+                        Muncheez<span className="text-[#2563EB]">.</span>
                     </span>
                 </div>
 
                 <div className="flex justify-center mb-8">
                     {status === 'loading' && (
-                        <div className="w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center">
-                            <Loader2 className="text-[#4A90E2] animate-spin" size={36} />
+                        <div className="w-16 h-16 bg-blue-50 flex items-center justify-center">
+                            <Loader2 className="text-[#2563EB] animate-spin" size={32} />
                         </div>
                     )}
                     {status === 'success' && (
-                        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center">
-                            <CheckCircle className="text-green-500" size={36} />
+                        <div className="w-16 h-16 bg-green-50 flex items-center justify-center">
+                            <CheckCircle className="text-green-600" size={32} />
                         </div>
                     )}
                     {status === 'error' && (
-                        <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center">
-                            <AlertCircle className="text-red-400" size={36} />
+                        <div className="w-16 h-16 bg-red-50 flex items-center justify-center">
+                            <AlertCircle className="text-red-500" size={32} />
                         </div>
                     )}
                 </div>
 
                 <h1 className="text-3xl font-heading font-light text-gray-900 tracking-tight mb-4">
                     {status === 'loading' && 'Verifying your email...'}
-                    {status === 'success' && "You're confirmed!"}
-                    {status === 'error' && 'Verification failed'}
+                    {status === 'success' && 'Email Confirmed.'}
+                    {status === 'error' && 'Verification Check'}
                 </h1>
 
                 <p className="text-sm text-gray-500 leading-relaxed mb-8">{message}</p>
 
                 {status === 'success' && (
-                    <div className="w-full bg-gray-100 rounded-full h-1 overflow-hidden">
+                    <div className="w-full bg-gray-100 h-0.5 overflow-hidden">
                         <div
-                            className="h-full bg-[#4A90E2] rounded-full transition-all"
-                            style={{ animation: 'progress-fill 1.8s linear forwards' }}
+                            className="h-full bg-[#2563EB] transition-all"
+                            style={{ animation: 'progress-fill 1.6s linear forwards' }}
                         />
                     </div>
                 )}
@@ -153,16 +165,16 @@ export default function AuthCallback() {
                 {status === 'error' && (
                     <div className="flex flex-col gap-3 mt-6">
                         <a
-                            href="/signup"
-                            className="w-full py-4 px-6 text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] transition-all uppercase tracking-widest text-center block"
+                            href="/login"
+                            className="w-full py-4 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#2563EB] transition-colors text-center block"
                         >
-                            Try Signing Up Again
+                            Continue to Login
                         </a>
                         <a
-                            href="/login"
-                            className="w-full py-4 px-6 text-sm font-bold text-gray-600 border border-gray-200 hover:bg-gray-50 transition-all uppercase tracking-widest text-center block"
+                            href="/signup"
+                            className="w-full py-4 px-6 text-xs font-mono uppercase tracking-widest text-gray-600 border border-gray-200 hover:border-black transition-colors text-center block"
                         >
-                            Back to Login
+                            Sign Up Again
                         </a>
                     </div>
                 )}

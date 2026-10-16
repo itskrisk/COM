@@ -5,6 +5,7 @@ import { useCart } from '../../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ChevronLeft,
+    ShoppingBag,
     ArrowRight,
     MapPin,
     CreditCard,
@@ -89,12 +90,65 @@ export default function CheckoutView() {
         setLoading(false);
     };
 
-    // Redirect if cart is empty
-    useEffect(() => {
-        if (itemCount === 0) {
-            navigate('/stores');
-        }
-    }, [itemCount, navigate]);
+    if (itemCount === 0 || !merchantId) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col justify-between selection:bg-black selection:text-white">
+                <header className="border-b border-gray-100 px-6 sm:px-12 py-5 flex items-center justify-between">
+                    <button
+                        onClick={() => navigate('/stores')}
+                        className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-black transition-colors"
+                    >
+                        <ChevronLeft size={16} />
+                        Back to Selection
+                    </button>
+                    <span className="font-heading font-bold text-2xl tracking-tighter text-gray-900">
+                        Muncheez<span className="text-[#2563EB]">.</span>
+                    </span>
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
+                        Fast. Fresh. Fam.
+                    </span>
+                </header>
+
+                <main className="max-w-xl mx-auto w-full px-6 py-20 flex-1 flex flex-col justify-center text-center">
+                    <div className="w-16 h-16 bg-blue-50 flex items-center justify-center mx-auto mb-8">
+                        <ShoppingBag size={28} className="text-[#2563EB]" />
+                    </div>
+
+                    <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400 mb-4 block">
+                        My Bag · 0 Items
+                    </span>
+
+                    <h1 className="text-4xl sm:text-5xl font-heading font-light text-gray-900 tracking-tight mb-4">
+                        Your bag is empty.
+                    </h1>
+
+                    <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed mb-10">
+                        You have not selected any items yet. Explore our curated selection of supermarkets and restaurants across Nairobi.
+                    </p>
+
+                    <div className="border-t border-b border-gray-100 py-6 mb-10">
+                        <p className="text-xs font-mono text-gray-400 uppercase tracking-wider">
+                            Real-time dispatch · Direct M-Pesa checkout · Zero hidden markups
+                        </p>
+                    </div>
+
+                    <button
+                        onClick={() => navigate('/stores')}
+                        className="inline-flex items-center justify-between gap-4 py-4 px-8 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#2563EB] transition-colors mx-auto"
+                    >
+                        <span>Browse Stores & Restaurants</span>
+                        <ArrowRight size={14} />
+                    </button>
+                </main>
+
+                <footer className="border-t border-gray-100 py-6 px-6 sm:px-12 text-center">
+                    <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-gray-400">
+                        Muncheez Technologies Limited · Nairobi, Kenya
+                    </p>
+                </footer>
+            </div>
+        );
+    }
 
     if (!merchant) return null;
 

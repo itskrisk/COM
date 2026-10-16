@@ -547,14 +547,20 @@ function ApplicationDetailDrawer({ merchant, tab, onTabChange, onClose, onApprov
 
     const getRealDocs = () => {
         if (!merchant.documents || typeof merchant.documents !== 'object') return [];
-        return Object.entries(merchant.documents).map(([key, doc]: [string, any]) => ({
-            type: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
-            icon: key.toLowerCase().includes('kra') ? '📋' : key.toLowerCase().includes('health') ? '🏥' : '📄',
-            status: doc?.url ? 'Submitted' : 'Pending Upload',
-            date: doc?.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : '—',
-            url: doc?.url,
-            filename: doc?.filename
-        }));
+        return Object.entries(merchant.documents).map(([key, doc]: [string, any]) => {
+            const isObj = doc && typeof doc === 'object';
+            const url = isObj ? doc.url : (typeof doc === 'string' && (doc.startsWith('http') || doc.startsWith('data:')) ? doc : undefined);
+            const filename = isObj ? doc.filename : (typeof doc === 'string' ? doc : undefined);
+            const date = isObj && doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : '—';
+            return {
+                type: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+                icon: key.toLowerCase().includes('kra') ? '📋' : key.toLowerCase().includes('health') ? '🏥' : '📄',
+                status: url ? 'Submitted' : (filename ? 'Uploaded' : 'Pending Upload'),
+                date,
+                url,
+                filename: filename || key
+            };
+        });
     };
 
     const REAL_DOCS = getRealDocs();

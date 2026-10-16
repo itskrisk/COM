@@ -82,9 +82,9 @@ export default function AdminDashboard() {
     };
 
     return (
-        <div className="space-y-8 pb-12">
+        <div className="space-y-6 sm:space-y-8 pb-8 sm:pb-12 px-4 sm:px-6 lg:px-8">
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-4">
                 <div>
                     <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black">Operations Cockpit</h1>
                     <p className="text-xs sm:text-sm text-gray-400 font-medium">Real-time system oversight • Nairobi Central Hub</p>
@@ -99,9 +99,7 @@ export default function AdminDashboard() {
                         className="p-3 sm:p-2 bg-gray-50 hover:bg-gray-100 border border-gray-100 rounded-xl text-gray-500 hover:text-gray-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                         aria-label="Sign out"
                     >
-                        <span className="flex items-center justify-center w-5 h-5 sm:w-4 sm:h-4">
-                        <LogOut size={18} className="w-full h-full" />
-                    </span>
+                        <LogOut size={18} className="w-5 h-5 sm:w-4 sm:h-4" />
                     </button>
                 </div>
             </div>

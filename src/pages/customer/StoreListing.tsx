@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useState, useMemo, useEffect } from 'react';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../context/AuthContext';
+import { useProfileGuard } from '../../hooks/useProfileGuard';
 import { publicApi } from '../../lib/api';
 import PageSEO from '../../components/SEO';
 import { supabase } from '../../lib/supabaseClient';
@@ -45,7 +46,7 @@ export default function StoreListing() {
     // Location State - synced between localStorage and Supabase profile
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
     const [userLocation, setUserLocation] = useState('');
-    const [isProfileOpen, setIsProfileOpen] = useState(false);
+    const { isOpen: isProfileOpen, open: openProfile, close: closeProfile } = useProfileGuard();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     // Sync location from profile or localStorage on mount/profile change
@@ -296,7 +297,7 @@ export default function StoreListing() {
 
                         {/* Profile / Account */}
                         <button
-                            onClick={() => setIsProfileOpen(true)}
+                            onClick={() => openProfile()}
                             aria-label="Open account"
                             className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
                         >
@@ -319,7 +320,7 @@ export default function StoreListing() {
                 {/* Profile Modal */}
                 <ProfileModal
                     isOpen={isProfileOpen}
-                    onClose={() => setIsProfileOpen(false)}
+                    onClose={() => closeProfile()}
                 />
 
                 {/* High-End Mobile Menu Overlay (Matching Home Navbar) */}
@@ -379,7 +380,7 @@ export default function StoreListing() {
                             <div className="flex flex-col gap-3 mt-8">
                                 {user ? (
                                     <button
-                                        onClick={() => { setIsMenuOpen(false); setIsProfileOpen(true); }}
+                                        onClick={() => { setIsMenuOpen(false); openProfile(); }}
                                         className="w-full py-3.5 px-6 bg-[#4A90E2] text-white rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-between shadow-lg"
                                     >
                                         <span>{profile?.full_name || user.email?.split('@')[0] || 'My Profile'}</span>

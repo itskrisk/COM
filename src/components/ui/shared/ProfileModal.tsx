@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    User, HelpCircle, LogOut, FileText, X, Cookie, Shield, ArrowLeft, Clock,
+    User, HelpCircle, LogOut, FileText, X, Cookie, Shield, ArrowLeft, ArrowRight, Clock,
     ShoppingBag, MapPin, CreditCard, Heart, Bell, Lock, Compass, FileCode,
     Trash2, Check, Plus, Download, RefreshCw, ChevronRight, Save, Smartphone,
     AlertTriangle, CheckCircle
@@ -340,9 +340,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
         navigate('/');
     };
 
-    if (!user) return null;
-
-    const initial = profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase() || '?';
+    const initial = profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : user?.email?.charAt(0).toUpperCase() || '?';
 
     return (
         <>
@@ -377,8 +375,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                         Back
                                     </button>
                                 ) : (
-                                    <div className="text-xs font-black uppercase tracking-widest text-[#4A90E2]">
-                                        Customer Account
+                                    <div className="text-xs font-black uppercase tracking-widest text-[#2563EB]">
+                                        {user ? 'Customer Account' : 'Muncheez Account'}
                                     </div>
                                 )}
 
@@ -420,22 +418,84 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                             exit={{ opacity: 0, x: -15 }}
                                             className="space-y-6"
                                         >
-                                            {/* User Profile Header — Apple-style editorial */}
-                                            <div className="flex items-center gap-4 pb-5 border-b border-black/5">
-                                                <div className="w-12 h-12 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center shrink-0">
-                                                    <span className="text-sm font-medium tracking-tight leading-none select-none">
-                                                        {profile?.full_name
-                                                            ? profile.full_name.split(' ').slice(0, 2).map((n: string) => n.charAt(0)).join('').toUpperCase()
-                                                            : initial}
-                                                    </span>
+                                            {!user ? (
+                                                <div className="space-y-6 py-2">
+                                                    <div>
+                                                        <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#2563EB] block mb-2">
+                                                            Account Access
+                                                        </span>
+                                                        <h2 className="text-2xl font-heading font-light text-gray-900 tracking-tight mb-2">
+                                                            Welcome to Muncheez.
+                                                        </h2>
+                                                        <p className="text-xs text-gray-500 leading-relaxed">
+                                                            Sign in to access your orders, track deliveries in real time, and manage your saved addresses.
+                                                        </p>
+                                                    </div>
+
+                                                    <div className="space-y-3 pt-2">
+                                                        <button
+                                                            onClick={() => { onClose(); navigate('/login'); }}
+                                                            className="w-full flex items-center justify-between py-4 px-6 bg-black text-white hover:bg-[#2563EB] transition-colors text-xs font-mono uppercase tracking-widest font-bold"
+                                                        >
+                                                            <span>Sign In</span>
+                                                            <ArrowRight size={14} />
+                                                        </button>
+
+                                                        <button
+                                                            onClick={() => { onClose(); navigate('/signup'); }}
+                                                            className="w-full flex items-center justify-between py-4 px-6 border border-gray-200 text-gray-900 hover:border-black transition-colors text-xs font-mono uppercase tracking-widest font-bold"
+                                                        >
+                                                            <span>Create an Account</span>
+                                                            <ArrowRight size={14} />
+                                                        </button>
+                                                    </div>
+
+                                                    <div className="border-t border-b border-gray-100 py-6 my-6">
+                                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block mb-3">
+                                                            Partner Portals
+                                                        </span>
+                                                        <div className="flex flex-col gap-2.5">
+                                                            <button
+                                                                onClick={() => { onClose(); navigate('/merchant/login'); }}
+                                                                className="flex items-center justify-between text-xs font-medium text-gray-700 hover:text-[#2563EB] transition-colors py-1"
+                                                            >
+                                                                <span>Merchant Partner Portal</span>
+                                                                <ChevronRight size={14} className="text-gray-300" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => { onClose(); navigate('/rider/login'); }}
+                                                                className="flex items-center justify-between text-xs font-medium text-gray-700 hover:text-[#2563EB] transition-colors py-1"
+                                                            >
+                                                                <span>Courier Fleet Terminal</span>
+                                                                <ChevronRight size={14} className="text-gray-300" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="text-center pt-2">
+                                                        <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-gray-400">
+                                                            Fast. Fresh. Fam.
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1 overflow-hidden">
-                                                    <h3 className="font-sans font-semibold text-sm text-gray-900 truncate tracking-tight">
-                                                        {profile?.full_name || 'Customer Account'}
-                                                    </h3>
-                                                    <p className="text-[11px] text-gray-400 truncate mt-0.5">{user.email}</p>
-                                                </div>
-                                            </div>
+                                            ) : (
+                                                <div className="space-y-6">
+                                                    {/* User Profile Header — Apple-style editorial */}
+                                                    <div className="flex items-center gap-4 pb-5 border-b border-black/5">
+                                                        <div className="w-12 h-12 rounded-full bg-[#1a1a1a] text-white flex items-center justify-center shrink-0">
+                                                            <span className="text-sm font-medium tracking-tight leading-none select-none">
+                                                                {profile?.full_name
+                                                                    ? profile.full_name.split(' ').slice(0, 2).map((n: string) => n.charAt(0)).join('').toUpperCase()
+                                                                    : initial}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex-1 overflow-hidden">
+                                                            <h3 className="font-sans font-semibold text-sm text-gray-900 truncate tracking-tight">
+                                                                {profile?.full_name || 'Customer Account'}
+                                                            </h3>
+                                                            <p className="text-[11px] text-gray-400 truncate mt-0.5">{user?.email}</p>
+                                                        </div>
+                                                    </div>
 
                                             {/* Quick Actions Grid */}
                                             <div>
@@ -601,6 +661,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                     </div>
                                                 </div>
                                             </div>
+                                            </div>)}
                                         </motion.div>
                                     )}
 
@@ -627,7 +688,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                         <input
                                                             type="text"
                                                             disabled
-                                                            value={user.email || ''}
+                                                            value={user?.email || ''}
                                                             className="w-full bg-transparent border-b border-gray-100 px-0 py-2.5 text-xs font-bold text-gray-400 cursor-not-allowed"
                                                         />
                                                     </div>
@@ -965,7 +1026,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
                                                 <div className="space-y-4">
                                                     <div className="text-xs font-bold text-gray-900">Password Management</div>
                                                     <p className="text-[10px] text-gray-500 leading-relaxed">
-                                                        Trigger a secure password reset link sent directly to <strong>{user.email}</strong>.
+                                                        Trigger a secure password reset link sent directly to <strong>{user?.email}</strong>.
                                                     </p>
                                                     <button
                                                         onClick={handleResetPassword}

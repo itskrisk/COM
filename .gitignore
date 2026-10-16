@@ -36,3 +36,6 @@ dist-ssr
 errors.txt
 build_full.txt
 temp_munchezz/
+
+# Local verification scripts (not part of the app)
+verify-migration.js

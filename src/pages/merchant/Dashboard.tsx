@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { productService, orderService, merchantService, realtimeService } from '../../lib/supabaseService';
+import { uploadFile } from '../../lib/storageService';
 import {
     Store,
     ShoppingBag,
@@ -352,6 +353,7 @@ export default function MerchantDashboard() {
     const [formStock, setFormStock] = useState('50');
     const [formUnit, setFormUnit] = useState('pack');
     const [formImageUrl, setFormImageUrl] = useState('');
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const [formIsPromo, setFormIsPromo] = useState(false);
     const [formOldPrice, setFormOldPrice] = useState('');
     const [formSku, setFormSku] = useState('');
@@ -363,18 +365,29 @@ export default function MerchantDashboard() {
     const [newMinBasket, setNewMinBasket] = useState('1000');
     const [newExpiry, setNewExpiry] = useState('2026-12-31');
 
-    // Categories matching SupermarketStore.tsx's categoricalTaxonomy
+    // Comprehensive supermarket categories taxonomy matching SupermarketStore.tsx
     const categories = [
         'All',
         'Fruits & Vegetables',
         'Bakery',
         'Fresh Food',
         'Beverages',
+        'Alcohol',
         'Food Cupboard',
         'Cleaning & Household',
         'Frozen Food',
         'Delicatessen',
+        'Delicatessen Counter',
+        'Beauty & Personal Care',
         'Bio & Organic Food',
+        'Baby Products',
+        'Health & Fitness',
+        'Electronics & Appliances',
+        'Pet Supplies',
+        'Stationery & School Supplies',
+        'Automotive',
+        'Home & Garden',
+        'Kiosk',
         'Deals'
     ];
 
@@ -1812,15 +1825,54 @@ export default function MerchantDashboard() {
                                         )}
                                     </div>
 
-                                    {/* Image URL Input & Presets */}
+                                    {/* Image Upload & URL Options */}
                                     <div className="flex-1 space-y-3 w-full">
+                                        <div className="space-y-1.5">
+                                            <div className="flex items-center justify-between">
+                                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                                                    Option A: Upload Image File (PDF / Image)
+                                                </label>
+                                                {isUploadingImage && (
+                                                    <span className="text-[10px] font-mono text-black uppercase animate-pulse">
+                                                        Uploading...
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-2.5 px-3 flex items-center justify-center gap-2 cursor-pointer text-center">
+                                                <UploadCloud size={14} className="text-neutral-500" />
+                                                <span className="text-[11px] font-mono text-neutral-700">
+                                                    {isUploadingImage ? 'Processing upload...' : 'Click to Browse & Upload File'}
+                                                </span>
+                                                <input
+                                                    type="file"
+                                                    accept="image/*,.pdf"
+                                                    disabled={isUploadingImage}
+                                                    onChange={async (e) => {
+                                                        const file = e.target.files?.[0];
+                                                        if (!file) return;
+                                                        setIsUploadingImage(true);
+                                                        try {
+                                                            const res = await uploadFile('documents', `products/${merchantId || 'temp'}`, file);
+                                                            if (res.url) {
+                                                                setFormImageUrl(res.url);
+                                                            }
+                                                        } catch (err) {
+                                                            console.error('Image upload failed:', err);
+                                                        } finally {
+                                                            setIsUploadingImage(false);
+                                                        }
+                                                    }}
+                                                    className="hidden"
+                                                />
+                                            </label>
+                                        </div>
+
                                         <div className="space-y-1">
                                             <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
-                                                Direct Image URL / CDN Link
+                                                Option B: Direct Image URL / CDN Link
                                             </label>
                                             <input
                                                 type="url"
-                                                required
                                                 placeholder="https://images.unsplash.com/..."
                                                 value={formImageUrl}
                                                 onChange={(e) => setFormImageUrl(e.target.value)}
@@ -1831,7 +1883,7 @@ export default function MerchantDashboard() {
                                         {/* Quick Preset Library */}
                                         <div>
                                             <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1.5 flex items-center gap-1">
-                                                <Sparkles size={11} /> Or Select From High-Res Supermarket Presets:
+                                                <Sparkles size={11} /> Option C: Or Choose High-Res Supermarket Preset:
                                             </span>
                                             <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
                                                 {PRESET_GROCERY_IMAGES.map((preset) => (

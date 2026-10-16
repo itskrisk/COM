@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import merchantImg from '../../assets/images/merchantloginpic.jpg';
 
@@ -14,13 +14,18 @@ export default function PartnerLogin() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Auto-redirect based on approval status
+    // Auto-redirect if already authenticated
     useEffect(() => {
         if (!authLoading && user && profile) {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
             if (roles.includes('merchant')) {
-                if (profile.status === 'APPROVED') {
+                const status = profile.account_status || profile.status;
+                if (status === 'active' || status === 'APPROVED') {
                     navigate('/merchant/dashboard', { replace: true });
+                } else if (status === 'pending_approval') {
+                    navigate('/pending-approval', { replace: true });
+                } else if (status === 'rejected') {
+                    navigate('/rejected', { replace: true });
                 } else {
                     navigate('/merchant/onboarding', { replace: true });
                 }
@@ -34,10 +39,23 @@ export default function PartnerLogin() {
         setIsLoading(true);
 
         try {
-            const { error: loginError } = await signIn(email, password);
+            const cleanEmail = email.trim();
+            const { error: loginError, profile: loggedProfile } = await signIn(cleanEmail, password);
             if (loginError) {
                 setError(loginError);
                 return;
+            }
+
+            // Immediately route
+            const status = loggedProfile?.account_status || loggedProfile?.status;
+            if (status === 'active' || status === 'APPROVED') {
+                navigate('/merchant/dashboard', { replace: true });
+            } else if (status === 'pending_approval') {
+                navigate('/pending-approval', { replace: true });
+            } else if (status === 'rejected') {
+                navigate('/rejected', { replace: true });
+            } else {
+                navigate('/merchant/onboarding', { replace: true });
             }
         } catch (err: any) {
             setError(err.message || 'Access denied. Verification failed.');
@@ -55,26 +73,25 @@ export default function PartnerLogin() {
                     alt="Merchant Partner"
                     className="absolute inset-0 w-full h-full object-cover"
                 />
-                <div className="absolute inset-0 bg-black/20" />
+                <div className="absolute inset-0 bg-black/30" />
                 <div className="absolute bottom-20 left-20 z-10 max-w-lg">
                     <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/60 mb-6 block">Partner Portal</span>
                     <h2 className="text-6xl font-heading font-light text-white leading-[1.1] tracking-tight mb-8">
-                        Craft & <br />
-                        <span className="italic opacity-50">Culinary</span>.
+                        Commerce <br />
+                        <span className="italic opacity-50">Accelerated</span>.
                     </h2>
                     <p className="text-lg text-white/70 font-light leading-relaxed">
-                        Manage orders, customize menu items, and access store intelligence in real time.
+                        Manage your kitchen, track operational metrics, and connect with thousands of local diners.
                     </p>
                 </div>
             </div>
 
             {/* Right Side: Auth Form */}
             <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative">
-                {/* Logo & Header */}
                 <div className="mb-12 relative">
                     <Link
                         to="/"
-                        className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#4A90E2] mb-8 hover:opacity-70 transition-all group"
+                        className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-[#2563EB] mb-8 hover:opacity-70 transition-all group"
                     >
                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
                         Back to Selection
@@ -82,15 +99,14 @@ export default function PartnerLogin() {
                     <div className="flex items-center justify-between mb-8">
                         <Link to="/" className="inline-block">
                             <span className="font-heading font-bold text-3xl tracking-tighter text-gray-900">
-                                Muncheez<span className="text-[#4A90E2]">.</span>
+                                Muncheez<span className="text-[#2563EB]">.</span>
                             </span>
                         </Link>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#D4AF37]">Merchant Portal</span>
                     </div>
-                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Welcome Back.</h1>
+                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Partner Login.</h1>
                     <p className="text-sm text-gray-500">
                         Need a partner account?{' '}
-                        <Link to="/merchant/signup" className="font-medium text-[#4A90E2] hover:underline transition-all">
+                        <Link to="/merchant/signup" className="font-medium text-[#2563EB] hover:underline transition-all">
                             Partner with us
                         </Link>
                     </p>
@@ -104,7 +120,10 @@ export default function PartnerLogin() {
                 >
                     {error && (
                         <div className="mb-6 border-b border-red-500 pb-3">
-                            <p className="text-xs text-red-600 font-medium font-mono">{error}</p>
+                            <div className="flex items-start gap-2.5">
+                                <AlertCircle size={16} className="text-red-600 shrink-0 mt-0.5" />
+                                <p className="text-xs text-red-600 font-medium leading-relaxed">{error}</p>
+                            </div>
                         </div>
                     )}
 
@@ -119,7 +138,7 @@ export default function PartnerLogin() {
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all"
                                 placeholder="merchant@business.com"
                             />
                         </div>
@@ -129,7 +148,7 @@ export default function PartnerLogin() {
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">
                                     Password
                                 </label>
-                                <Link to="/auth/forgot-password" className="text-[10px] font-bold uppercase tracking-widest text-[#4A90E2] hover:underline">
+                                <Link to="/auth/forgot-password" className="text-[10px] font-bold uppercase tracking-widest text-[#2563EB] hover:underline">
                                     Forgot?
                                 </Link>
                             </div>
@@ -139,7 +158,7 @@ export default function PartnerLogin() {
                                 required
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all"
                                 placeholder="••••••••"
                             />
                         </div>
@@ -147,7 +166,7 @@ export default function PartnerLogin() {
                         <button
                             type="submit"
                             disabled={isLoading}
-                            className="group w-full flex justify-between items-center py-5 px-8 rounded-2xl text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-500 uppercase tracking-widest shadow-xl shadow-gray-200"
+                            className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-black hover:bg-[#2563EB] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
                         >
                             {isLoading ? (
                                 <>
@@ -163,12 +182,12 @@ export default function PartnerLogin() {
                         </button>
                     </form>
 
-                    <div className="mt-12 pt-8 border-t border-gray-50 flex flex-col gap-3">
+                    <div className="mt-12 pt-8 border-t border-gray-100 flex flex-col gap-3">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 block">Switch Portals</span>
                         <div className="flex items-center gap-4">
-                            <Link to="/login" className="text-xs font-bold text-gray-900 hover:text-[#4A90E2] hover:underline uppercase tracking-widest">Customer App</Link>
-                            <span className="w-1 h-1 rounded-full bg-gray-200" />
-                            <Link to="/rider/login" className="text-xs font-bold text-gray-900 hover:text-[#4A90E2] hover:underline uppercase tracking-widest">Fleet Terminal</Link>
+                            <Link to="/login" className="text-xs font-bold text-gray-900 hover:text-[#2563EB] hover:underline uppercase tracking-widest">Customer App</Link>
+                            <span className="w-1 h-1 rounded-full bg-gray-300" />
+                            <Link to="/rider/login" className="text-xs font-bold text-gray-900 hover:text-[#2563EB] hover:underline uppercase tracking-widest">Fleet Terminal</Link>
                         </div>
                     </div>
                 </motion.div>

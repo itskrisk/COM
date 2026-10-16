@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { uploadFile } from '../../lib/storageService';
 
 export default function MerchantOnboarding() {
     const navigate = useNavigate();
@@ -90,10 +91,13 @@ export default function MerchantOnboarding() {
         }
     }, [profile, navigate, user, storeName, phone]);
 
+    const [permitFile, setPermitFile] = useState<File | null>(null);
+
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             setPermitDocName(file.name);
+            setPermitFile(file);
         }
     };
 
@@ -116,6 +120,24 @@ export default function MerchantOnboarding() {
                     return;
                 }
 
+                // Upload permit document if provided
+                let docUrl = '';
+                if (permitFile) {
+                    const uploadRes = await uploadFile('documents', `merchants/${user.id}`, permitFile);
+                    if (uploadRes.url) {
+                        docUrl = uploadRes.url;
+                    }
+                }
+
+                const docsPayload: Record<string, any> = {};
+                if (permitDocName || docUrl) {
+                    docsPayload.businessPermit = {
+                        url: docUrl,
+                        filename: permitDocName || 'Business Registration Permit',
+                        uploadedAt: new Date().toISOString()
+                    };
+                }
+
                 await supabase
                     .from('merchants')
                     .upsert({
@@ -125,22 +147,25 @@ export default function MerchantOnboarding() {
                         phone: phone.trim(),
                         kra_pin: kraPin.trim(),
                         health_permit: businessPermitNumber.trim(),
+                        business_permit_url: docUrl || null,
                         mpesa_till: mpesaTill.trim(),
                         status: 'PENDING',
                         onboarding_completed: true,
-                        documents: permitDocName ? { permit: permitDocName } : null,
+                        email: user.email || '',
+                        owner_name: profile?.full_name || user.email?.split('@')[0] || '',
+                        documents: docsPayload,
                         created_at: new Date().toISOString()
                     }, { onConflict: 'id' });
 
-                    // Move the profile to pending_approval so ProtectedRoute stops
-                    // bouncing submitted users back to the onboarding form.
-                    await supabase.from('profiles').update({
-                        status: 'PENDING',
-                        account_status: 'pending_approval'
-                    }).eq('id', user.id);
-                }
-                setSubmitted(true);
-            } catch (err) {
+                // Move the profile to pending_approval so ProtectedRoute stops
+                // bouncing submitted users back to the onboarding form.
+                await supabase.from('profiles').update({
+                    status: 'PENDING',
+                    account_status: 'pending_approval'
+                }).eq('id', user.id);
+            }
+            setSubmitted(true);
+        } catch (err) {
                 console.error('Error saving onboarding data:', err);
                 // Still allow proceeding to review state
                 setSubmitted(true);
@@ -279,15 +304,18 @@ export default function MerchantOnboarding() {
                     Muncheez<span className="text-[#00BCD4]">.</span>
                 </Link>
                 <div className="flex items-center gap-3 sm:gap-6 flex-wrap">
+                    <span className="text-[9px] uppercase font-mono tracking-widest text-neutral-400 sm:hidden">
+                        Step {step}/2
+                    </span>
                     <span className="text-[9px] sm:text-[10px] uppercase font-mono tracking-widest text-neutral-400 hidden sm:inline">
                         Step {step} of 2 · Supermarket Onboarding
                     </span>
                     <button
-                        onClick={() => signOut()}
+                        onClick={handleLogout}
                         className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-black transition-colors px-3 py-2 min-h-[44px]"
                     >
                         <LogOut size={13} />
-                        <span className="hidden sm:inline">Sign Out</span>
+                        <span className="hidden sm:inline">Logout</span>
                     </button>
                 </div>
             </header>

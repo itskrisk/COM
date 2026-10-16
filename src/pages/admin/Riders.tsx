@@ -519,14 +519,20 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
 
     const getRealDocs = () => {
         if (!rider.documents || typeof rider.documents !== 'object') return [];
-        return Object.entries(rider.documents).map(([key, doc]: [string, any]) => ({
-            type: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
-            icon: key.toLowerCase().includes('id') ? '🪪' : key.toLowerCase().includes('license') ? '📋' : key.toLowerCase().includes('logbook') ? '📄' : '📎',
-            status: doc?.url ? 'Submitted' : 'Pending Upload',
-            date: doc?.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : '—',
-            url: doc?.url,
-            filename: doc?.filename
-        }));
+        return Object.entries(rider.documents).map(([key, doc]: [string, any]) => {
+            const isObj = doc && typeof doc === 'object';
+            const url = isObj ? doc.url : (typeof doc === 'string' && (doc.startsWith('http') || doc.startsWith('data:')) ? doc : undefined);
+            const filename = isObj ? doc.filename : (typeof doc === 'string' ? doc : undefined);
+            const date = isObj && doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : '—';
+            return {
+                type: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
+                icon: key.toLowerCase().includes('id') ? '🪪' : key.toLowerCase().includes('license') ? '📋' : key.toLowerCase().includes('logbook') ? '📄' : '📎',
+                status: url ? 'Submitted' : (filename ? 'Uploaded' : 'Pending Upload'),
+                date,
+                url,
+                filename: filename || key
+            };
+        });
     };
 
     const REAL_DOCS = getRealDocs();
