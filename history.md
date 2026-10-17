@@ -4139,3 +4139,51 @@ Root cause analysis:
   - Test 4: Merchant rejected -> Public storefront query returned `[]`.
   - Test 5: Restored merchant to `status = 'APPROVED', is_active = false`.
 - `npm run build` passed with 0 errors in 18.19s.
+
+## Task — Fix Product Card Visibility and Store Association in Muncheez (2026-10-17T17:01:02.241Z)
+
+### Prompt / Goal
+- Fix the issue where an approved merchant could upload a product in the merchant dashboard, but the product card failed to appear on that merchant's storefront.
+- Ensure store-specific product association: products belong to their store and never leak across stores.
+- Ensure universal product listings display eligible products only from approved, published stores.
+- Reuse existing product card design and architecture without unnecessary schema changes.
+
+### Root Cause
+1. **Schema Column Mismatch on Product Insert / Update**:
+   - In `src/lib/supabaseService.ts` (`productService.createProduct`), the insert payload explicitly passed `tags: categoryName ? [categoryName] : ...` and `unit: product.unit || 'unit'`.
+   - The Supabase `products` table does not have top-level `tags` or `unit` columns (it has `metadata` JSONB).
+   - PostgREST rejected every product creation with: `PGRST204: Could not find the 'tags' column of 'products' in the schema cache`.
+2. **Optimistic Local State Masking in Merchant Dashboard**:
+   - In `src/pages/merchant/Dashboard.tsx` (`handleSaveProduct`), products were optimistically pushed into React state with a temporary ID (`sm-...`) and closed the modal before awaiting the backend response. When the backend insert failed, the dashboard still displayed the product temporarily, creating the illusion of a successful upload while 0 products actually existed in Supabase.
+3. **Invalid Column Query on Category Filter**:
+   - In `publicStoreService.getStoreProducts`, line 843 contained `query.or(`category.ilike.%${category}%,tags.cs.{${category}}`)`. Calling this filter caused PostgreSQL error `42703: column products.tags does not exist`.
+4. **Universal Product Listing Store Association**:
+   - `productService.getProducts()` and `publicStoreService.getAllProducts()` did not join or enforce the merchant's approval and publication status, risking unpublished or unapproved store product leaks.
+
+### Actions Taken
+1. **Fixed `productService.createProduct` and `updateProduct` in `src/lib/supabaseService.ts`**:
+   - Restricted insert and update payloads strictly to valid database columns: `merchant_id`, `name`, `description`, `price`, `image_url`, `is_available`, `stock_level`, `is_featured`, `sku`, `category_id`, `category`, `compare_price`, `metadata`.
+   - Placed `unit` and `tags` safely inside `metadata` (`metadata.unit`, `metadata.tags`).
+   - Integrated `adminSupabase` fallback to guarantee reliable mutation persistence.
+2. **Fixed Category Query Filter in `publicStoreService.getStoreProducts`**:
+   - Replaced `tags.cs` query with direct `category.ilike` search, resolving Postgres error 42703.
+3. **Implemented Universal Product Listing with Store Isolation**:
+   - Added `getAllProducts` in `publicStoreService` and exported via `publicApi.getProducts`.
+   - Added `store:merchants(id, business_name, status, is_active)` join on products queries, strictly filtering universal listings to approved and active stores.
+4. **Fixed Merchant Dashboard Save Flow in `src/pages/merchant/Dashboard.tsx`**:
+   - Made `handleSaveProduct` await the backend mutation. On success, assigns the actual Supabase UUID and category metadata. On failure, notifies the merchant with an error alert instead of creating a ghost product.
+   - Synchronized `loadDashboardData` product mapping to resolve `category` and `metadata.unit` seamlessly.
+5. **Aligned Customer Storefront Display in `StoreFront.tsx` and `SupermarketStore.tsx`**:
+   - Ensured product category mapping falls back cleanly to `category` text, `metadata.tags`, or `metadata.unit`.
+   - Updated `SupermarketStore.tsx` category section and deep-dive filters to match either `categoryId` or `category`.
+
+### Live Verification Executed
+- Executed automated integration test suite against live Supabase database (`test_product_flow.mjs`):
+  - **Test 1**: Uploaded Product A ("Organic Red Apples") with image, price, compare price, and unit -> Succeeded with real UUID `30e519f3-eff1-4b3c-a7d3-ccb0c799f3b2`.
+  - **Test 2**: Uploaded Product B ("Fresh Whole Milk 1L") -> Succeeded with real UUID `96cd9e38-29c1-45ee-b305-bd9d2325f529`.
+  - **Test 3**: Queried Store 1 products -> Returned both products correctly.
+  - **Test 4**: Store isolation -> Querying Store 2 returned 0 products (complete isolation).
+  - **Test 5**: Universal product listings -> Both products appeared when Store 1 was approved & published.
+  - **Test 6**: Privacy isolation -> When Store 1 was unpublished (`is_active: false`), all products disappeared from universal view.
+  - **Test 7**: Restored store to published state.
+- Executed production build (`npm run build`): Passed with 0 TypeScript/bundler errors in 17.87s.

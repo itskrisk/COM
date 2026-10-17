@@ -223,21 +223,24 @@ export default function MerchantDashboard() {
             // Load real products from Supabase (including unavailable/draft to manage whole inventory)
             const { data: dbProducts } = await productService.getProducts(mId, true);
             if (dbProducts && dbProducts.length > 0) {
-                const mapped: SupermarketProduct[] = dbProducts.map((p: any) => ({
-                    id: p.id,
-                    name: p.name,
-                    description: p.description || '',
-                    category: p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'Food Cupboard',
-                    categoryId: p.category_id,
-                    price: Number(p.price) || 0,
-                    promo: p.is_featured || false,
-                    oldPrice: p.compare_price ? Number(p.compare_price) : null,
-                    isAvailable: p.is_available,
-                    imageUrl: p.image_url || '',
-                    stockLevel: Number(p.stock_level) || 0,
-                    unit: p.unit || 'unit',
-                    sku: p.sku || `SKU-${p.id.slice(-4).toUpperCase()}`
-                }));
+                const mapped: SupermarketProduct[] = dbProducts.map((p: any) => {
+                    const resolvedCat = p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || (p.metadata?.tags && p.metadata.tags[0]) || 'Food Cupboard';
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        description: p.description || '',
+                        category: resolvedCat,
+                        categoryId: resolvedCat,
+                        price: Number(p.price) || 0,
+                        promo: p.is_featured || false,
+                        oldPrice: p.compare_price ? Number(p.compare_price) : null,
+                        isAvailable: p.is_available,
+                        imageUrl: p.image_url || '',
+                        stockLevel: Number(p.stock_level) || 0,
+                        unit: p.unit || p.metadata?.unit || 'unit',
+                        sku: p.sku || `SKU-${p.id.slice(-4).toUpperCase()}`
+                    };
+                });
                 setProducts(mapped);
             } else if (dbProducts) {
                 setProducts([]);
@@ -492,37 +495,19 @@ export default function MerchantDashboard() {
     const handleSaveProduct = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!formName.trim() || !formPrice) return;
+        if (!merchantId) {
+            alert('Store identifier is loading. Please try again in a moment.');
+            return;
+        }
 
         const numericPrice = Number(formPrice);
         const numericStock = Number(formStock) || 0;
         const numericOldPrice = formIsPromo && formOldPrice ? Number(formOldPrice) : null;
 
-        if (editingProductId) {
-            // Update existing locally first
-            setProducts((prev) =>
-                prev.map((p) =>
-                    p.id === editingProductId
-                        ? {
-                              ...p,
-                              name: formName.trim(),
-                              description: formDescription.trim(),
-                              category: formCategory,
-                              categoryId: formCategory,
-                              price: numericPrice,
-                              promo: formIsPromo,
-                              oldPrice: numericOldPrice,
-                              stockLevel: numericStock,
-                              isAvailable: numericStock > 0,
-                              imageUrl: formImageUrl || PRESET_GROCERY_IMAGES[0].url,
-                              unit: formUnit,
-                              sku: formSku
-                          }
-                        : p
-                )
-            );
-            // Sync to Supabase
-            if (!editingProductId.startsWith('sm-')) {
-                productService.updateProduct(editingProductId, {
+        try {
+            if (editingProductId) {
+                const { data, error } = await productService.updateProduct(editingProductId, {
+                    merchant_id: merchantId,
                     name: formName.trim(),
                     description: formDescription.trim(),
                     category: formCategory,
@@ -535,32 +520,38 @@ export default function MerchantDashboard() {
                     image_url: formImageUrl || PRESET_GROCERY_IMAGES[0].url,
                     unit: formUnit,
                     sku: formSku
-                } as any).catch(err => {
-                    console.error('[MerchantDashboard] Failed to update product in Supabase:', err);
-                });
-            }
-        } else {
-            // Create new locally first
-            const tempId = `sm-${Date.now()}`;
-            const newProd: SupermarketProduct = {
-                id: tempId,
-                name: formName.trim(),
-                description: formDescription.trim(),
-                category: formCategory,
-                categoryId: formCategory,
-                price: numericPrice,
-                promo: formIsPromo,
-                oldPrice: numericOldPrice,
-                isAvailable: numericStock > 0,
-                imageUrl: formImageUrl || PRESET_GROCERY_IMAGES[0].url,
-                stockLevel: numericStock,
-                unit: formUnit,
-                sku: formSku || `SKU-${Date.now().toString().slice(-4)}`
-            };
-            setProducts((prev) => [newProd, ...prev]);
-            // Sync to Supabase
-            if (merchantId) {
-                productService.createProduct({
+                } as any);
+
+                if (error) {
+                    console.error('[MerchantDashboard] Failed to update product in Supabase:', error);
+                    alert('Failed to update product. Please check the fields and try again.');
+                    return;
+                }
+
+                const resolvedCat = data?.category?.name || data?.category || formCategory;
+                setProducts((prev) =>
+                    prev.map((p) =>
+                        p.id === editingProductId
+                            ? {
+                                  ...p,
+                                  name: formName.trim(),
+                                  description: formDescription.trim(),
+                                  category: resolvedCat,
+                                  categoryId: resolvedCat,
+                                  price: numericPrice,
+                                  promo: formIsPromo,
+                                  oldPrice: numericOldPrice,
+                                  stockLevel: numericStock,
+                                  isAvailable: numericStock > 0,
+                                  imageUrl: formImageUrl || PRESET_GROCERY_IMAGES[0].url,
+                                  unit: formUnit,
+                                  sku: formSku
+                              }
+                            : p
+                    )
+                );
+            } else {
+                const { data, error } = await productService.createProduct({
                     merchant_id: merchantId,
                     name: formName.trim(),
                     description: formDescription.trim(),
@@ -574,26 +565,38 @@ export default function MerchantDashboard() {
                     image_url: formImageUrl || PRESET_GROCERY_IMAGES[0].url,
                     unit: formUnit,
                     sku: formSku || `SKU-${Date.now().toString().slice(-4)}`
-                } as any).then(({ data, error }) => {
-                    if (error) {
-                        console.error('[MerchantDashboard] Product creation error:', error);
-                    }
-                    if (data) {
-                        // Replace temp ID with real DB ID and category name
-                        setProducts(prev => prev.map(p => p.id === tempId ? {
-                            ...p,
-                            id: data.id,
-                            category: data.category?.name || data.category || formCategory,
-                            categoryId: data.category_id
-                        } : p));
-                    }
-                }).catch(err => {
-                    console.error('[MerchantDashboard] Supabase createProduct failed:', err);
-                });
-            }
-        }
+                } as any);
 
-        setIsModalOpen(false);
+                if (error || !data) {
+                    console.error('[MerchantDashboard] Product creation error:', error);
+                    alert('Failed to save product to database. Please check your connection and try again.');
+                    return;
+                }
+
+                const resolvedCat = data.category?.name || data.category || formCategory;
+                const newProd: SupermarketProduct = {
+                    id: data.id,
+                    name: data.name || formName.trim(),
+                    description: data.description || formDescription.trim(),
+                    category: resolvedCat,
+                    categoryId: resolvedCat,
+                    price: Number(data.price) || numericPrice,
+                    promo: Boolean(data.is_featured),
+                    oldPrice: data.compare_price ? Number(data.compare_price) : numericOldPrice,
+                    isAvailable: data.is_available ?? (numericStock > 0),
+                    imageUrl: data.image_url || formImageUrl || PRESET_GROCERY_IMAGES[0].url,
+                    stockLevel: data.stock_level ?? numericStock,
+                    unit: data.metadata?.unit || formUnit,
+                    sku: data.sku || formSku || `SKU-${Date.now().toString().slice(-4)}`
+                };
+                setProducts((prev) => [newProd, ...prev]);
+            }
+
+            setIsModalOpen(false);
+        } catch (err) {
+            console.error('[MerchantDashboard] Product save exception:', err);
+            alert('An unexpected error occurred while saving the product.');
+        }
     };
 
     const handleDeleteProduct = (id: string) => {

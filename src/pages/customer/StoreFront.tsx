@@ -30,7 +30,7 @@ export default function StoreFront() {
             if (productsResult.data && productsResult.data.length > 0) {
                 // Normalize snake_case DB fields → camelCase expected by SupermarketStore.tsx
                 setMerchantProducts(productsResult.data.map((p: any) => {
-                    const resolvedCategory = p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'Food Cupboard';
+                    const resolvedCategory = p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || (p.metadata?.tags && p.metadata.tags[0]) || 'Food Cupboard';
                     return {
                         id: p.id,
                         name: p.name,
@@ -44,7 +44,7 @@ export default function StoreFront() {
                         stockLevel: p.stock_level ?? 50,
                         isAvailable: p.is_available ?? true,
                         imageUrl: p.image_url || p.imageUrl || '',
-                        unit: p.unit || 'unit',
+                        unit: p.unit || p.metadata?.unit || 'unit',
                         sku: p.sku || `SKU-${p.id?.slice(-4)?.toUpperCase() || '0000'}`,
                     };
                 }));

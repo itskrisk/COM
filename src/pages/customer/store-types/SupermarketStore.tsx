@@ -554,7 +554,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                                             {products
                                                 .filter(p => viewingCategoryDeepDive === 'Almost anything, delivered'
                                                     ? (p.categoryId === 'Featured items' || p.isFeatured)
-                                                    : p.categoryId === viewingCategoryDeepDive
+                                                    : (p.categoryId === viewingCategoryDeepDive || p.category === viewingCategoryDeepDive)
                                                 )
                                                 .map(p => renderProductCard(p, false))}
                                         </div>
@@ -602,7 +602,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                                                 {/* SECTIONS: CATEGORIES (UNIVERSAL BENCHMARK) */}
                                                 <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-32">
                                                     {categories.filter(c => c !== 'Featured items' && c !== 'Almost anything, delivered').map(cat => {
-                                                        const categoryProducts = products.filter(p => p.categoryId === cat && (searchTerm === '' || p.name.toLowerCase().includes(searchTerm.toLowerCase())));
+                                                        const categoryProducts = products.filter(p => (p.categoryId === cat || p.category === cat) && (searchTerm === '' || p.name.toLowerCase().includes(searchTerm.toLowerCase())));
                                                         const itemsToDisplay = categoryProducts.length > 0 ? categoryProducts.slice(0, 20) : [];
 
                                                         if (itemsToDisplay.length === 0) return null;

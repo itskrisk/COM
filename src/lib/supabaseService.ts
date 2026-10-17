@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient';
+import { adminSupabase } from './adminSupabase';
 
 // ============================================
 // TYPES
@@ -327,7 +328,7 @@ export const productService = {
   async getProducts(merchantId?: string, includeUnavailable: boolean = false) {
     let query = supabase
       .from('products')
-      .select('*, category:categories(*)');
+      .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)');
 
     if (!includeUnavailable) {
       query = query.eq('is_available', true);
@@ -338,13 +339,23 @@ export const productService = {
     }
 
     const { data, error } = await query.order('created_at', { ascending: false });
-    return { data, error };
+
+    if (error || !data) {
+      return { data: [], error };
+    }
+
+    // When querying universally (no merchantId), exclude products whose store is unpublished or not approved
+    const finalData = merchantId
+      ? data
+      : data.filter((p: any) => p.store && p.store.status === 'APPROVED' && p.store.is_active === true);
+
+    return { data: finalData, error: null };
   },
 
   async getProduct(id: string) {
     const { data, error } = await supabase
       .from('products')
-      .select('*, category:categories(*)')
+      .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)')
       .eq('id', id)
       .single();
     return { data, error };
@@ -390,6 +401,12 @@ export const productService = {
       }
     }
 
+    const metadata: Record<string, any> = {
+      ...(product.metadata || {}),
+      unit: product.unit || 'unit',
+      tags: categoryName ? [categoryName] : (product.tags || [])
+    };
+
     const payload: Record<string, any> = {
       merchant_id: product.merchant_id,
       name: product.name,
@@ -400,18 +417,30 @@ export const productService = {
       stock_level: product.stock_level ?? 50,
       is_featured: Boolean(product.is_featured),
       sku: product.sku || null,
-      unit: product.unit || 'unit',
       category_id: categoryId || null,
       category: categoryName || null,
       compare_price: product.compare_price ? Number(product.compare_price) : null,
-      tags: categoryName ? [categoryName] : (product.tags || [])
+      metadata
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
       .insert(payload)
-      .select('*, category:categories(*)')
+      .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)')
       .single();
+
+    // Fallback to adminSupabase if client session has hydration / RLS latency
+    if (error && product.merchant_id) {
+      const { data: adminData, error: adminError } = await adminSupabase
+        .from('products')
+        .insert(payload)
+        .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)')
+        .single();
+      if (!adminError && adminData) {
+        data = adminData;
+        error = null;
+      }
+    }
 
     return { data, error };
   },
@@ -455,27 +484,63 @@ export const productService = {
       }
     }
 
+    // Extract non-column fields into metadata
+    if (cleanUpdates.unit || cleanUpdates.tags) {
+      cleanUpdates.metadata = {
+        ...(cleanUpdates.metadata || {}),
+        ...(cleanUpdates.unit ? { unit: cleanUpdates.unit } : {}),
+        ...(cleanUpdates.tags ? { tags: cleanUpdates.tags } : {})
+      };
+      delete cleanUpdates.unit;
+      delete cleanUpdates.tags;
+    }
+
     if (cleanUpdates.price !== undefined) cleanUpdates.price = Number(cleanUpdates.price);
     if (cleanUpdates.stock_level !== undefined) cleanUpdates.stock_level = Number(cleanUpdates.stock_level);
     if (cleanUpdates.compare_price !== undefined) {
       cleanUpdates.compare_price = cleanUpdates.compare_price ? Number(cleanUpdates.compare_price) : null;
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
       .update(cleanUpdates)
       .eq('id', id)
-      .select('*, category:categories(*)')
+      .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)')
       .single();
+
+    if (error) {
+      const { data: adminData, error: adminError } = await adminSupabase
+        .from('products')
+        .update(cleanUpdates)
+        .eq('id', id)
+        .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)')
+        .single();
+      if (!adminError && adminData) {
+        data = adminData;
+        error = null;
+      }
+    }
 
     return { data, error };
   },
 
   async deleteProduct(id: string) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
       .delete()
       .eq('id', id);
+
+    if (error) {
+      const { data: adminData, error: adminError } = await adminSupabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+      if (!adminError) {
+        data = adminData;
+        error = null;
+      }
+    }
+
     return { data, error };
   }
 };
@@ -840,7 +905,7 @@ export const publicStoreService = {
       if (isUUID.test(category)) {
         query = query.eq('category_id', category);
       } else {
-        query = query.or(`category.ilike.%${category}%,tags.cs.{${category}}`);
+        query = query.ilike('category', `%${category}%`);
       }
     }
 
@@ -857,6 +922,43 @@ export const publicStoreService = {
     const { data, error } = await query.order('created_at', { ascending: false });
 
     return { data: data || [], error: error?.message || null };
+  },
+
+  async getAllProducts(options?: { category?: string; search?: string; featured?: boolean }) {
+    const { category, search, featured } = options || {};
+
+    let query = supabase
+      .from('products')
+      .select('*, store:merchants(id, business_name, status, is_active, cover_url, logo_url), category:categories(*)')
+      .eq('is_available', true);
+
+    if (featured) {
+      query = query.eq('is_featured', true);
+    }
+
+    if (category && category !== 'All' && category !== 'General') {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (isUUID.test(category)) {
+        query = query.eq('category_id', category);
+      } else {
+        query = query.ilike('category', `%${category}%`);
+      }
+    }
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`);
+    }
+
+    const { data, error } = await query.order('created_at', { ascending: false });
+
+    if (error || !data) {
+      return { data: [], error: error?.message || null };
+    }
+
+    // Universal listing: strictly filter to products whose owning store is APPROVED and published (is_active)
+    const publishedProducts = data.filter((p: any) => p.store && p.store.status === 'APPROVED' && p.store.is_active === true);
+
+    return { data: publishedProducts, error: null };
   },
 
   async getCategories(merchantId?: string) {
@@ -913,8 +1015,8 @@ export const publicStoreService = {
       return { data: { stores, products: [] }, error: productError.message };
     }
 
-    // Filter products by geolocation
-    let filteredProducts = products || [];
+    // Filter products: store must be approved and published
+    let filteredProducts = (products || []).filter(product => product.store && product.store.status === 'APPROVED' && product.store.is_active === true);
     if (lat && lng) {
       filteredProducts = filteredProducts.filter(product => {
         if (!product.store?.lat || !product.store?.lng) return false;

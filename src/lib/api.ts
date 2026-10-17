@@ -536,6 +536,11 @@ export const publicApi = {
     return { data: result.data, error: result.error };
   },
 
+  getProducts: async (options?: { category?: string; search?: string; featured?: boolean }) => {
+    const result = await publicStoreService.getAllProducts(options);
+    return { data: result.data, error: result.error };
+  },
+
   getCategories: async (merchantId?: string) => {
     const result = await publicStoreService.getCategories(merchantId);
     return { data: result.data, error: result.error };
