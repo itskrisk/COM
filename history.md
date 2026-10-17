@@ -4287,3 +4287,53 @@ The customer checkout process was incomplete (review, delivery location, instruc
 - Ran TypeScript compilation and Vite production build (`npm run build`): Passed with 0 errors in 17.98s.
 - Verified remote query for merchant `11949575-b1f4-43e1-a256-8561eaf234b4` successfully returns all products including offline ones (`Fresh Whole Milk 1L`, `Organic Red Apples`).
 - Verified complete order lifecycle creation and transition logic.
+
+---
+## 2026-10-17 -- Comprehensive Mobile Responsiveness for Checkout & Order Lifecycle
+
+### Problem & Request
+- The user reported that mobile responsiveness was not fully applied to the checkout process.
+- The entire checkout journey—from the floating cart drawer (`GlassCart`), through multi-step checkout (`CheckoutView` at `/checkout`: review items, delivery details, payment method, and M-Pesa STK push modal), to live order tracking (`OrderStatus` at `/order/:id`)—required seamless mobile responsiveness, touch-friendly tap targets, anti-zoom inputs for mobile Safari, and zero visual overflow on small mobile screens (320px–420px), while strictly respecting the NO-CARD/unboxed editorial design rules.
+
+### Actions Taken & Final Working Solution
+1. **Multi-Step Checkout Page (`src/pages/customer/CheckoutView.tsx`)**:
+   - **Responsive Edge-to-Edge Sticky Header**:
+     - Reduced horizontal padding on mobile (`px-3 sm:px-8 py-3`) with a flexible layout (`gap-2`).
+     - Constrained center merchant title (`max-w-[140px] xs:max-w-[200px] sm:max-w-xs`) to prevent layout collision with the Back button and order total.
+     - Preserved touch target accessibility (`min-h-[40px]`) with non-wrapping KES totals.
+   - **Robust, Non-Jittering Step Navigation Bar**:
+     - Replaced fragile negative margin calculations (`-mb-[13px]`) with a stable, flexible `grid`/`flex` tab bar using `-mb-px` and `border-b-2`.
+     - Scaled typography smoothly (`text-[10px] sm:text-xs tracking-wider sm:tracking-widest`) so step indicators (`1. Review`, `2. Delivery`, `3. Payment`) fit comfortably on 320px screens without awkward line breaks.
+   - **Mobile-First Bag Review Items (Step 1)**:
+     - Formatted each product row with responsive image dimensions (`w-12 h-12 sm:w-14 sm:h-14`).
+     - Allowed item titles to use 2-line clamp (`line-clamp-2`) instead of severe 1-line truncation on narrow displays.
+     - Positioned quantity steppers and delete buttons to self-align cleanly on mobile (`self-end sm:self-center`) with generous 28px–32px touch targets.
+   - **Form Fields & Anti-Zoom Typography (Step 2)**:
+     - Applied `text-base sm:text-sm` (16px base on mobile) to all inputs and textareas (`deliveryAddress`, `deliveryInstructions`, `phoneNumber`). This prevents iOS Mobile Safari from zooming in automatically on focus, keeping the UI stable.
+     - Responsive "Use My GPS" button with a touch-friendly `min-h-[36px]` tap target.
+     - Restructured bottom navigation into a mobile-first `flex-col-reverse sm:flex-row gap-2.5 sm:gap-3`, prioritizing the primary CTA ("Continue to Payment") at full-width under the user's thumb with the secondary Back button below.
+   - **Payment Method Selection & Summary (Step 3)**:
+     - Cleaned up radio label rows (`gap-3 min-w-0 flex-1`) to prevent horizontal overflow and icon squishing.
+     - Styled totals breakdown and stacked action buttons (`flex-col-reverse sm:flex-row`) with full-width primary submission button.
+   - **M-Pesa STK Push Simulation Modal**:
+     - Added `overflow-y-auto` and `p-3 sm:p-4` to outer backdrop.
+     - Set modal container to `max-h-[92vh] flex flex-col my-auto`, ensuring the modal never clips off-screen even on small phones with mobile virtual keyboards open.
+     - Added touch-friendly buttons (`min-h-[44px]`).
+
+2. **Floating Cart Drawer (`src/components/ui/shared/GlassCart.tsx`)**:
+   - Added iOS safe-area inset spacing (`mb-[env(safe-area-inset-bottom,0px)]` and `bottom-3 sm:bottom-6`) so the floating pill doesn't collide with the mobile home indicator.
+   - Fixed expanded drawer max-height for mobile viewports (`max-h-[82vh]` with `max-h-[45vh]` scrollable item container) to ensure the checkout button is never pushed off-screen.
+   - Configured responsive thumbnail sizes (`w-11 h-11 sm:w-14 sm:h-14`) and multi-line item titles.
+
+3. **Live Order Tracking (`src/pages/customer/OrderStatus.tsx`)**:
+   - **Responsive Stepper Tracker**:
+     - Added a dedicated mobile stage indicator (`Step X of 6: Stage Name`) visible on mobile screens.
+     - Provided short labels for xs screens (`Placed`, `Accept`, `Pack`, `Ready`, `Transit`, `Done`) alongside full labels on desktop, preventing 9-letter words like "Confirmed" from breaking across multiple lines on small displays.
+   - **Unboxed Merchant & Courier Sections**:
+     - Converted single horizontal rows into responsive `flex-col sm:flex-row` layouts so "Contact Store" and "Call Rider" buttons never collide with merchant or rider names.
+   - **Line Items & Navigation**:
+     - Enhanced truncate and flex layout on line items, with full-width responsive action buttons at the bottom.
+
+### Verification
+- Production build (`npm run build`) succeeded with 0 errors in 20.62s.
+- Validated that strict NO-CARD/unboxed design rules are honored: hairline dividers, transparent bottom-line inputs, editorial typography, zero card padding.

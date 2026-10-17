@@ -282,38 +282,38 @@ export default function CheckoutView() {
 
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-24">
-            {/* Header: Editorial, minimal, edge-to-edge */}
-            <header className="border-b border-neutral-200 px-4 sm:px-10 py-3.5 sticky top-0 bg-white/95 backdrop-blur z-30 flex items-center justify-between">
+            {/* Header: Editorial, minimal, edge-to-edge with mobile responsiveness */}
+            <header className="border-b border-neutral-200 px-3 sm:px-8 py-3 sticky top-0 bg-white/95 backdrop-blur z-30 flex items-center justify-between gap-2">
                 <button
                     onClick={() => navigate(-1)}
-                    className="inline-flex items-center gap-1 text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors min-h-[44px]"
+                    className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono uppercase tracking-wider sm:tracking-widest text-neutral-500 hover:text-black transition-colors min-h-[40px] shrink-0"
                     aria-label="Go back"
                 >
                     <ChevronLeft size={16} />
                     <span>Back</span>
                 </button>
-                <div className="text-center">
-                    <span className="font-heading font-bold text-xl tracking-tighter block leading-tight">
+                <div className="text-center min-w-0 flex-1 px-1">
+                    <span className="font-heading font-bold text-lg sm:text-xl tracking-tighter block leading-tight">
                         Muncheez<span className="text-[#D4AF37]">.</span>
                     </span>
-                    <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest block truncate max-w-[200px] sm:max-w-xs">
+                    <span className="text-[9px] sm:text-[10px] font-mono text-neutral-400 uppercase tracking-widest block truncate max-w-[140px] xs:max-w-[200px] sm:max-w-xs mx-auto">
                         {merchant?.businessName || merchant?.business_name || 'Market Checkout'}
                     </span>
                 </div>
-                <div className="text-right">
-                    <span className="text-xs font-mono font-bold text-black block">
+                <div className="text-right shrink-0">
+                    <span className="text-xs font-mono font-bold text-black block whitespace-nowrap">
                         KES {finalTotal.toLocaleString()}
                     </span>
-                    <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest block">
+                    <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest block whitespace-nowrap">
                         {itemCount} {itemCount === 1 ? 'item' : 'items'}
                     </span>
                 </div>
             </header>
 
-            <main className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-6">
-                {/* Step indicator: Clean text navigation without overflowing horizontal cards */}
-                <nav className="border-b border-neutral-200 pb-3 flex items-center justify-between text-xs font-mono uppercase tracking-widest">
-                    {(['review', 'delivery', 'payment'] as const).map((step, idx) => {
+            <main className="max-w-2xl mx-auto w-full px-3.5 sm:px-6 py-5 sm:py-8 space-y-6">
+                {/* Step indicator: Clean, unboxed text navigation that never wraps awkwardly on mobile */}
+                <nav className="border-b border-neutral-200 flex items-center justify-between text-[10px] sm:text-xs font-mono uppercase tracking-wider sm:tracking-widest">
+                    {(['review', 'delivery', 'payment'] as const).map((step) => {
                         const isActive = currentStep === step;
                         const isPast = (step === 'delivery' && currentStep === 'payment') || (step === 'review' && currentStep !== 'review');
                         const labels = { review: '1. Review', delivery: '2. Delivery', payment: '3. Payment' };
@@ -321,16 +321,16 @@ export default function CheckoutView() {
                             <button
                                 key={step}
                                 onClick={() => setCurrentStep(step)}
-                                className={`py-1.5 transition-colors min-h-[36px] flex items-center gap-1.5 ${
+                                className={`py-2.5 sm:py-3 transition-colors min-h-[40px] flex items-center justify-center gap-1 sm:gap-1.5 relative flex-1 text-center ${
                                     isActive
-                                        ? 'text-black font-bold border-b-2 border-black -mb-[13px]'
+                                        ? 'text-black font-bold border-b-2 border-black -mb-px'
                                         : isPast
-                                        ? 'text-neutral-500 hover:text-black'
-                                        : 'text-neutral-300 hover:text-neutral-500'
+                                        ? 'text-neutral-500 hover:text-black border-b-2 border-transparent -mb-px'
+                                        : 'text-neutral-300 hover:text-neutral-500 border-b-2 border-transparent -mb-px'
                                 }`}
                             >
-                                {isPast && <CheckCircle2 size={12} className="text-emerald-600" />}
-                                <span>{labels[step]}</span>
+                                {isPast && <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />}
+                                <span className="truncate">{labels[step]}</span>
                             </button>
                         );
                     })}
@@ -338,7 +338,7 @@ export default function CheckoutView() {
 
                 {/* Inline Error Banner */}
                 {errorMessage && (
-                    <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-xs font-mono flex items-start gap-2">
+                    <div className="border border-red-200 bg-red-50 text-red-700 px-3.5 py-3 text-xs font-mono flex items-start gap-2">
                         <AlertCircle size={16} className="shrink-0 mt-0.5" />
                         <div className="flex-1 leading-relaxed">{errorMessage}</div>
                     </div>
@@ -346,7 +346,7 @@ export default function CheckoutView() {
 
                 {/* Unauthenticated Customer Notice */}
                 {!user && (
-                    <div className="border border-amber-200 bg-amber-50/60 p-4 text-xs font-mono text-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="border border-amber-200 bg-amber-50/60 p-3.5 sm:p-4 text-xs font-mono text-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
                             <LogIn size={15} className="shrink-0" />
                             <span>You are checking out as guest. Sign in to track live delivery.</span>
@@ -374,17 +374,17 @@ export default function CheckoutView() {
                                 <h1 className="text-xl sm:text-2xl font-light tracking-tight text-black mb-1">
                                     Review Your Items
                                 </h1>
-                                <p className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
+                                <p className="text-xs font-mono text-neutral-400 uppercase tracking-widest truncate">
                                     Direct from {merchant?.businessName || merchant?.business_name || 'Market'}
                                 </p>
                             </div>
 
-                            {/* Item List: Unboxed editorial list with hairline dividers */}
+                            {/* Item List: Unboxed editorial list with hairline dividers, mobile-first */}
                             <div className="border-t border-b border-neutral-200 divide-y divide-neutral-100">
                                 {items.map((item) => (
-                                    <div key={item.id} className="py-3.5 flex items-center gap-3">
+                                    <div key={item.id} className="py-3 sm:py-3.5 flex items-start sm:items-center gap-3">
                                         {/* Image */}
-                                        <div className="w-14 h-14 border border-neutral-200 bg-neutral-100 overflow-hidden shrink-0">
+                                        <div className="w-12 h-12 sm:w-14 sm:h-14 border border-neutral-200 bg-neutral-100 overflow-hidden shrink-0 mt-0.5 sm:mt-0">
                                             <img
                                                 src={item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400'}
                                                 alt={item.name}
@@ -392,54 +392,57 @@ export default function CheckoutView() {
                                             />
                                         </div>
 
-                                        {/* Name & Price */}
-                                        <div className="flex-1 min-w-0 pr-1">
-                                            <h2 className="text-sm font-medium text-black truncate leading-snug">
-                                                {item.name}
-                                            </h2>
-                                            <p className="text-xs font-mono text-neutral-500">
-                                                KES {item.price.toLocaleString()}
-                                            </p>
-                                        </div>
+                                        {/* Name, Price, and Controls: Mobile wrap handled elegantly */}
+                                        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                                            <div className="min-w-0 pr-1">
+                                                <h2 className="text-xs sm:text-sm font-medium text-black line-clamp-2 leading-snug">
+                                                    {item.name}
+                                                </h2>
+                                                <p className="text-[11px] sm:text-xs font-mono text-neutral-500 mt-0.5">
+                                                    KES {item.price.toLocaleString()}
+                                                </p>
+                                            </div>
 
-                                        {/* Quantity Controls: Generous touch targets */}
-                                        <div className="flex items-center gap-1 border border-neutral-300 px-1 py-0.5 shrink-0 bg-white">
-                                            <button
-                                                onClick={() => updateQuantity(item.id, -1)}
-                                                className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-black transition-colors"
-                                                aria-label="Decrease quantity"
-                                            >
-                                                <Minus size={12} />
-                                            </button>
-                                            <span className="text-xs font-mono font-bold min-w-[20px] text-center">
-                                                {item.quantity}
-                                            </span>
-                                            <button
-                                                onClick={() => updateQuantity(item.id, 1)}
-                                                className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-black transition-colors"
-                                                aria-label="Increase quantity"
-                                            >
-                                                <Plus size={12} />
-                                            </button>
-                                        </div>
+                                            {/* Quantity Controls & Remove Action */}
+                                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                                <div className="flex items-center border border-neutral-300 px-0.5 py-0.5 bg-white">
+                                                    <button
+                                                        onClick={() => updateQuantity(item.id, -1)}
+                                                        className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-black transition-colors"
+                                                        aria-label="Decrease quantity"
+                                                    >
+                                                        <Minus size={11} />
+                                                    </button>
+                                                    <span className="text-xs font-mono font-bold min-w-[22px] text-center">
+                                                        {item.quantity}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => updateQuantity(item.id, 1)}
+                                                        className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-black transition-colors"
+                                                        aria-label="Increase quantity"
+                                                    >
+                                                        <Plus size={11} />
+                                                    </button>
+                                                </div>
 
-                                        {/* Direct Remove */}
-                                        <button
-                                            onClick={() => removeItem(item.id)}
-                                            className="p-2 text-neutral-400 hover:text-rose-600 transition-colors shrink-0"
-                                            aria-label={`Remove ${item.name}`}
-                                        >
-                                            <Trash2 size={15} />
-                                        </button>
+                                                <button
+                                                    onClick={() => removeItem(item.id)}
+                                                    className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-rose-600 transition-colors"
+                                                    aria-label={`Remove ${item.name}`}
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 ))}
                             </div>
 
                             {/* Cutlery Toggle: Unboxed border divider */}
                             {merchant?.type === 'Restaurant' && (
-                                <div className="border-b border-neutral-200 pb-4 flex items-center justify-between">
-                                    <div>
-                                        <span className="text-xs font-mono uppercase tracking-widest text-black block">
+                                <div className="border-b border-neutral-200 pb-4 flex items-center justify-between gap-3">
+                                    <div className="min-w-0 flex-1">
+                                        <span className="text-xs font-mono uppercase tracking-widest text-black block truncate">
                                             Cutlery & Utensils
                                         </span>
                                         <span className="text-[11px] text-neutral-400 block">
@@ -450,7 +453,7 @@ export default function CheckoutView() {
                                         type="checkbox"
                                         checked={wantsCutlery}
                                         onChange={(e) => setWantsCutlery(e.target.checked)}
-                                        className="w-4 h-4 accent-black cursor-pointer"
+                                        className="w-4 h-4 accent-black cursor-pointer shrink-0"
                                     />
                                 </div>
                             )}
@@ -458,15 +461,15 @@ export default function CheckoutView() {
                             {/* Subtotal Preview */}
                             <div className="border-b border-neutral-200 pb-4 space-y-1.5 text-xs font-mono">
                                 <div className="flex justify-between text-neutral-500">
-                                    <span className="uppercase tracking-widest">Subtotal ({itemCount} items)</span>
+                                    <span className="uppercase tracking-wider sm:tracking-widest">Subtotal ({itemCount} items)</span>
                                     <span>KES {total.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between text-neutral-500">
-                                    <span className="uppercase tracking-widest">Delivery Standard</span>
+                                    <span className="uppercase tracking-wider sm:tracking-widest">Delivery Standard</span>
                                     <span>KES {deliveryFee.toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between text-black font-bold pt-1 text-sm">
-                                    <span className="uppercase tracking-widest">Estimated Total</span>
+                                <div className="flex justify-between text-black font-bold pt-1 text-sm sm:text-base">
+                                    <span className="uppercase tracking-wider sm:tracking-widest">Estimated Total</span>
                                     <span>KES {finalTotal.toLocaleString()}</span>
                                 </div>
                             </div>
@@ -500,9 +503,9 @@ export default function CheckoutView() {
                             </div>
 
                             <div className="border-t border-neutral-200 pt-4 space-y-6">
-                                {/* Address Input: Transparent bottom-line input */}
+                                {/* Address Input: Transparent bottom-line input, 16px font on mobile to prevent iOS auto-zoom */}
                                 <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between gap-2">
                                         <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
                                             Street Address, Building & Unit *
                                         </label>
@@ -510,10 +513,10 @@ export default function CheckoutView() {
                                             type="button"
                                             onClick={handleGetCurrentLocation}
                                             disabled={isLocating}
-                                            className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 hover:text-black underline flex items-center gap-1"
+                                            className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 hover:text-black underline flex items-center gap-1 min-h-[36px] shrink-0"
                                         >
                                             <MapPin size={11} />
-                                            {isLocating ? 'Locating...' : 'Use My GPS'}
+                                            <span>{isLocating ? 'Locating...' : 'Use My GPS'}</span>
                                         </button>
                                     </div>
                                     <input
@@ -525,14 +528,14 @@ export default function CheckoutView() {
                                             localStorage.setItem('muncheez_delivery_address', e.target.value);
                                         }}
                                         placeholder="e.g. Westlands, Mpaka Road, The Mirage, Tower 2, Apt 4B"
-                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-sans"
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-base sm:text-sm text-black outline-none font-sans"
                                     />
-                                    <span className="text-[10px] font-mono text-neutral-400 block">
+                                    <span className="text-[10px] font-mono text-neutral-400 block leading-relaxed">
                                         Both the merchant packing team and dispatch rider will receive this exact destination.
                                     </span>
                                 </div>
 
-                                {/* Delivery Instructions: Clean textarea */}
+                                {/* Delivery Instructions: Clean textarea, 16px mobile font */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
                                         Drop-off Notes / Instructions (Optional)
@@ -542,11 +545,11 @@ export default function CheckoutView() {
                                         value={deliveryInstructions}
                                         onChange={(e) => setDeliveryInstructions(e.target.value)}
                                         placeholder="e.g. Ring the bell on arrival, leave at security desk, call upon reaching the gate..."
-                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-sans resize-none"
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-base sm:text-sm text-black outline-none font-sans resize-none"
                                     />
                                 </div>
 
-                                {/* Phone Number: Transparent bottom-line input */}
+                                {/* Phone Number: Transparent bottom-line input, 16px mobile font */}
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
                                         Recipient Phone Number *
@@ -557,7 +560,7 @@ export default function CheckoutView() {
                                         value={phoneNumber}
                                         onChange={(e) => setPhoneNumber(e.target.value)}
                                         placeholder="07XX XXX XXX or +254 7XX XXX XXX"
-                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-base sm:text-sm text-black outline-none font-mono"
                                     />
                                     <span className="text-[10px] font-mono text-neutral-400 block">
                                         Used for delivery SMS updates and M-Pesa push prompts.
@@ -565,11 +568,12 @@ export default function CheckoutView() {
                                 </div>
                             </div>
 
-                            <div className="flex gap-3 pt-2">
+                            {/* Responsive Actions: Primary on top on mobile, secondary below */}
+                            <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-3">
                                 <button
                                     type="button"
                                     onClick={() => setCurrentStep('review')}
-                                    className="px-5 py-4 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors min-h-[48px]"
+                                    className="w-full sm:w-auto px-6 py-3.5 sm:py-4 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors min-h-[48px]"
                                 >
                                     Back
                                 </button>
@@ -583,7 +587,7 @@ export default function CheckoutView() {
                                         setErrorMessage(null);
                                         setCurrentStep('payment');
                                     }}
-                                    className="flex-1 bg-black hover:bg-neutral-800 text-white font-mono uppercase tracking-widest text-xs py-4 flex items-center justify-center gap-2 transition-colors min-h-[48px]"
+                                    className="w-full sm:flex-1 bg-black hover:bg-neutral-800 text-white font-mono uppercase tracking-widest text-xs py-3.5 sm:py-4 flex items-center justify-center gap-2 transition-colors min-h-[48px]"
                                 >
                                     <span>Continue to Payment</span>
                                     <ArrowRight size={14} />
@@ -613,14 +617,14 @@ export default function CheckoutView() {
                             {/* Payment Options: Edge-to-edge unboxed layout with radio indicators */}
                             <div className="border-t border-b border-neutral-200 divide-y divide-neutral-100">
                                 {/* M-Pesa Option */}
-                                <label className="py-4 flex items-center justify-between cursor-pointer group">
-                                    <div className="flex items-center gap-3">
-                                        <Smartphone size={18} className={paymentMethod === 'mpesa' ? 'text-emerald-600' : 'text-neutral-400'} />
-                                        <div>
-                                            <span className="text-sm font-medium text-black block">
+                                <label className="py-3.5 sm:py-4 flex items-center justify-between cursor-pointer group gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <Smartphone size={18} className={`shrink-0 ${paymentMethod === 'mpesa' ? 'text-emerald-600' : 'text-neutral-400'}`} />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-xs sm:text-sm font-medium text-black block truncate">
                                                 M-Pesa Express (STK Push)
                                             </span>
-                                            <span className="text-[11px] font-mono text-neutral-400 block">
+                                            <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate">
                                                 Prompt sent to {phoneNumber || 'your registered phone'}
                                             </span>
                                         </div>
@@ -631,20 +635,20 @@ export default function CheckoutView() {
                                         value="mpesa"
                                         checked={paymentMethod === 'mpesa'}
                                         onChange={() => setPaymentMethod('mpesa')}
-                                        className="w-4 h-4 accent-black cursor-pointer"
+                                        className="w-4 h-4 accent-black cursor-pointer shrink-0"
                                     />
                                 </label>
 
                                 {/* Cash Option */}
-                                <label className="py-4 flex items-center justify-between cursor-pointer group">
-                                    <div className="flex items-center gap-3">
-                                        <Banknote size={18} className={paymentMethod === 'cash' ? 'text-black' : 'text-neutral-400'} />
-                                        <div>
-                                            <span className="text-sm font-medium text-black block">
+                                <label className="py-3.5 sm:py-4 flex items-center justify-between cursor-pointer group gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <Banknote size={18} className={`shrink-0 ${paymentMethod === 'cash' ? 'text-black' : 'text-neutral-400'}`} />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-xs sm:text-sm font-medium text-black block truncate">
                                                 Cash on Delivery
                                             </span>
-                                            <span className="text-[11px] font-mono text-neutral-400 block">
-                                                Pay courier upon receiving your package
+                                            <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate">
+                                                Pay courier upon receiving package
                                             </span>
                                         </div>
                                     </div>
@@ -654,19 +658,19 @@ export default function CheckoutView() {
                                         value="cash"
                                         checked={paymentMethod === 'cash'}
                                         onChange={() => setPaymentMethod('cash')}
-                                        className="w-4 h-4 accent-black cursor-pointer"
+                                        className="w-4 h-4 accent-black cursor-pointer shrink-0"
                                     />
                                 </label>
 
                                 {/* Card Option */}
-                                <label className="py-4 flex items-center justify-between cursor-pointer group">
-                                    <div className="flex items-center gap-3">
-                                        <CreditCard size={18} className={paymentMethod === 'card' ? 'text-black' : 'text-neutral-400'} />
-                                        <div>
-                                            <span className="text-sm font-medium text-black block">
+                                <label className="py-3.5 sm:py-4 flex items-center justify-between cursor-pointer group gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <CreditCard size={18} className={`shrink-0 ${paymentMethod === 'card' ? 'text-black' : 'text-neutral-400'}`} />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-xs sm:text-sm font-medium text-black block truncate">
                                                 Card / Visa / Mastercard
                                             </span>
-                                            <span className="text-[11px] font-mono text-neutral-400 block">
+                                            <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate">
                                                 Online card gateway checkout
                                             </span>
                                         </div>
@@ -677,7 +681,7 @@ export default function CheckoutView() {
                                         value="card"
                                         checked={paymentMethod === 'card'}
                                         onChange={() => setPaymentMethod('card')}
-                                        className="w-4 h-4 accent-black cursor-pointer"
+                                        className="w-4 h-4 accent-black cursor-pointer shrink-0"
                                     />
                                 </label>
                             </div>
@@ -685,15 +689,15 @@ export default function CheckoutView() {
                             {/* Summary Breakdown */}
                             <div className="border-b border-neutral-200 pb-4 space-y-2 text-xs font-mono">
                                 <div className="flex justify-between text-neutral-500">
-                                    <span className="uppercase tracking-widest">Basket Subtotal</span>
+                                    <span className="uppercase tracking-wider sm:tracking-widest">Basket Subtotal</span>
                                     <span>KES {total.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between text-neutral-500">
-                                    <span className="uppercase tracking-widest">Courier Delivery</span>
+                                    <span className="uppercase tracking-wider sm:tracking-widest">Courier Delivery</span>
                                     <span>KES {deliveryFee.toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between text-black font-bold pt-2 border-t border-neutral-100 text-base">
-                                    <span className="uppercase tracking-widest">Total Payable</span>
+                                <div className="flex justify-between text-black font-bold pt-2 border-t border-neutral-100 text-sm sm:text-base">
+                                    <span className="uppercase tracking-wider sm:tracking-widest">Total Payable</span>
                                     <span>KES {finalTotal.toLocaleString()}</span>
                                 </div>
                             </div>
@@ -704,13 +708,13 @@ export default function CheckoutView() {
                                 <span className="truncate">Delivering to: {deliveryAddress || 'Address required'}</span>
                             </div>
 
-                            {/* Action Buttons */}
-                            <div className="flex gap-3 pt-2">
+                            {/* Action Buttons: Responsive stacking on mobile */}
+                            <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 pt-2">
                                 <button
                                     type="button"
                                     disabled={isProcessing}
                                     onClick={() => setCurrentStep('delivery')}
-                                    className="px-5 py-4 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors min-h-[48px]"
+                                    className="w-full sm:w-auto px-6 py-3.5 sm:py-4 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors min-h-[48px]"
                                 >
                                     Back
                                 </button>
@@ -718,17 +722,17 @@ export default function CheckoutView() {
                                     type="button"
                                     disabled={isProcessing}
                                     onClick={handlePlaceOrder}
-                                    className="flex-1 bg-black hover:bg-neutral-800 disabled:bg-neutral-300 text-white font-mono uppercase tracking-widest text-xs py-4 flex items-center justify-center gap-2 transition-colors min-h-[48px]"
+                                    className="w-full sm:flex-1 bg-black hover:bg-neutral-800 disabled:bg-neutral-300 text-white font-mono uppercase tracking-widest text-xs py-3.5 sm:py-4 flex items-center justify-center gap-2 transition-colors min-h-[48px]"
                                 >
                                     {isProcessing ? (
                                         <>
-                                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                            <span>Placing Order in Supabase...</span>
+                                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin shrink-0" />
+                                            <span className="truncate">Placing Order in Supabase...</span>
                                         </>
                                     ) : (
                                         <>
                                             <span>Confirm & Place Order</span>
-                                            <ArrowRight size={14} />
+                                            <ArrowRight size={14} className="shrink-0" />
                                         </>
                                     )}
                                 </button>
@@ -739,23 +743,23 @@ export default function CheckoutView() {
             </main>
 
             {/* ═══ M-PESA STK PUSH INTERACTIVE SIMULATION MODAL ═══ */}
-            {/* Unboxed editorial modal strictly conforming to NO-CARD rules */}
+            {/* Unboxed editorial modal strictly conforming to NO-CARD rules, 100% mobile responsive */}
             <AnimatePresence>
                 {isStkModalOpen && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
                     >
                         <motion.div
                             initial={{ y: 20, opacity: 0 }}
                             animate={{ y: 0, opacity: 1 }}
                             exit={{ y: 20, opacity: 0 }}
-                            className="w-full max-w-md bg-white border border-neutral-300 shadow-2xl space-y-6"
+                            className="w-full max-w-md bg-white border border-neutral-300 shadow-2xl my-auto overflow-hidden max-h-[92vh] flex flex-col"
                         >
                             {/* Modal Header */}
-                            <div className="border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
+                            <div className="border-b border-neutral-200 px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
                                     <span className="text-xs font-mono uppercase tracking-widest font-bold text-black">
@@ -768,8 +772,8 @@ export default function CheckoutView() {
                             </div>
 
                             {/* Modal Body */}
-                            <div className="px-6 space-y-4">
-                                <div className="border border-neutral-200 p-4 space-y-2 bg-neutral-50/50">
+                            <div className="px-4 sm:px-6 py-4 space-y-4 overflow-y-auto flex-1">
+                                <div className="border border-neutral-200 p-3 sm:p-4 space-y-2 bg-neutral-50/50">
                                     <div className="flex justify-between text-xs font-mono text-neutral-500">
                                         <span>Recipient Number</span>
                                         <span className="font-bold text-black">{phoneNumber || '07XX XXX XXX'}</span>
@@ -784,7 +788,7 @@ export default function CheckoutView() {
                                     </div>
                                 </div>
 
-                                <div className="space-y-1 text-center py-2">
+                                <div className="space-y-1 text-center py-1 sm:py-2">
                                     <p className="text-sm font-medium text-black">
                                         Prompt sent to your phone
                                     </p>
@@ -799,7 +803,7 @@ export default function CheckoutView() {
                             </div>
 
                             {/* Modal Actions */}
-                            <div className="border-t border-neutral-200 p-6 flex flex-col gap-2.5">
+                            <div className="border-t border-neutral-200 p-4 sm:p-6 flex flex-col gap-2.5 shrink-0">
                                 <button
                                     type="button"
                                     onClick={handleConfirmStkSuccess}
@@ -817,7 +821,7 @@ export default function CheckoutView() {
                                             navigate(`/order/${stkOrderId}`);
                                         }
                                     }}
-                                    className="w-full py-2.5 border border-neutral-200 hover:border-black text-neutral-600 hover:text-black font-mono uppercase tracking-widest text-[11px] transition-colors"
+                                    className="w-full py-2.5 border border-neutral-200 hover:border-black text-neutral-600 hover:text-black font-mono uppercase tracking-widest text-[11px] transition-colors min-h-[40px]"
                                 >
                                     View Order Status Now
                                 </button>

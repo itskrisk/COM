@@ -228,58 +228,58 @@ export default function OrderStatus() {
     const isCancelled = order.status === 'CANCELLED' || order.status === 'DECLINED';
 
     const lifecycleStages = [
-        { label: 'Placed', desc: 'Order received' },
-        { label: 'Confirmed', desc: 'Routed to kitchen/store' },
-        { label: 'Packing', desc: 'Hand-picked & bagged' },
-        { label: 'Ready', desc: 'Awaiting courier' },
-        { label: 'Transit', desc: 'Out for delivery' },
-        { label: 'Delivered', desc: 'Dropped off' }
+        { label: 'Placed', short: 'Placed', desc: 'Order received' },
+        { label: 'Confirmed', short: 'Accept', desc: 'Routed to kitchen/store' },
+        { label: 'Packing', short: 'Pack', desc: 'Hand-picked & bagged' },
+        { label: 'Ready', short: 'Ready', desc: 'Awaiting courier' },
+        { label: 'Transit', short: 'Transit', desc: 'Out for delivery' },
+        { label: 'Delivered', short: 'Done', desc: 'Dropped off' }
     ];
 
     return (
         <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">
-            {/* Header: Edge-to-edge unboxed editorial banner */}
-            <header className="border-b border-neutral-200 px-4 sm:px-10 py-3.5 sticky top-0 bg-white/95 backdrop-blur z-30 flex items-center justify-between">
+            {/* Header: Edge-to-edge unboxed editorial banner with mobile responsiveness */}
+            <header className="border-b border-neutral-200 px-3 sm:px-10 py-3 sm:py-3.5 sticky top-0 bg-white/95 backdrop-blur z-30 flex items-center justify-between gap-2">
                 <button
                     onClick={() => navigate('/stores')}
-                    className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors min-h-[44px]"
+                    className="inline-flex items-center gap-1 text-[11px] sm:text-xs font-mono uppercase tracking-wider sm:tracking-widest text-neutral-500 hover:text-black transition-colors min-h-[40px] shrink-0"
                 >
                     <ChevronLeft size={16} />
                     <span>Stores</span>
                 </button>
-                <div className="text-center">
-                    <span className="font-heading font-bold text-xl tracking-tighter block leading-tight">
+                <div className="text-center min-w-0 flex-1 px-1">
+                    <span className="font-heading font-bold text-lg sm:text-xl tracking-tighter block leading-tight">
                         Muncheez<span className="text-[#D4AF37]">.</span>
                     </span>
-                    <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest block">
+                    <span className="text-[9px] sm:text-[10px] font-mono text-neutral-400 uppercase tracking-widest block truncate">
                         Order #{effectiveOrderId.slice(0, 8).toUpperCase()}
                     </span>
                 </div>
-                <div className="text-right">
-                    <span className="text-xs font-mono font-bold text-black block">
+                <div className="text-right shrink-0">
+                    <span className="text-xs font-mono font-bold text-black block whitespace-nowrap">
                         KES {order.total?.toLocaleString()}
                     </span>
-                    <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest block">
+                    <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest block whitespace-nowrap">
                         {order.items?.length || 0} items
                     </span>
                 </div>
             </header>
 
-            <main className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+            <main className="max-w-2xl mx-auto w-full px-3.5 sm:px-6 py-5 sm:py-8 space-y-7">
                 {/* ═══ HERO STATUS: UNBOXED EDITORIAL TYPOGRAPHY ═══ */}
                 <section className="space-y-4">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                         <span className={`text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 border ${narrative.badgeColor}`}>
                             {order.status.replace(/_/g, ' ')}
                         </span>
-                        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                        <div className="flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-widest text-neutral-400 shrink-0">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span>Live Updates</span>
                         </div>
                     </div>
 
                     <div>
-                        <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-black mb-1.5">
+                        <h1 className="text-xl sm:text-3xl font-light tracking-tight text-black mb-1.5">
                             {narrative.headline}
                         </h1>
                         <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed">
@@ -287,9 +287,15 @@ export default function OrderStatus() {
                         </p>
                     </div>
 
-                    {/* Progress Bar & Stepper: Edge-to-edge hairline divider */}
+                    {/* Progress Bar & Responsive Stepper */}
                     {!isCancelled && (
                         <div className="pt-2 space-y-3">
+                            {/* Mobile Active Stage Indicator */}
+                            <div className="flex sm:hidden items-center justify-between text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                                <span>Step {activeStepIndex + 1} of 6</span>
+                                <span className="font-bold text-black">{lifecycleStages[activeStepIndex]?.label}</span>
+                            </div>
+
                             <div className="w-full h-1 bg-neutral-100 overflow-hidden">
                                 <motion.div
                                     className="h-full bg-black"
@@ -299,14 +305,15 @@ export default function OrderStatus() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-6 text-center text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                            <div className="grid grid-cols-6 text-center text-[9px] sm:text-[10px] font-mono uppercase tracking-tight sm:tracking-wider text-neutral-400 gap-1">
                                 {lifecycleStages.map((stage, idx) => {
                                     const isDone = idx <= activeStepIndex;
                                     const isCurrent = idx === activeStepIndex;
                                     return (
                                         <div key={stage.label} className="space-y-0.5">
-                                            <span className={`block font-medium ${isCurrent ? 'text-black font-bold' : isDone ? 'text-neutral-700' : 'text-neutral-300'}`}>
-                                                {stage.label}
+                                            <span className={`block font-medium truncate ${isCurrent ? 'text-black font-bold' : isDone ? 'text-neutral-700' : 'text-neutral-300'}`}>
+                                                <span className="sm:hidden">{stage.short}</span>
+                                                <span className="hidden sm:inline">{stage.label}</span>
                                             </span>
                                             {isCurrent && (
                                                 <div className="w-1 h-1 rounded-full bg-black mx-auto" />
@@ -320,19 +327,19 @@ export default function OrderStatus() {
                 </section>
 
                 {/* ═══ STORE & COURIER ASSIGNMENT: UNBOXED HAIRLINE DIVIDERS ═══ */}
-                <section className="border-t border-b border-neutral-200 py-6 space-y-6">
+                <section className="border-t border-b border-neutral-200 py-5 sm:py-6 space-y-5">
                     {/* Merchant Details */}
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="flex items-start gap-3">
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
                             <Store size={18} className="text-neutral-400 shrink-0 mt-0.5" />
-                            <div className="space-y-0.5">
+                            <div className="space-y-0.5 min-w-0">
                                 <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">
                                     Fulfilling Store
                                 </span>
-                                <h2 className="text-sm font-medium text-black">
+                                <h2 className="text-sm font-medium text-black truncate">
                                     {merchant?.business_name || 'Market Hub'}
                                 </h2>
-                                <p className="text-xs text-neutral-500 font-mono">
+                                <p className="text-xs text-neutral-500 font-mono truncate">
                                     {merchant?.address || 'Nairobi'}
                                 </p>
                             </div>
@@ -340,7 +347,7 @@ export default function OrderStatus() {
                         {merchant?.phone && (
                             <a
                                 href={`tel:${merchant.phone}`}
-                                className="text-xs font-mono uppercase tracking-widest text-neutral-600 hover:text-black border border-neutral-300 hover:border-black px-3 py-1.5 transition-colors shrink-0"
+                                className="w-full sm:w-auto text-center text-xs font-mono uppercase tracking-widest text-neutral-600 hover:text-black border border-neutral-300 hover:border-black px-4 py-2 transition-colors shrink-0 min-h-[38px] flex items-center justify-center"
                             >
                                 Contact Store
                             </a>
@@ -349,17 +356,17 @@ export default function OrderStatus() {
 
                     {/* Courier Details */}
                     {rider ? (
-                        <div className="border-t border-neutral-100 pt-5 flex items-start justify-between gap-4">
-                            <div className="flex items-start gap-3">
+                        <div className="border-t border-neutral-100 pt-5 flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                            <div className="flex items-start gap-3 min-w-0 flex-1">
                                 <Bike size={18} className="text-neutral-400 shrink-0 mt-0.5" />
-                                <div className="space-y-0.5">
+                                <div className="space-y-0.5 min-w-0">
                                     <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">
                                         Assigned Courier
                                     </span>
-                                    <h3 className="text-sm font-medium text-black">
+                                    <h3 className="text-sm font-medium text-black truncate">
                                         {rider.name || rider.full_name || 'Dispatch Courier'}
                                     </h3>
-                                    <p className="text-xs text-neutral-500 font-mono">
+                                    <p className="text-xs text-neutral-500 font-mono truncate">
                                         {rider.vehicle_type || 'Motorbike'} · {rider.phone || 'Fleet Dispatch'}
                                     </p>
                                 </div>
@@ -367,15 +374,15 @@ export default function OrderStatus() {
                             {rider.phone && (
                                 <a
                                     href={`tel:${rider.phone}`}
-                                    className="text-xs font-mono uppercase tracking-widest text-neutral-600 hover:text-black border border-neutral-300 hover:border-black px-3 py-1.5 transition-colors shrink-0"
+                                    className="w-full sm:w-auto text-center text-xs font-mono uppercase tracking-widest text-neutral-600 hover:text-black border border-neutral-300 hover:border-black px-4 py-2 transition-colors shrink-0 min-h-[38px] flex items-center justify-center"
                                 >
                                     Call Rider
                                 </a>
                             )}
                         </div>
                     ) : (
-                        <div className="border-t border-neutral-100 pt-5 flex items-center gap-3 text-neutral-400 font-mono text-xs">
-                            <Clock size={16} />
+                        <div className="border-t border-neutral-100 pt-5 flex items-center gap-3 text-neutral-400 font-mono text-xs leading-relaxed">
+                            <Clock size={16} className="shrink-0" />
                             <span>Courier dispatch assignment in progress once packing finishes.</span>
                         </div>
                     )}
@@ -383,15 +390,15 @@ export default function OrderStatus() {
                     {/* Delivery Destination */}
                     <div className="border-t border-neutral-100 pt-5 flex items-start gap-3">
                         <MapPin size={18} className="text-neutral-400 shrink-0 mt-0.5" />
-                        <div className="space-y-0.5">
+                        <div className="space-y-0.5 min-w-0 flex-1">
                             <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">
                                 Delivering To
                             </span>
-                            <p className="text-sm text-black">
+                            <p className="text-sm text-black break-words">
                                 {order.delivery_address || 'Address provided at checkout'}
                             </p>
                             {order.delivery_instructions && (
-                                <p className="text-xs text-neutral-500 font-mono pt-0.5">
+                                <p className="text-xs text-neutral-500 font-mono pt-0.5 break-words">
                                     Notes: {order.delivery_instructions}
                                 </p>
                             )}
@@ -401,27 +408,27 @@ export default function OrderStatus() {
 
                 {/* ═══ ORDER BASKET ITEMS: UNBOXED EDITORIAL LIST ═══ */}
                 <section className="space-y-4">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs font-mono">
+                        <h2 className="uppercase tracking-wider sm:tracking-widest text-neutral-400">
                             Package Line Items ({order.items?.length || 0})
                         </h2>
-                        <span className="text-xs font-mono text-neutral-500">
+                        <span className="text-neutral-500">
                             Payment: {order.payment_method || 'MPESA'} ({order.payment_status || 'CONFIRMED'})
                         </span>
                     </div>
 
                     <div className="border-t border-b border-neutral-200 divide-y divide-neutral-100">
                         {(order.items || []).map((item: any, i: number) => (
-                            <div key={i} className="py-3 flex items-center justify-between gap-3 text-xs font-mono">
-                                <div className="flex items-center gap-2.5 truncate">
-                                    <span className="font-bold text-neutral-400 min-w-[24px]">
+                            <div key={i} className="py-2.5 sm:py-3 flex items-center justify-between gap-3 text-xs font-mono">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
+                                    <span className="font-bold text-neutral-400 min-w-[22px] shrink-0">
                                         {item.quantity}x
                                     </span>
                                     <span className="text-black font-medium truncate">
                                         {item.name}
                                     </span>
                                 </div>
-                                <span className="text-neutral-500 shrink-0">
+                                <span className="text-neutral-600 shrink-0 whitespace-nowrap">
                                     KES {((Number(item.price) || 0) * (Number(item.quantity) || 1)).toLocaleString()}
                                 </span>
                             </div>
@@ -431,21 +438,21 @@ export default function OrderStatus() {
                     {/* Financial Breakdown */}
                     <div className="space-y-1.5 text-xs font-mono pt-2">
                         <div className="flex justify-between text-neutral-500">
-                            <span className="uppercase tracking-widest">Courier Delivery</span>
+                            <span className="uppercase tracking-wider sm:tracking-widest">Courier Delivery</span>
                             <span>KES {(order.delivery_fee || 150).toLocaleString()}</span>
                         </div>
-                        <div className="flex justify-between text-black font-bold pt-2 border-t border-neutral-100 text-sm">
-                            <span className="uppercase tracking-widest">Total Paid</span>
+                        <div className="flex justify-between text-black font-bold pt-2 border-t border-neutral-100 text-sm sm:text-base">
+                            <span className="uppercase tracking-wider sm:tracking-widest">Total Paid</span>
                             <span>KES {order.total?.toLocaleString()}</span>
                         </div>
                     </div>
                 </section>
 
-                {/* Footer Navigation */}
-                <div className="pt-6 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                {/* Footer Navigation: Mobile-friendly full width buttons */}
+                <div className="pt-4 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3">
                     <button
                         onClick={() => navigate('/stores')}
-                        className="w-full sm:w-auto px-6 py-3 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors"
+                        className="w-full sm:w-auto px-6 py-3.5 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors min-h-[44px]"
                     >
                         Browse Other Stores
                     </button>
@@ -453,7 +460,7 @@ export default function OrderStatus() {
                         href="https://wa.me/254700000000"
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full sm:w-auto px-6 py-3 bg-black hover:bg-neutral-800 text-white text-xs font-mono uppercase tracking-widest text-center transition-colors"
+                        className="w-full sm:w-auto px-6 py-3.5 bg-black hover:bg-neutral-800 text-white text-xs font-mono uppercase tracking-widest text-center transition-colors min-h-[44px] flex items-center justify-center"
                     >
                         Muncheez Live Help
                     </a>
