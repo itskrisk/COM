@@ -420,9 +420,39 @@ export const productService = {
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     const cleanUpdates: Record<string, any> = { ...updates };
 
+    // If category_id is a text name rather than a UUID, resolve it to a real UUID
+    let categoryName: string | null = null;
     if (cleanUpdates.category_id && !isUUID.test(cleanUpdates.category_id)) {
-      if (!cleanUpdates.category) cleanUpdates.category = cleanUpdates.category_id;
+      categoryName = cleanUpdates.category_id;
+      if (!cleanUpdates.category) cleanUpdates.category = categoryName;
       delete cleanUpdates.category_id;
+    } else if (!cleanUpdates.category_id && cleanUpdates.category && typeof cleanUpdates.category === 'string') {
+      categoryName = cleanUpdates.category;
+    }
+
+    // Resolve categoryName -> UUID if we have a merchant_id context
+    if (categoryName && cleanUpdates.merchant_id && !cleanUpdates.category_id) {
+      try {
+        const { data: existingCat } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('merchant_id', cleanUpdates.merchant_id)
+          .ilike('name', categoryName)
+          .maybeSingle();
+
+        if (existingCat?.id) {
+          cleanUpdates.category_id = existingCat.id;
+        } else {
+          const { data: newCat } = await supabase
+            .from('categories')
+            .insert({ merchant_id: cleanUpdates.merchant_id, name: categoryName, is_active: true })
+            .select('id')
+            .maybeSingle();
+          if (newCat?.id) cleanUpdates.category_id = newCat.id;
+        }
+      } catch (catErr) {
+        console.warn('[productService.updateProduct] Category resolve warning:', catErr);
+      }
     }
 
     if (cleanUpdates.price !== undefined) cleanUpdates.price = Number(cleanUpdates.price);
@@ -646,12 +676,11 @@ export const publicStoreService = {
   async getStores(options?: { lat?: number; lng?: number; radius?: number; category?: string; search?: string; featured?: boolean }) {
     const { lat, lng, radius = 10, category, search, featured } = options || {};
 
-    // Query approved and active merchants
+    // Query all approved merchants (closed stores still show with badge)
     let query = supabase
       .from('merchants')
       .select('*')
-      .eq('status', 'APPROVED')
-      .eq('is_active', true);
+      .eq('status', 'APPROVED');
 
     // Search by name or description
     if (search) {
@@ -740,7 +769,6 @@ export const publicStoreService = {
       .select('*')
       .eq('id', id)
       .eq('status', 'APPROVED')
-      .eq('is_active', true)
       .single();
 
     if (error || !merchant) {
@@ -798,8 +826,9 @@ export const publicStoreService = {
     let query = supabase
       .from('products')
       .select('*, category:categories(*)')
-      .eq('merchant_id', merchantId)
-      .eq('is_available', true);
+      .eq('merchant_id', merchantId);
+    // Note: we fetch ALL products (incl. out-of-stock/unavailable) so SupermarketStore
+    // can render them with OUT OF STOCK / UNAVAILABLE overlays instead of hiding them.
 
     // Filter by category (handles both UUIDs and category text names)
     if (category && category !== 'All' && category !== 'General') {
