@@ -35,6 +35,11 @@ BEGIN
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
 
+  DROP POLICY IF EXISTS "Public stores visible" ON public.merchants;
+  CREATE POLICY "Public stores visible"
+    ON public.merchants FOR SELECT
+    USING (status = 'APPROVED' AND is_active = true);
+
   DROP POLICY IF EXISTS "Admin manages merchants" ON public.merchants;
   CREATE POLICY "Admin manages merchants"
     ON public.merchants FOR ALL
@@ -117,7 +122,15 @@ BEGIN
     DROP POLICY IF EXISTS "Available products public" ON public.products;
     CREATE POLICY "Available products public"
       ON public.products FOR SELECT
-      USING (is_available = true);
+      USING (
+        is_available = true AND
+        EXISTS (
+          SELECT 1 FROM public.merchants
+          WHERE merchants.id = products.merchant_id
+            AND merchants.status = 'APPROVED'
+            AND merchants.is_active = true
+        )
+      );
   END IF;
 END $$;
 

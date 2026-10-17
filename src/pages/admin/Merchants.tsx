@@ -194,11 +194,17 @@ export default function Merchants() {
         try {
             if (type === 'delete') {
                 await adminSupabase.from('merchants').update({ status: 'DELETED', is_active: false }).eq('id', merchant.id);
-            } else {
-                const isActive = newStatus === 'APPROVED';
-                await adminSupabase.from('merchants').update({ status: newStatus, is_active: isActive }).eq('id', merchant.id);
-                const accountStatus = newStatus === 'APPROVED' ? 'active' : newStatus === 'SUSPENDED' ? 'suspended' : 'pending_approval';
-                await adminSupabase.from('profiles').update({ status: newStatus, account_status: accountStatus }).eq('id', merchant.id);
+            } else if (type === 'suspend') {
+                // Suspending a merchant revokes operational access and deactivates storefront
+                await adminSupabase.from('merchants').update({ status: 'SUSPENDED', is_active: false }).eq('id', merchant.id);
+                await adminSupabase.from('profiles').update({ status: 'SUSPENDED', account_status: 'suspended' }).eq('id', merchant.id);
+            } else if (type === 'review') {
+                await adminSupabase.from('merchants').update({ status: 'PENDING', is_active: false }).eq('id', merchant.id);
+                await adminSupabase.from('profiles').update({ status: 'PENDING', account_status: 'pending_approval' }).eq('id', merchant.id);
+            } else if (type === 'approve') {
+                // Admin approval grants dashboard access; it NEVER automatically publishes the store
+                await adminSupabase.from('merchants').update({ status: 'APPROVED' }).eq('id', merchant.id);
+                await adminSupabase.from('profiles').update({ status: 'APPROVED', account_status: 'active' }).eq('id', merchant.id);
             }
 
             // Re-fetch to update UI

@@ -165,9 +165,10 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
+            // Approval grants authorization to operate; it NEVER automatically publishes the store
             const updatePayload = activeTab === 'merchants'
-                ? { status: 'APPROVED', is_active: true }
-                : { status: 'APPROVED', is_online: true };
+                ? { status: 'APPROVED' }
+                : { status: 'APPROVED' };
 
             const { error } = await adminSupabase
                 .from(table)

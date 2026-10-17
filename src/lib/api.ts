@@ -141,6 +141,8 @@ export const customerApi = {
       .from('merchants')
       .select('*')
       .eq('id', id)
+      .eq('status', 'APPROVED')
+      .eq('is_active', true)
       .single();
     return { data, error: error?.message || null };
   },

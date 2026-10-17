@@ -4106,3 +4106,36 @@ Root cause analysis:
    - Added a manual "Check Status Now" action button for instant verification.
 4. **Build Verification**:
    - Confirmed full build verification with `npm run build` passed cleanly with zero errors.
+
+## Task 1 — Fix Merchant Approval and Public Store Visibility (2026-10-17T13:48:56.335Z)
+
+### Prompt / Goal
+- Resolve the critical bug where clicking "Approve" in the Admin Dashboard makes a store immediately visible on the public storefront, even before the merchant configures their store card, branding, or products.
+- Decouple merchant account authorization (dashboard access) from public store publication (customer storefront visibility).
+- Enforce that stores remain invisible publicly until the merchant has configured their store and explicitly published it.
+
+### Root Cause
+1. **Admin Approval Handlers**: In `src/pages/admin/Approvals.tsx` (`handleApprove`) and `src/pages/admin/Merchants.tsx` (`confirmedAction`), approving a merchant explicitly executed `update({ status: 'APPROVED', is_active: true })`. Forcing `is_active = true` during admin approval automatically exposed the store to customers prematurely.
+2. **Public Storefront Queries**: In `src/lib/supabaseService.ts` (`publicStoreService.getStores` & `getStore`), queries were filtering solely on `.eq('status', 'APPROVED')` without enforcing `.eq('is_active', true)`.
+3. **Merchant Dashboard Gate**: In `src/pages/merchant/Dashboard.tsx`, an early return `if (profile.status === 'APPROVED' || isApprovedLocally) return;` bypassed the initial store settings fetch, while unapproved checks were bouncing merchants to onboarding instead of `/pending-approval`. Additionally, `isStoreOpen` state was defaulting to `true`.
+
+### Actions Taken
+1. **Decoupled Admin Approval from Storefront Publication**:
+   - In `src/pages/admin/Approvals.tsx`: Changed merchant approval update payload to `{ status: 'APPROVED' }`. `is_active` remains untouched (`false` for newly approved merchants).
+   - In `src/pages/admin/Merchants.tsx`: Approval sets `{ status: 'APPROVED' }` without altering `is_active`. Suspension sets `{ status: 'SUSPENDED', is_active: false }`.
+2. **Enforced Publication Filter on Public Storefront**:
+   - In `src/lib/supabaseService.ts`: Added `.eq('is_active', true)` to `publicStoreService.getStores`, `getStore`, and `getStoreProducts`.
+   - In `src/lib/api.ts`: Added `.eq('status', 'APPROVED').eq('is_active', true)` to `customerApi.getStore`.
+3. **Merchant Dashboard Access Alignment**:
+   - In `src/pages/merchant/Dashboard.tsx`: Defaulted `isStoreOpen` to `false`. Fixed status routing so approved merchants load store settings and inventory, while pending merchants route to `/pending-approval` and rejected merchants route to `/rejected`.
+4. **Database RLS Policies**:
+   - In `supabase/migrations/009_onboarding_and_storefront_alignment.sql`: Explicitly reaffirmed `"Public stores visible"` on `merchants` with `USING (status = 'APPROVED' AND is_active = true)`, and tightened `"Available products public"` on `products` to require that the owning merchant is approved and active.
+
+### Live Verification Executed
+- Executed automated integration test against Supabase:
+  - Test 1: Merchant approved with `is_active = false` -> Public storefront query returned `[]` (invisible).
+  - Test 2: Merchant published store (`is_active = true`) -> Public storefront query returned the store.
+  - Test 3: Merchant unpublished store (`is_active = false`) -> Public storefront query returned `[]`.
+  - Test 4: Merchant rejected -> Public storefront query returned `[]`.
+  - Test 5: Restored merchant to `status = 'APPROVED', is_active = false`.
+- `npm run build` passed with 0 errors in 18.19s.

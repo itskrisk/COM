@@ -676,11 +676,12 @@ export const publicStoreService = {
   async getStores(options?: { lat?: number; lng?: number; radius?: number; category?: string; search?: string; featured?: boolean }) {
     const { lat, lng, radius = 10, category, search, featured } = options || {};
 
-    // Query all approved merchants (closed stores still show with badge)
+    // Query only approved AND published merchants (is_active: true)
     let query = supabase
       .from('merchants')
       .select('*')
-      .eq('status', 'APPROVED');
+      .eq('status', 'APPROVED')
+      .eq('is_active', true);
 
     // Search by name or description
     if (search) {
@@ -769,10 +770,11 @@ export const publicStoreService = {
       .select('*')
       .eq('id', id)
       .eq('status', 'APPROVED')
+      .eq('is_active', true)
       .single();
 
     if (error || !merchant) {
-      return { data: null, error: error?.message || 'Store not found' };
+      return { data: null, error: error?.message || 'Store not found or unpublished' };
     }
 
     // Get categories with products
@@ -812,15 +814,17 @@ export const publicStoreService = {
   async getStoreProducts(merchantId: string, options?: { category?: string; search?: string; featured?: boolean }) {
     const { category, search, featured } = options || {};
 
-    // Verify merchant exists
+    // Verify merchant is approved and published
     const { data: merchant, error: merchantError } = await supabase
       .from('merchants')
       .select('id, status, is_active')
       .eq('id', merchantId)
+      .eq('status', 'APPROVED')
+      .eq('is_active', true)
       .maybeSingle();
 
     if (merchantError || !merchant) {
-      return { data: null, error: 'Store not found or not available' };
+      return { data: null, error: 'Store not found or not published' };
     }
 
     let query = supabase

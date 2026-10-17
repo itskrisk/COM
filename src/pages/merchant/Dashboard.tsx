@@ -121,7 +121,7 @@ export default function MerchantDashboard() {
     const [storePhone, setStorePhone] = useState(profile?.phone || '');
     const [storeEmail, setStoreEmail] = useState(profile?.email || '');
     const [storeDescription, setStoreDescription] = useState('');
-    const [isStoreOpen, setIsStoreOpen] = useState(true);
+    const [isStoreOpen, setIsStoreOpen] = useState(false);
     const [packTimeMin, setPackTimeMin] = useState(20);
     const [deliveryRadiusKm, setDeliveryRadiusKm] = useState(7);
     const [lowStockThreshold, setLowStockThreshold] = useState(10);
@@ -137,40 +137,35 @@ export default function MerchantDashboard() {
     const [merchantId, setMerchantId] = useState<string | null>(null);
     const [nearbyCouriers, setNearbyCouriers] = useState(0);
 
-    // Approval gate check on mount
+    // Approval gate check on mount: verify merchant status before granting dashboard access
     useEffect(() => {
         if (!profile?.id) return;
         const isApprovedLocally = localStorage.getItem('muncheez_merchant_approved_' + profile.id) === 'true';
-        if (profile.status === 'APPROVED' || isApprovedLocally) {
-            return;
-        }
+
         merchantService.getMerchant(profile.id).then(({ data }) => {
-            if (!data || data.status !== 'APPROVED') {
-                navigate('/merchant/onboarding', { replace: true });
-            } else {
-                if (data.business_name) setStoreName(data.business_name);
-                if (data.phone) setStorePhone(data.phone);
-                if (data.address) {
-                    // Try to split address into branch + address if formatted as 'Branch - Address'
-                    const parts = data.address.split(' - ');
-                    if (parts.length >= 2) {
-                        setStoreBranch(parts[0].trim());
-                        setStoreAddress(parts.slice(1).join(' - ').trim());
-                    } else {
-                        setStoreAddress(data.address);
-                    }
-                }
-                if (data.description) setStoreDescription(data.description);
-                if (data.email) setStoreEmail(data.email);
-                if (data.mpesa_till) setMpesaTill(data.mpesa_till);
-                if (data.is_active !== undefined) setIsStoreOpen(data.is_active);
-                if (data.operating_hours?.hours) setOperatingHours(data.operating_hours.hours);
-                // Load store cover image
-                setStoreCoverUrl(data.cover_url || data.logo_url || data.branding?.bannerUrl || '');
+            const status = data?.status || profile.status;
+            if (status === 'APPROVED' || isApprovedLocally) {
+                // Approved: merchant has full dashboard access to configure store
+                return;
             }
+            if (status === 'REJECTED') {
+                navigate('/rejected', { replace: true });
+                return;
+            }
+            if (status === 'SUSPENDED') {
+                navigate('/suspended', { replace: true });
+                return;
+            }
+            if (data?.onboarding_completed || status === 'PENDING') {
+                navigate('/pending-approval', { replace: true });
+                return;
+            }
+            navigate('/merchant/onboarding', { replace: true });
         }).catch(() => {
             if (profile.status === 'PENDING') {
-                navigate('/merchant/onboarding', { replace: true });
+                navigate('/pending-approval', { replace: true });
+            } else if (profile.status === 'REJECTED') {
+                navigate('/rejected', { replace: true });
             }
         });
     }, [profile?.id, profile?.status, navigate]);
