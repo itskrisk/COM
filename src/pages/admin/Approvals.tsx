@@ -96,10 +96,19 @@ export default function Approvals() {
         setLoading(true);
         try {
             if (activeTab === 'merchants') {
-                const { data, error } = await supabase
+                let { data, error } = await supabase
                     .from('merchants')
-                    .select('*, profile:profiles!id(full_name, phone, email)')
+                    .select('*, profile:profiles!id(full_name, phone)')
                     .order('created_at', { ascending: false });
+
+                if (error || !data) {
+                    console.warn('Approvals: merchants relation query notice, falling back to direct select:', error);
+                    const directRes = await supabase
+                        .from('merchants')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    data = directRes.data;
+                }
 
                 if (data) {
                     let filtered = data;
@@ -115,10 +124,19 @@ export default function Approvals() {
                     setMerchants(filtered as Merchant[]);
                 }
             } else {
-                const { data, error } = await supabase
+                let { data, error } = await supabase
                     .from('riders')
-                    .select('*, profile:profiles!id(full_name, phone, email)')
+                    .select('*, profile:profiles!id(full_name, phone)')
                     .order('created_at', { ascending: false });
+
+                if (error || !data) {
+                    console.warn('Approvals: riders relation query notice, falling back to direct select:', error);
+                    const directRes = await supabase
+                        .from('riders')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    data = directRes.data;
+                }
 
                 if (data) {
                     let filtered = data;

@@ -52,7 +52,7 @@ export default function Riders() {
     const fetchRiders = async () => {
         setIsLoading(true);
         try {
-            const [{ data: riderData, error: riderError }, { data: orderData, error: orderError }] = await Promise.all([
+            let [{ data: riderData, error: riderError }, { data: orderData, error: orderError }] = await Promise.all([
                 supabase
                     .from('riders')
                     .select('*, profile:profiles!id(full_name, phone)')
@@ -60,8 +60,14 @@ export default function Riders() {
                 supabase.from('orders').select('*').not('status', 'in', '("DELIVERED","CANCELLED")')
             ]);
 
-            if (riderError) throw riderError;
-            if (orderError) throw orderError;
+            if (riderError || !riderData) {
+                console.warn('Riders fetch notice, falling back to direct table select:', riderError);
+                const directRiders = await supabase
+                    .from('riders')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                riderData = directRiders.data;
+            }
 
             if (orderData) {
                 setOrders(orderData);

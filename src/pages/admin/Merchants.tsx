@@ -61,12 +61,19 @@ export default function Merchants() {
     const fetchMerchants = async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
+            let { data, error } = await supabase
                 .from('merchants')
                 .select('*, owner:profiles!id(full_name, phone)')
                 .order('created_at', { ascending: false });
 
-            if (error) throw error;
+            if (error || !data) {
+                console.warn('Merchants fetch notice, falling back to direct table select:', error);
+                const directRes = await supabase
+                    .from('merchants')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+                data = directRes.data;
+            }
 
             if (data) {
                 const mappedMerchants: Merchant[] = data.map(m => {

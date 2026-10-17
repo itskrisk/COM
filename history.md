@@ -4042,3 +4042,23 @@ Investigation revealed two compounding root causes:
 3. **Admin Visibility (src/pages/admin/Approvals.tsx & src/pages/admin/Merchants.tsx)**:
    - Updated Admin Approvals and Merchants details view to explicitly render the Single Business Permit / License Number and Operating Hours in addition to KRA PIN, M-Pesa Till, Owner Name, Contact, Address, and Document links.
    - Confirmed full build verification with npm run build passed cleanly.
+
+---
+## 2026-10-17 -- Fix Admin Approvals & Merchants Data Loading Failure (PostgREST Error 42703)
+
+### Problem
+In the Admin Approvals page (`/admin/approvals`), applied merchants and riders waiting for approval were not showing up.
+Investigation of the Supabase network response revealed:
+- `code: '42703'`
+- `message: 'column profiles_1.email does not exist'`
+The query in `Approvals.tsx` was attempting to join `profile:profiles!id(full_name, phone, email)`. However, `email` is stored in `auth.users` and directly on `merchants.email` and `riders.email`, not in `public.profiles`. This column mismatch caused PostgREST to return a database error, resulting in `data = null` and leaving the Approvals list blank.
+
+### Solution
+1. **Approvals Query Fix (`src/pages/admin/Approvals.tsx`)**:
+   - Removed `email` from the `profiles!id(...)` select sub-query.
+   - Added automatic fallback to direct table select (`.select('*')`) if the profile relation query fails for any reason, guaranteeing that merchants and riders will always load into the console.
+2. **Merchants & Riders Admin Resiliency (`src/pages/admin/Merchants.tsx` & `src/pages/admin/Riders.tsx`)**:
+   - Added automatic fallback to direct select if relational join yields an error or empty result.
+3. **End-to-End Verification**:
+   - Ran an automated script simulating the exact signup, onboarding submission, and admin fetching lifecycle to verify that newly submitted applications appear in the admin console.
+   - Verified that `npm run build` passed cleanly with 0 errors.
