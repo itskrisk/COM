@@ -111,7 +111,13 @@ const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
   // Customers NEVER undergo onboarding. Only merchants and couriers can be pending_onboarding.
   let accountStatus: string = 'active';
   if (isPartner) {
-    if (merchantData?.onboarding_completed || riderData?.onboarding_completed) {
+    if (merchantData?.status === 'APPROVED' || riderData?.status === 'APPROVED' || profileData?.account_status === 'active') {
+      accountStatus = 'active';
+    } else if (merchantData?.status === 'REJECTED' || riderData?.status === 'REJECTED' || profileData?.account_status === 'rejected') {
+      accountStatus = 'rejected';
+    } else if (merchantData?.status === 'SUSPENDED' || riderData?.status === 'SUSPENDED' || profileData?.account_status === 'suspended') {
+      accountStatus = 'suspended';
+    } else if (merchantData?.onboarding_completed || riderData?.onboarding_completed) {
       accountStatus = profileData?.account_status || 'pending_approval';
     } else {
       accountStatus = profileData?.account_status || (authUser.email_confirmed_at ? 'pending_onboarding' : 'pending_email_verification');

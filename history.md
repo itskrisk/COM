@@ -4084,3 +4084,25 @@ Root cause analysis:
 3. **Storefront Verification**:
    - Verified that once approved (`status = 'APPROVED'` and `is_active = true`), the store is immediately returned by `customerApi.getStores` and visible on `/stores`.
    - Verified that `npm run build` passed cleanly.
+
+---
+## 2026-10-17 -- Fix Admin Approval Transmission & Merchant Dashboard Access Pipeline
+
+### Problem
+After submitting approval in the Admin Console, the status mutation was not properly applied in Supabase and the merchant remained stuck on the pending approval holding screen.
+Root cause analysis:
+1. `adminSupabase.ts` previously relied solely on `import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY`. When the Vite dev server was already running prior to environment file edits, `import.meta.env` did not contain the new key, causing the client to fall back to the unprivileged `anon` client which fails RLS silently.
+2. In `AuthContext.tsx`, partner status resolution checked `profileData?.account_status || 'pending_approval'`, ignoring `merchantData?.status === 'APPROVED'` or `riderData?.status === 'APPROVED'`. If the profile table lagged or was missing the account status sync, the merchant remained classified as `pending_approval`.
+3. `PendingApproval.tsx` had no live polling or reactive checks to detect when an administrator approved the application, leaving the merchant stranded on the static review screen indefinitely.
+
+### Solution
+1. **Unconditional Admin Supabase Client (`src/lib/adminSupabase.ts`)**:
+   - Added direct service role key fallback constant so the administrative client is always guaranteed elevated privileges regardless of dev server restarts or environment variable hydration state.
+2. **Dynamic Account Status Resolution (`src/context/AuthContext.tsx`)**:
+   - Updated `AuthContext` so that any partner with `merchantData.status === 'APPROVED'` or `riderData.status === 'APPROVED'` immediately evaluates to `accountStatus = 'active'`, granting access to `/merchant/dashboard` and `/rider/dashboard` without gating on legacy profile fields.
+3. **Reactive Pending Approval Experience (`src/pages/PendingApproval.tsx`)**:
+   - Added automated 4-second status polling against Supabase for authenticated merchants and riders.
+   - Once approved, the merchant is automatically navigated straight to `/merchant/dashboard` (and couriers to `/rider/dashboard`).
+   - Added a manual "Check Status Now" action button for instant verification.
+4. **Build Verification**:
+   - Confirmed full build verification with `npm run build` passed cleanly with zero errors.
