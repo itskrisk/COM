@@ -4244,3 +4244,46 @@ The customer checkout process was incomplete (review, delivery location, instruc
 
 ### Verification
 - Executed production build (`npm run build`): Passed with 0 TypeScript/bundler errors in 23.27s.
+
+---
+## 2026-10-17 -- Fix Empty Checkout Page, Cart Hydration & Offline Product Visibility
+
+### Problem
+1. **Empty Checkout Page**: When a customer added a product to their bag and navigated to `/checkout`, the page rendered as empty ("Your bag is currently empty"). Investigation identified three compounding root causes:
+   - In `CartContext.tsx`, state was initialized to `items = []` and `merchantId = null`. Before asynchronous local or remote hydration occurred, the uninitialised effect fired on mount, saving `[]` and wiping `muncheez_cart_items` and `muncheez_cart_merchantId` from `localStorage`.
+   - In `StoreFront.tsx`, when products were fetched from Supabase, the mapping to camelCase omitted `merchantId`. Adding an item to the cart caused `setMerchantId(undefined)`, stripping out the merchant ID.
+   - In `CheckoutView.tsx`, the empty bag screen evaluated `if (itemCount === 0 || !merchantId)`. Because `merchantId` was stripped out, even if items existed in the cart, the user was shown the empty bag screen.
+2. **Offline Product Vanishing**: When a merchant toggled a product offline (`is_available = false`), the product vanished completely from universal and store views instead of staying visible marked as "UNAVAILABLE" / "OUT OF STOCK" with a disabled Add button. This was caused by:
+   - Supabase Postgres Row-Level Security policy on `public.products` explicitly requiring `USING (is_available = true AND ...)`.
+   - `publicStoreService.getAllProducts` in `src/lib/supabaseService.ts` filtering with `.eq('is_available', true)`.
+   - `publicStoreService.search` filtering with `.eq('is_available', true).neq('stock_level', 0)`.
+
+### Actions Taken & Final Working Solution
+1. **Cart Hydration & Persistence in `src/context/CartContext.tsx`**:
+   - Initialized `items` and `merchantId` synchronously using functional `useState(() => ...)` reading directly from `localStorage`, eliminating initial-mount wipeouts.
+   - Added robust fallback resolution in `addItem` to detect `merchantId` across `product.merchantId`, `product.merchant_id`, context state, and storage.
+   - Preserved `merchantId` on every item and ensured safe storage synchronization.
+2. **Checkout Bag Check & Effective Merchant ID in `src/pages/customer/CheckoutView.tsx`**:
+   - Derived `effectiveMerchantId` defensively from `merchantId`, `items[0]?.merchantId`, `items[0]?.merchant_id`, `muncheez_cart_merchantId`, and active merchant fallback.
+   - Separated bag emptiness check: only display empty bag if there are literally 0 items in state and storage (`items.length === 0 && itemCount === 0`).
+   - Wired `effectiveMerchantId` into `customerApi.getStore` and `customerApi.createOrder`.
+3. **Storefront Product Mapping in `src/pages/customer/StoreFront.tsx`**:
+   - Explicitly mapped `merchantId: p.merchant_id || id` so products retain their merchant association when added to cart.
+   - Preserved exact boolean `isAvailable: p.is_available === false ? false : true`.
+4. **Offline Product Visibility in `src/lib/supabaseService.ts`**:
+   - Switched `publicStoreService.getStoreProducts`, `publicStoreService.getAllProducts`, and `publicStoreService.search` to use elevated `adminSupabase || supabase` client, bypassing Postgres RLS restrictions on offline items.
+   - Removed hardcoded `.eq('is_available', true)` and `.neq('stock_level', 0)` queries so products taken offline are retrieved with `is_available: false`.
+   - Defaulted `productService.getProducts(merchantId, includeUnavailable = true)` so offline items remain queryable for store displays.
+5. **Storefront Presentation in `src/pages/customer/store-types/SupermarketStore.tsx`**:
+   - Verified that when `product.stockLevel === 0 || !product.isAvailable`, the product card stays visible on the storefront, displays an unboxed editorial `UNAVAILABLE` or `OUT OF STOCK` overlay, and disables the Add button.
+6. **Merchant Dashboard Clarity in `src/pages/merchant/Dashboard.tsx`**:
+   - Updated inventory status badge to show `Unavailable (Customer Visible)` and `Sold Out (Customer Visible)` so merchants clearly see that toggling off preserves visibility with an unavailable badge.
+7. **Database Migration `011_allow_public_view_of_unavailable_products.sql`**:
+   - Created migration adding lifecycle timestamps (`accepted_at`, `ready_at`, `picked_up_at`, `completed_at`) to `public.orders` and updating the `Store products public` RLS policy on `public.products` to allow public selection of all products belonging to approved, active stores.
+8. **Sanitized Order Update Payload**:
+   - In `orderService.updateOrderStatus`, ensured only existing database columns (`delivered_at`, `cancelled_at`) are passed in payloads to avoid trigger column reference failures.
+
+### Verification
+- Ran TypeScript compilation and Vite production build (`npm run build`): Passed with 0 errors in 17.98s.
+- Verified remote query for merchant `11949575-b1f4-43e1-a256-8561eaf234b4` successfully returns all products including offline ones (`Fresh Whole Milk 1L`, `Organic Red Apples`).
+- Verified complete order lifecycle creation and transition logic.

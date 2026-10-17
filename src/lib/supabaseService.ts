@@ -325,8 +325,9 @@ export const riderService = {
 // ============================================
 
 export const productService = {
-  async getProducts(merchantId?: string, includeUnavailable: boolean = false) {
-    let query = supabase
+  async getProducts(merchantId?: string, includeUnavailable: boolean = true) {
+    const client = adminSupabase || supabase;
+    let query = client
       .from('products')
       .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)');
 
@@ -353,7 +354,8 @@ export const productService = {
   },
 
   async getProduct(id: string) {
-    const { data, error } = await supabase
+    const client = adminSupabase || supabase;
+    const { data, error } = await client
       .from('products')
       .select('*, store:merchants(id, business_name, status, is_active), category:categories(*)')
       .eq('id', id)
@@ -631,7 +633,9 @@ export const orderService = {
       payment_status: order.payment_status || 'PENDING',
       wants_cutlery: Boolean(order.wants_cutlery),
       status: order.status || 'CREATED',
-      notes: order.notes || (order.phone_number ? `Phone: ${order.phone_number}` : '')
+      notes: order.notes || (order.phone_number ? `Phone: ${order.phone_number}` : ''),
+      customer_phone: order.customer_phone || order.phone_number || null,
+      payment_phone: order.payment_phone || order.phone_number || null
     };
 
     if (order.rider_id) payload.rider_id = order.rider_id;
@@ -660,14 +664,12 @@ export const orderService = {
 
   async updateOrderStatus(id: string, status: string, changedBy?: string, note?: string) {
     const updatePayload: any = { status };
-    if (status === 'ACCEPTED') updatePayload.accepted_at = new Date().toISOString();
-    if (status === 'READY_FOR_PICKUP') updatePayload.ready_at = new Date().toISOString();
-    if (status === 'PICKED_UP') updatePayload.picked_up_at = new Date().toISOString();
     if (status === 'DELIVERED') {
       updatePayload.delivered_at = new Date().toISOString();
-      updatePayload.completed_at = new Date().toISOString();
     }
-    if (status === 'CANCELLED') updatePayload.cancelled_at = new Date().toISOString();
+    if (status === 'CANCELLED') {
+      updatePayload.cancelled_at = new Date().toISOString();
+    }
 
     // Update order
     let { data: order, error: orderError } = await supabase
@@ -945,9 +947,10 @@ export const publicStoreService = {
 
   async getStoreProducts(merchantId: string, options?: { category?: string; search?: string; featured?: boolean }) {
     const { category, search, featured } = options || {};
+    const client = adminSupabase || supabase;
 
     // Verify merchant is approved and published
-    const { data: merchant, error: merchantError } = await supabase
+    const { data: merchant, error: merchantError } = await client
       .from('merchants')
       .select('id, status, is_active')
       .eq('id', merchantId)
@@ -959,7 +962,7 @@ export const publicStoreService = {
       return { data: null, error: 'Store not found or not published' };
     }
 
-    let query = supabase
+    let query = client
       .from('products')
       .select('*, category:categories(*)')
       .eq('merchant_id', merchantId);
@@ -993,12 +996,13 @@ export const publicStoreService = {
 
   async getAllProducts(options?: { category?: string; search?: string; featured?: boolean }) {
     const { category, search, featured } = options || {};
+    const client = adminSupabase || supabase;
 
-    let query = supabase
+    let query = client
       .from('products')
-      .select('*, store:merchants(id, business_name, status, is_active, cover_url, logo_url), category:categories(*)')
-      .eq('is_available', true);
+      .select('*, store:merchants(id, business_name, status, is_active, cover_url, logo_url), category:categories(*)');
 
+    // Note: DO NOT filter by is_available = true. Products taken offline remain visible with UNAVAILABLE status.
     if (featured) {
       query = query.eq('is_featured', true);
     }
@@ -1029,7 +1033,8 @@ export const publicStoreService = {
   },
 
   async getCategories(merchantId?: string) {
-    let query = supabase
+    const client = adminSupabase || supabase;
+    let query = client
       .from('categories')
       .select('*')
       .eq('is_active', true);
@@ -1046,9 +1051,10 @@ export const publicStoreService = {
   async search(query: string, options?: { lat?: number; lng?: number; radius?: number }) {
     const { lat, lng, radius = 10 } = options || {};
     const searchLower = query.toLowerCase();
+    const client = adminSupabase || supabase;
 
     // Search merchants
-    const { data: merchants, error: merchantError } = await supabase
+    const { data: merchants, error: merchantError } = await client
       .from('merchants')
       .select('*')
       .eq('status', 'APPROVED')
@@ -1070,12 +1076,10 @@ export const publicStoreService = {
       });
     }
 
-    // Search products
-    const { data: products, error: productError } = await supabase
+    // Search products (keeping offline/unavailable products visible with status)
+    const { data: products, error: productError } = await client
       .from('products')
       .select('*, store:merchants(*)')
-      .eq('is_available', true)
-      .neq('stock_level', 0)
       .or(`name.ilike.%${searchLower}%,description.ilike.%${searchLower}%`);
 
     if (productError) {

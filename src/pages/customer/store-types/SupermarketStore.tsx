@@ -218,14 +218,14 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                         {/* Out of Stock / Unavailable Overlay */}
                         {/* Out of Stock / Unavailable / Low Stock Overlay */}
                         {(product.stockLevel === 0 || !product.isAvailable) ? (
-                            <div className="absolute inset-0 bg-white/90 backdrop-blur-[2px] flex items-center justify-center z-20 rounded-[2rem]">
-                                <span className="bg-red-500 text-white text-[8px] font-black px-3 py-1 rounded-full shadow-lg">
+                            <div className="absolute inset-0 bg-white/90 backdrop-blur-[2px] flex items-center justify-center z-20">
+                                <span className="bg-neutral-900 text-white text-[9px] font-mono tracking-widest uppercase px-3 py-1 shadow-md">
                                     {product.stockLevel === 0 ? 'OUT OF STOCK' : 'UNAVAILABLE'}
                                 </span>
                             </div>
                         ) : (product.stockLevel > 0 && product.stockLevel <= (merchant.customSettings?.lowStockThreshold || 5)) && (
                             <div className="absolute top-3 left-3 z-20 mt-6">
-                                <span className="bg-orange-500 text-white text-[8px] font-black px-2.5 py-1 rounded-full shadow-lg">LOW STOCK</span>
+                                <span className="bg-amber-600 text-white text-[8px] font-mono tracking-wider uppercase px-2 py-0.5 shadow-sm">LOW STOCK</span>
                             </div>
                         )}
                     </div>

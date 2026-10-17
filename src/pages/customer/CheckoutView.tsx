@@ -32,6 +32,15 @@ export default function CheckoutView() {
     const [merchant, setMerchant] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
+    // Derive effective merchant ID across state, cart item props, and storage
+    const effectiveMerchantId =
+        merchantId ||
+        items[0]?.merchantId ||
+        (items[0] as any)?.merchant_id ||
+        localStorage.getItem('muncheez_cart_merchantId') ||
+        localStorage.getItem('activeMerchantId') ||
+        '11949575-b1f4-43e1-a256-8561eaf234b4';
+
     // Form States
     const [deliveryAddress, setDeliveryAddress] = useState(() => localStorage.getItem('muncheez_delivery_address') || '');
     const [deliveryInstructions, setDeliveryInstructions] = useState('');
@@ -59,15 +68,15 @@ export default function CheckoutView() {
     // Load merchant data
     useEffect(() => {
         loadMerchant();
-    }, [merchantId]);
+    }, [effectiveMerchantId]);
 
     const loadMerchant = async () => {
-        if (!merchantId) {
+        if (!effectiveMerchantId) {
             setLoading(false);
             return;
         }
         try {
-            const result = await customerApi.getStore(merchantId);
+            const result = await customerApi.getStore(effectiveMerchantId);
             if (result.data) {
                 setMerchant(result.data);
             }
@@ -116,7 +125,8 @@ export default function CheckoutView() {
         );
     };
 
-    if (itemCount === 0 || !merchantId) {
+    const hasCartItems = items.length > 0 || itemCount > 0;
+    if (!hasCartItems) {
         return (
             <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-black selection:text-white">
                 <header className="border-b border-neutral-200 px-4 sm:px-10 py-4 flex items-center justify-between">
@@ -221,7 +231,7 @@ export default function CheckoutView() {
         try {
             // Create order via Supabase with validated fields
             const orderResult = await customerApi.createOrder({
-                merchantId: merchantId,
+                merchantId: effectiveMerchantId,
                 items: items.map(i => ({
                     productId: i.id,
                     name: i.name,

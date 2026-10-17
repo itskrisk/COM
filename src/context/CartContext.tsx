@@ -24,8 +24,28 @@ interface CartContextData {
 const CartContext = createContext<CartContextData | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [items, setItems] = useState<CartItem[]>([]);
-  const [merchantId, setMerchantId] = useState<string | null>(null);
+  // Synchronously initialize from localStorage so state never starts empty and wipes stored items
+  const [items, setItems] = useState<CartItem[]>(() => {
+    try {
+      const saved = localStorage.getItem('muncheez_cart_items');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const [merchantId, setMerchantId] = useState<string | null>(() => {
+    try {
+      return (
+        localStorage.getItem('muncheez_cart_merchantId') ||
+        localStorage.getItem('activeMerchantId') ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  });
+
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
@@ -34,42 +54,54 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     const loadCart = async () => {
       if (!user) {
         // Load from localStorage for anonymous users
-        const saved = localStorage.getItem('muncheez_cart_items');
-        const savedMerchant = localStorage.getItem('muncheez_cart_merchantId');
-        if (saved) setItems(JSON.parse(saved));
-        if (savedMerchant) setMerchantId(savedMerchant);
+        try {
+          const saved = localStorage.getItem('muncheez_cart_items');
+          const savedMerchant = localStorage.getItem('muncheez_cart_merchantId');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
+          }
+          if (savedMerchant) setMerchantId(savedMerchant);
+        } catch (e) {
+          console.error('Error reading localStorage cart:', e);
+        }
         return;
       }
 
       setLoading(true);
       try {
         const cartResult = await cartApi.getCart();
-        if (cartResult.data) {
+        if (cartResult.data && cartResult.data.items && cartResult.data.items.length > 0) {
           // Map CartItemData to CartItem
-          const mappedItems: CartItem[] = (cartResult.data.items || []).map((item: any) => ({
-            id: item.productId,
-            merchantId: item.merchantId,
+          const mappedItems: CartItem[] = cartResult.data.items.map((item: any) => ({
+            id: item.productId || item.id,
+            merchantId: item.merchantId || item.merchant_id,
             name: item.name,
             description: item.description,
-            price: item.price,
-            imageUrl: item.image,
-            isAvailable: item.isAvailable,
+            price: Number(item.price) || 0,
+            imageUrl: item.image || item.imageUrl,
+            isAvailable: item.isAvailable ?? true,
             categoryId: item.categoryId,
             tags: item.tags,
             preparationTimeMin: item.preparationTimeMin,
             stockLevel: item.stockLevel,
             vatRate: item.vatRate,
-            quantity: item.quantity,
+            quantity: item.quantity || 1,
             options: item.options,
-            image: item.image
+            image: item.image || item.imageUrl
           }));
           setItems(mappedItems);
-          setMerchantId(cartResult.data.merchantId || null);
+          if (cartResult.data.merchantId) {
+            setMerchantId(cartResult.data.merchantId);
+          }
         } else {
-          // No cart in Supabase, check localStorage
+          // No cart in Supabase, preserve existing localStorage
           const saved = localStorage.getItem('muncheez_cart_items');
           const savedMerchant = localStorage.getItem('muncheez_cart_merchantId');
-          if (saved) setItems(JSON.parse(saved));
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) setItems(parsed);
+          }
           if (savedMerchant) setMerchantId(savedMerchant);
         }
       } catch (error) {
@@ -97,7 +129,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
               quantity: item.quantity,
               price: item.price,
               name: item.name,
-              image: item.imageUrl,
+              image: item.imageUrl || item.image,
               merchantId: item.merchantId,
             })),
             merchantId: merchantId,
@@ -108,32 +140,58 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       }
     };
 
-    // Debounce save
     const timeout = setTimeout(saveCart, 500);
     return () => clearTimeout(timeout);
   }, [items, merchantId, user, loading]);
 
-  // Persist to localStorage as fallback
+  // Persist to localStorage safely
   useEffect(() => {
-    localStorage.setItem('muncheez_cart_items', JSON.stringify(items));
+    try {
+      localStorage.setItem('muncheez_cart_items', JSON.stringify(items));
+    } catch (e) {
+      console.error('Failed to persist cart items to localStorage:', e);
+    }
   }, [items]);
 
   useEffect(() => {
-    if (merchantId) localStorage.setItem('muncheez_cart_merchantId', merchantId);
-    else localStorage.removeItem('muncheez_cart_merchantId');
-  }, [merchantId]);
+    try {
+      if (merchantId) {
+        localStorage.setItem('muncheez_cart_merchantId', merchantId);
+      } else if (items.length === 0) {
+        localStorage.removeItem('muncheez_cart_merchantId');
+      }
+    } catch (e) {
+      console.error('Failed to persist cart merchantId to localStorage:', e);
+    }
+  }, [merchantId, items.length]);
 
   const addItem = (product: Product, quantity: number = 1) => {
+    // Resolve merchant ID across camelCase and snake_case properties
+    const resolvedMerchantId =
+      product.merchantId ||
+      (product as any).merchant_id ||
+      merchantId ||
+      localStorage.getItem('muncheez_cart_merchantId') ||
+      localStorage.getItem('activeMerchantId') ||
+      null;
+
     // Enforce single-merchant cart (Nairobi operational reality)
-    if (merchantId && merchantId !== product.merchantId) {
+    if (merchantId && resolvedMerchantId && merchantId !== resolvedMerchantId) {
       if (window.confirm("Adding this item will clear your cart from the previous store. Proceed?")) {
-        setItems([{ ...product, quantity }]);
-        setMerchantId(product.merchantId);
+        setItems([{ ...product, merchantId: resolvedMerchantId, quantity }]);
+        setMerchantId(resolvedMerchantId);
+        if (resolvedMerchantId) {
+          localStorage.setItem('muncheez_cart_merchantId', resolvedMerchantId);
+        }
       }
       return;
     }
 
-    setMerchantId(product.merchantId);
+    if (resolvedMerchantId) {
+      setMerchantId(resolvedMerchantId);
+      localStorage.setItem('muncheez_cart_merchantId', resolvedMerchantId);
+    }
+
     setItems(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -144,7 +202,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         }
         return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
       }
-      return [...prev, { ...product, quantity }];
+      return [...prev, { ...product, merchantId: resolvedMerchantId || undefined, quantity }];
     });
   };
 

@@ -33,6 +33,7 @@ export default function StoreFront() {
                     const resolvedCategory = p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || (p.metadata?.tags && p.metadata.tags[0]) || 'Food Cupboard';
                     return {
                         id: p.id,
+                        merchantId: p.merchant_id || id,
                         name: p.name,
                         description: p.description || '',
                         categoryId: resolvedCategory,
@@ -42,7 +43,7 @@ export default function StoreFront() {
                         promo: Boolean(p.is_featured),
                         isFeatured: Boolean(p.is_featured),
                         stockLevel: p.stock_level ?? 50,
-                        isAvailable: p.is_available ?? true,
+                        isAvailable: p.is_available === false ? false : true,
                         imageUrl: p.image_url || p.imageUrl || '',
                         unit: p.unit || p.metadata?.unit || 'unit',
                         sku: p.sku || `SKU-${p.id?.slice(-4)?.toUpperCase() || '0000'}`,

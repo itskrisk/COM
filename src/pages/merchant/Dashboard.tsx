@@ -1187,9 +1187,13 @@ export default function MerchantDashboard() {
                                                     <span className={`inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border ${
                                                         prod.isAvailable && prod.stockLevel > 0
                                                             ? 'border-emerald-200 text-emerald-800 bg-emerald-50'
-                                                            : 'border-neutral-200 text-neutral-400 bg-neutral-100'
+                                                            : 'border-amber-200 text-amber-800 bg-amber-50'
                                                     }`}>
-                                                        {prod.isAvailable && prod.stockLevel > 0 ? 'Live on Storefront' : 'Hidden / Sold Out'}
+                                                        {prod.isAvailable && prod.stockLevel > 0
+                                                            ? 'Live on Storefront'
+                                                            : !prod.isAvailable
+                                                            ? 'Unavailable (Customer Visible)'
+                                                            : 'Sold Out (Customer Visible)'}
                                                     </span>
                                                 </td>
                                                 <td className="py-3 px-4 text-right">
