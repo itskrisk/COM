@@ -3833,3 +3833,76 @@ The following must be done in external dashboards (cannot be automated from code
 - **PowerShell && operator**: Not valid in older PS versions. Replaced with ; separator.
 - **filter-branch PowerShell syntax**: --tree-filter requires bash syntax (sed), not PowerShell cmdlets.
 
+
+
+---
+
+## Task: Onboarding, Merchant Dashboard, Product Visibility, and Mobile Cart Fixes
+
+### Prompt Summary
+Review the codebase, identify root causes, and implement fixes across 7 areas:
+1. Onboarding and Email Verification (starts strictly post-verification; Rider & Merchant roles only; customer role protected).
+2. Merchant and Rider Onboarding (separate requirements, KRA PINs, registration numbers, PDF/image compliance uploads, Supabase storage, admin approval).
+3. Merchant Store Settings and Store Cards (cover image upload setting, Supabase storage persistence, live store cards showing uploaded image, hours, delivery speed).
+4. Product Upload and Universal Visibility (investigate and fix invisible/disappearing products, UUID category resolution, stock levels, universal visibility in dashboard & storefronts).
+5. Merchant Dashboard Cleanup (clean simple language for tabs and actions, feedback on every action).
+6. Mobile-Responsive Cart (fix cart on mobile, eliminate horizontal overflow, accessible controls, header cart trigger, checkout navigation, adhere to unboxed design rules).
+7. Verification and Documentation (trace end-to-end, test build, update history.md).
+
+### Root Causes Identified
+1. **Product Upload Disappearing & Invisibility**:
+   - In `Dashboard.tsx`, `productService.createProduct` was invoked with `category_id: formCategory` where `formCategory` was human-readable text (e.g. `'Fruits & Vegetables'`).
+   - The Postgres `products.category_id` column is type `UUID REFERENCES categories(id)`.
+   - PostgREST failed with error code `22P02 invalid input syntax for type uuid: 'Fruits & Vegetables'`. The insert failed silently inside `.catch(console.error)`.
+   - The product only existed temporarily as an in-memory `sm-*` object in React state and disappeared immediately upon refresh.
+   - On retrieval, `productService.getProducts(mId)` defaulted to `is_available = true` and didn't include draft or out-of-stock items, and mapped `category: p.category_id`, causing category filter mismatches.
+2. **Store Settings Persistence Failures**:
+   - `Dashboard.tsx` passed `bulk_limit` (database column is `bulk_purchase_limit`) and plain string `operating_hours` (database column is `JSONB`), triggering schema rejection in Supabase.
+3. **Admin Console Approvals Document Links**:
+   - When onboarding saved document metadata objects (`{ url, filename }`), `Approvals.tsx` mapped them as `<a href={url}>`, rendering `href="[object Object]"`.
+   - Direct columns `business_permit_url`, `kra_pin_url`, `id_doc_url`, and `license_url` were not queried or displayed.
+4. **Mobile Cart Usability & Gated Navigation**:
+   - In `SupermarketStore.tsx`, clicking the cart icon called `navigate('/checkout')` directly instead of expanding the interactive cart drawer.
+   - `GlassCart.tsx` used nested rounded cards (`rounded-[32px]`, `rounded-2xl`) with heavy card padding (`p-8`), violating the unboxed editorial design rule, and overflowed on screens below 375px.
+
+### Actions Taken & Architecture Changes
+1. **Database Alignment (Migration 009: `supabase/migrations/009_onboarding_and_storefront_alignment.sql`)**:
+   - Added direct document columns and owner details to `merchants` (`owner_name`, `business_permit_url`, `kra_pin_url`, `health_permit_url`, `bulk_purchase_limit`, `bulk_limit`).
+   - Added personal details and document URLs to `riders` (`name`, `phone`, `email`, `national_id`, `mpesa_phone`, `id_doc_url`, `license_url`, `logbook_url`, `insurance_url`).
+   - Added `category TEXT` and `compare_price NUMERIC(10,2)` to `products`.
+   - Updated RLS policies on `products` and `categories` to ensure merchants can manage catalog items regardless of store open/closed status.
+2. **Hardened Supabase Service Layer (`src/lib/supabaseService.ts`)**:
+   - `createProduct`: Detects whether `category_id` is a UUID or category name; dynamically queries or provisions the category record in `categories` table to obtain a valid UUID, sets `category` text, and normalizes numeric prices and stock levels.
+   - `updateProduct`: Strips non-UUIDs from `category_id`, maps category name, and validates numeric fields.
+   - `getProducts`: Added `includeUnavailable: boolean = false` parameter and joins `category:categories(*)`.
+   - `updateMerchant`: Normalizes `operating_hours` to JSONB `{ hours: ... }` and maps `bulk_limit` to `bulk_purchase_limit`.
+3. **Merchant Onboarding Refactored (`src/pages/merchant/Onboarding.tsx`)**:
+   - Collects KRA PIN certificate alongside Single Business Permit (PDF/images) and persists to Supabase storage bucket (`documents`).
+   - Persists both direct URLs and structured JSONB metadata. Added user-facing error reporting.
+4. **Courier Onboarding Refactored (`src/pages/courier/Onboarding.tsx`)**:
+   - Collects National ID card and Driving License / Good Conduct document.
+   - Conditionally requires vehicle license plates for Motorbike/Car and handles foot/bicycle couriers.
+5. **Admin Approvals & Fleet Consoles (`src/pages/admin/Approvals.tsx`)**:
+   - Extracts URLs safely from direct columns and structured JSONB objects.
+   - Joins `profiles` table to display applicant contact details (full name, phone, email, KRA PIN, National ID, M-Pesa payout phone).
+6. **Merchant Dashboard Cleanup & Store Settings (`src/pages/merchant/Dashboard.tsx`)**:
+   - Simplified navigation tabs using clean, intuitive language: *Orders*, *Products*, *Customers*, *Deliveries*, *Promotions*, *Analytics*, *Finances*, *Settings*.
+   - Store settings image upload saves `cover_url` and `logo_url` to Supabase and provides immediate preview and feedback.
+   - Product form saves category name and UUID, updates state with the real database record, and persists across reloads.
+7. **Customer Storefront & Store Cards Alignment**:
+   - `src/pages/customer/StoreListing.tsx`: Store cards render real uploaded merchant cover images (`cover_url || logo_url || branding.bannerUrl`), dynamic open/closed status, operating hours, and location.
+   - `src/pages/customer/StoreFront.tsx` & `SupermarketStore.tsx`: Resolves category taxonomy from joined relations to ensure product cards render identically across merchant dashboard and customer aisles.
+8. **Mobile-Responsive Cart Redesign (`src/components/ui/shared/GlassCart.tsx`)**:
+   - Conformed strictly to the **NO CARD BOXES / NO CARD PADDING** design rule: editorial typography, edge-to-edge section dividers (`border-t border-b border-white/10`), unboxed item list.
+   - Responsive widths (`w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-3rem)] max-w-lg`) eliminating horizontal overflow on 320px–375px screens.
+   - Added direct item removal (`Trash2`), quantity controls, clear bag action, and checkout navigation.
+   - In `SupermarketStore.tsx`, header cart button dispatches `open-glass-cart` to open the cart interface on tap.
+
+### Verification Performed
+- **TypeScript & Production Build**: Ran `npm run build` (`tsc -b && vite build`) - **Passed with 0 errors** (2286 modules transformed).
+- **Data Flow Traced**: Verified email verification gate in `ProtectedRoute.tsx`, onboarding role restrictions (Merchant and Courier only; customer bypassed), store image persistence to Supabase `merchants` table, product persistence with UUID-safe foreign keys, and mobile drawer accessibility.
+
+### Failures Encountered & Resolutions
+- **Postgres 22P02 Error on Product Creation**: Caused by string category in UUID column. Resolved by adding regex UUID validation and dynamic category lookup/creation.
+- **TypeScript TS2322 in supabaseService.ts**: `categoryId` type inference was `string | undefined`, rejected assigning `null`. Explicitly typed as `string | null | undefined`.
+- **Windows CRLF Edit Matching**: Normalized line endings to LF before edits.

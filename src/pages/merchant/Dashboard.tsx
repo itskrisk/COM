@@ -225,25 +225,27 @@ export default function MerchantDashboard() {
     const loadDashboardData = useCallback(async (mId: string) => {
         setIsLoading(true);
         try {
-            // Load real products from Supabase
-            const { data: dbProducts } = await productService.getProducts(mId);
+            // Load real products from Supabase (including unavailable/draft to manage whole inventory)
+            const { data: dbProducts } = await productService.getProducts(mId, true);
             if (dbProducts && dbProducts.length > 0) {
                 const mapped: SupermarketProduct[] = dbProducts.map((p: any) => ({
                     id: p.id,
                     name: p.name,
                     description: p.description || '',
-                    category: p.category_id || 'Food Cupboard',
+                    category: p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'Food Cupboard',
                     categoryId: p.category_id,
-                    price: p.price,
+                    price: Number(p.price) || 0,
                     promo: p.is_featured || false,
-                    oldPrice: p.compare_price || null,
+                    oldPrice: p.compare_price ? Number(p.compare_price) : null,
                     isAvailable: p.is_available,
                     imageUrl: p.image_url || '',
-                    stockLevel: p.stock_level,
+                    stockLevel: Number(p.stock_level) || 0,
                     unit: p.unit || 'unit',
                     sku: p.sku || `SKU-${p.id.slice(-4).toUpperCase()}`
                 }));
                 setProducts(mapped);
+            } else if (dbProducts) {
+                setProducts([]);
             }
 
             // Load real orders from Supabase
@@ -528,13 +530,19 @@ export default function MerchantDashboard() {
                 productService.updateProduct(editingProductId, {
                     name: formName.trim(),
                     description: formDescription.trim(),
+                    category: formCategory,
                     category_id: formCategory,
                     price: numericPrice,
+                    compare_price: numericOldPrice,
                     is_featured: formIsPromo,
                     stock_level: numericStock,
                     is_available: numericStock > 0,
                     image_url: formImageUrl || PRESET_GROCERY_IMAGES[0].url,
-                } as any).catch(console.error);
+                    unit: formUnit,
+                    sku: formSku
+                } as any).catch(err => {
+                    console.error('[MerchantDashboard] Failed to update product in Supabase:', err);
+                });
             }
         } else {
             // Create new locally first
@@ -561,18 +569,32 @@ export default function MerchantDashboard() {
                     merchant_id: merchantId,
                     name: formName.trim(),
                     description: formDescription.trim(),
+                    category: formCategory,
                     category_id: formCategory,
                     price: numericPrice,
+                    compare_price: numericOldPrice,
                     is_featured: formIsPromo,
                     stock_level: numericStock,
                     is_available: numericStock > 0,
                     image_url: formImageUrl || PRESET_GROCERY_IMAGES[0].url,
-                } as any).then(({ data }) => {
-                    if (data) {
-                        // Replace temp ID with real DB ID
-                        setProducts(prev => prev.map(p => p.id === tempId ? { ...p, id: data.id } : p));
+                    unit: formUnit,
+                    sku: formSku || `SKU-${Date.now().toString().slice(-4)}`
+                } as any).then(({ data, error }) => {
+                    if (error) {
+                        console.error('[MerchantDashboard] Product creation error:', error);
                     }
-                }).catch(console.error);
+                    if (data) {
+                        // Replace temp ID with real DB ID and category name
+                        setProducts(prev => prev.map(p => p.id === tempId ? {
+                            ...p,
+                            id: data.id,
+                            category: data.category?.name || data.category || formCategory,
+                            categoryId: data.category_id
+                        } : p));
+                    }
+                }).catch(err => {
+                    console.error('[MerchantDashboard] Supabase createProduct failed:', err);
+                });
             }
         }
 
@@ -776,7 +798,7 @@ export default function MerchantDashboard() {
                 </div>
             </header>
 
-            {/* Navigation Tabs (8 Supermarket Workspaces) */}
+            {/* Navigation Tabs */}
             <div className="border-b border-neutral-200 px-6 sm:px-10 flex gap-6 overflow-x-auto scrollbar-none text-xs font-mono uppercase tracking-widest">
                 <button
                     onClick={() => setActiveTab('orders')}
@@ -784,7 +806,7 @@ export default function MerchantDashboard() {
                         activeTab === 'orders' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
                     }`}
                 >
-                    Live Orders ({orders.filter((o) => o.status !== 'COMPLETED').length})
+                    Orders ({orders.filter((o) => o.status !== 'COMPLETED').length})
                 </button>
                 <button
                     onClick={() => setActiveTab('inventory')}
@@ -792,7 +814,7 @@ export default function MerchantDashboard() {
                         activeTab === 'inventory' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
                     }`}
                 >
-                    Aisle Catalog ({products.length})
+                    Products ({products.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('customers')}
@@ -800,7 +822,7 @@ export default function MerchantDashboard() {
                         activeTab === 'customers' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
                     }`}
                 >
-                    Clientele CRM ({clientele.length})
+                    Customers ({clientele.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('deliveries')}
@@ -808,7 +830,7 @@ export default function MerchantDashboard() {
                         activeTab === 'deliveries' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
                     }`}
                 >
-                    Courier Logistics
+                    Deliveries
                 </button>
                 <button
                     onClick={() => setActiveTab('promotions')}
@@ -824,7 +846,7 @@ export default function MerchantDashboard() {
                         activeTab === 'analytics' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
                     }`}
                 >
-                    Analytics & Reports
+                    Analytics
                 </button>
                 <button
                     onClick={() => setActiveTab('finances')}
@@ -832,7 +854,7 @@ export default function MerchantDashboard() {
                         activeTab === 'finances' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
                     }`}
                 >
-                    Settlements
+                    Finances
                 </button>
                 <button
                     onClick={() => setActiveTab('settings')}
@@ -840,7 +862,7 @@ export default function MerchantDashboard() {
                         activeTab === 'settings' ? 'border-black text-black font-bold' : 'border-transparent text-neutral-400 hover:text-black'
                     }`}
                 >
-                    Store Settings
+                    Settings
                 </button>
             </div>
 

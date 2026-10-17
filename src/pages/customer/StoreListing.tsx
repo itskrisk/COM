@@ -110,17 +110,21 @@ export default function StoreListing() {
     const MARKET_STORES = useMemo(() => {
         return stores.map((m: any) => ({
             id: m.id,
-            name: m.business_name,
+            name: m.business_name || 'Supermarket',
             promo: m.branding?.promo || '',
-            status: 'Open',
+            status: m.is_active ? 'Open' : 'Closed',
             rating: m.rating ? `${m.rating}` : '--',
             count: m.review_count ? `(${m.review_count})` : '(0)',
-            type: m.type,
+            type: m.type || 'Supermarket',
             departments: m.branding?.departments || ['market'],
             tags: m.branding?.tags || [],
             actionText: 'Order Now',
             image: m.cover_url || m.logo_url || m.branding?.bannerUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800',
-            isTopRated: m.rating >= 4.5
+            isTopRated: m.rating >= 4.5,
+            operatingHours: m.operating_hours?.hours || '08:00 AM - 10:00 PM',
+            deliverySpeed: `${m.pack_time_min ? m.pack_time_min + 15 : 35} mins`,
+            deliveryFee: m.delivery_fee ? `KES ${m.delivery_fee}` : 'KES 150',
+            address: m.address || 'Nairobi'
         }));
     }, [stores]);
 
@@ -168,9 +172,16 @@ export default function StoreListing() {
                     </div>
                 )}
 
+                {/* Speed / Delivery Badge */}
+                <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2">
+                    <span className="text-[9px] font-black tracking-wider text-white uppercase bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full">
+                        ⚡ {store.deliverySpeed}
+                    </span>
+                </div>
+
                 {/* Status Overlay for Closed Stores */}
                 {store.status === 'Closed' && (
-                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
                         <span className="bg-white/10 backdrop-blur-xl border border-white/20 px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-2xl">
                             Currently Closed
                         </span>
@@ -184,28 +195,33 @@ export default function StoreListing() {
             </div>
 
             {/* Meta Content */}
-            <div className="px-1">
-                <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-2">
+            <div className="px-1 space-y-1">
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
                         {store.isTopRated && (
-                            <span className="text-[10px] font-black uppercase tracking-widest text-[#D4AF37]">Premium Selection</span>
+                            <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37] shrink-0">Top Selection</span>
                         )}
-                        <h3 className="text-xl font-heading font-black tracking-tighter leading-tight transition-colors">
+                        <h3 className="text-xl font-heading font-black tracking-tighter leading-tight transition-colors truncate">
                             {store.name}
                         </h3>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-700">
+                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-700 flex-wrap">
                     <span className={`${store.status.includes('Closed') ? 'text-amber-700' : 'text-green-600'}`}>
                         {store.status}
+                    </span>
+
+                    <span className="w-1 h-1 bg-gray-300 rounded-full" />
+                    <span className="text-gray-500 font-medium text-[10px]">
+                        🕒 {store.operatingHours}
                     </span>
 
                     {store.rating !== '--' && (
                         <>
                             <span className="w-1 h-1 bg-gray-300 rounded-full" />
                             <div className="flex items-center gap-1.5 font-black text-gray-900">
-                                <span>{store.rating}</span>
+                                <span>★ {store.rating}</span>
                                 <span className="text-gray-400 font-medium">{store.count}</span>
                             </div>
                         </>

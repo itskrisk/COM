@@ -28,15 +28,31 @@ interface Merchant {
     logo_url?: string;
     description?: string;
     address?: string;
+    phone?: string;
+    email?: string;
+    owner_name?: string;
     kra_pin?: string;
     health_permit?: string;
+    business_permit_url?: string;
+    kra_pin_url?: string;
+    health_permit_url?: string;
     mpesa_till?: string;
-    documents?: Record<string, string> | null;
+    documents?: Record<string, any> | null;
     created_at: string;
+    profile?: {
+        full_name?: string;
+        phone?: string;
+        email?: string;
+    };
 }
 
 interface Rider {
     id: string;
+    name?: string;
+    phone?: string;
+    email?: string;
+    national_id?: string;
+    mpesa_phone?: string;
     vehicle_type: string;
     status: string;
     is_online: boolean;
@@ -47,8 +63,17 @@ interface Rider {
     has_helmet: boolean;
     has_thermal_bag: boolean;
     has_vest: boolean;
-    documents?: Record<string, string> | null;
+    id_doc_url?: string;
+    license_url?: string;
+    logbook_url?: string;
+    insurance_url?: string;
+    documents?: Record<string, any> | null;
     created_at: string;
+    profile?: {
+        full_name?: string;
+        phone?: string;
+        email?: string;
+    };
 }
 
 export default function Approvals() {
@@ -73,7 +98,7 @@ export default function Approvals() {
             if (activeTab === 'merchants') {
                 const { data, error } = await supabase
                     .from('merchants')
-                    .select('*')
+                    .select('*, profile:profiles!id(full_name, phone, email)')
                     .order('created_at', { ascending: false });
 
                 if (data) {
@@ -83,7 +108,8 @@ export default function Approvals() {
                     }
                     if (searchQuery) {
                         filtered = filtered.filter((m: any) =>
-                            m.business_name?.toLowerCase().includes(searchQuery.toLowerCase())
+                            m.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            m.owner_name?.toLowerCase().includes(searchQuery.toLowerCase())
                         );
                     }
                     setMerchants(filtered as Merchant[]);
@@ -91,7 +117,7 @@ export default function Approvals() {
             } else {
                 const { data, error } = await supabase
                     .from('riders')
-                    .select('*')
+                    .select('*, profile:profiles!id(full_name, phone, email)')
                     .order('created_at', { ascending: false });
 
                 if (data) {
@@ -101,7 +127,9 @@ export default function Approvals() {
                     }
                     if (searchQuery) {
                         filtered = filtered.filter((r: any) =>
-                            r.vehicle_type?.toLowerCase().includes(searchQuery.toLowerCase())
+                            r.vehicle_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            r.national_id?.toLowerCase().includes(searchQuery.toLowerCase())
                         );
                     }
                     setRiders(filtered as Rider[]);
@@ -243,11 +271,45 @@ export default function Approvals() {
         );
     };
 
+    const extractDocUrl = (val: any): string | null => {
+        if (!val) return null;
+        if (typeof val === 'string') return (val.startsWith('http') || val.startsWith('blob:')) ? val : null;
+        if (typeof val === 'object' && val.url) return val.url;
+        return null;
+    };
+
     const renderMerchantDocuments = (merchant: Merchant) => {
         const docs = merchant.documents || {};
-        const docEntries = Object.entries(docs);
+        const items: { key: string; label: string; url: string }[] = [];
+
+        // Check direct columns
+        if (merchant.business_permit_url) {
+            items.push({ key: 'business_permit', label: 'Single Business Permit', url: merchant.business_permit_url });
+        }
+        if (merchant.kra_pin_url) {
+            items.push({ key: 'kra_pin', label: 'KRA PIN Certificate', url: merchant.kra_pin_url });
+        }
+        if (merchant.health_permit_url) {
+            items.push({ key: 'health_permit', label: 'Health & Hygiene Permit', url: merchant.health_permit_url });
+        }
+
+        // Check JSONB documents
+        Object.entries(docs).forEach(([k, v]) => {
+            const url = extractDocUrl(v);
+            if (!url) return;
+            const keyLower = k.toLowerCase();
+            // Don't duplicate if already added
+            if (items.some(i => i.url === url)) return;
+
+            let label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            if (keyLower.includes('kra')) label = 'KRA PIN Certificate';
+            else if (keyLower.includes('business') || keyLower.includes('permit')) label = 'Single Business Permit';
+            else if (keyLower.includes('health')) label = 'Health & Hygiene Permit';
+
+            items.push({ key: k, label, url });
+        });
         
-        if (docEntries.length === 0) {
+        if (items.length === 0) {
             return (
                 <div className="flex items-center gap-2 text-amber-600 text-sm min-h-[44px]">
                     <AlertTriangle size={16} />
@@ -256,27 +318,18 @@ export default function Approvals() {
             );
         }
 
-        const getDocLabel = (key: string) => {
-            const labels: Record<string, string> = {
-                kra_pin: 'KRA PIN',
-                health_permit: 'Health Permit',
-                business_license: 'Business License',
-            };
-            return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        };
-
         return (
             <div className="flex flex-wrap gap-2 mt-3">
-                {docEntries.map(([key, url]) => (
+                {items.map((item) => (
                     <a
-                        key={key}
-                        href={url}
+                        key={item.key}
+                        href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all min-h-[40px]"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all min-h-[40px]"
                     >
                         <FileText size={14} />
-                        {getDocLabel(key)}
+                        <span>{item.label}</span>
                         <ExternalLink size={12} />
                     </a>
                 ))}
@@ -286,9 +339,40 @@ export default function Approvals() {
 
     const renderRiderDocuments = (rider: Rider) => {
         const docs = rider.documents || {};
-        const docEntries = Object.entries(docs);
+        const items: { key: string; label: string; url: string }[] = [];
 
-        if (docEntries.length === 0) {
+        // Check direct columns
+        if (rider.id_doc_url) {
+            items.push({ key: 'id_doc', label: 'National ID Card', url: rider.id_doc_url });
+        }
+        if (rider.license_url) {
+            items.push({ key: 'license', label: "Driver's License", url: rider.license_url });
+        }
+        if (rider.logbook_url) {
+            items.push({ key: 'logbook', label: 'Vehicle Logbook', url: rider.logbook_url });
+        }
+        if (rider.insurance_url) {
+            items.push({ key: 'insurance', label: 'Insurance Certificate', url: rider.insurance_url });
+        }
+
+        // Check JSONB documents
+        Object.entries(docs).forEach(([k, v]) => {
+            const url = extractDocUrl(v);
+            if (!url) return;
+            if (items.some(i => i.url === url)) return;
+
+            const keyLower = k.toLowerCase();
+            let label = k.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+            if (keyLower.includes('id')) label = 'National ID Card';
+            else if (keyLower.includes('license')) label = "Driver's License";
+            else if (keyLower.includes('logbook')) label = 'Vehicle Logbook';
+            else if (keyLower.includes('conduct')) label = 'Good Conduct Certificate';
+            else if (keyLower.includes('insurance')) label = 'Insurance Certificate';
+
+            items.push({ key: k, label, url });
+        });
+
+        if (items.length === 0) {
             return (
                 <div className="flex items-center gap-2 text-amber-600 text-sm min-h-[44px]">
                     <AlertTriangle size={16} />
@@ -297,29 +381,18 @@ export default function Approvals() {
             );
         }
 
-        const getDocLabel = (key: string) => {
-            const labels: Record<string, string> = {
-                id_doc: 'ID Document',
-                license: 'Driver\'s License',
-                logbook: 'Logbook',
-                good_conduct: 'Good Conduct',
-                insurance: 'Insurance',
-            };
-            return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-        };
-
         return (
             <div className="flex flex-wrap gap-2 mt-3">
-                {docEntries.map(([key, url]) => (
+                {items.map((item) => (
                     <a
-                        key={key}
-                        href={url}
+                        key={item.key}
+                        href={item.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all min-h-[40px]"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition-all min-h-[40px]"
                     >
                         <FileText size={14} />
-                        {getDocLabel(key)}
+                        <span>{item.label}</span>
                         <ExternalLink size={12} />
                     </a>
                 ))}
@@ -484,16 +557,20 @@ export default function Approvals() {
                                                 animate={{ opacity: 1, height: 'auto' }}
                                                 className="mt-3 p-4 bg-gray-50 rounded-xl"
                                             >
-                                                <div className="grid grid-cols-1 gap-4">
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
-                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Business Info</p>
-                                                        <div className="space-y-1 text-sm">
-                                                            <p><span className="text-gray-500">Address:</span> {merchant.address || 'Not provided'}</p>
-                                                            <p><span className="text-gray-500">M-Pesa Till:</span> {merchant.mpesa_till || 'Not provided'}</p>
+                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Business & Contact Info</p>
+                                                        <div className="space-y-1.5 text-sm">
+                                                            <p><span className="text-gray-500 font-medium">Owner / Rep:</span> {merchant.owner_name || merchant.profile?.full_name || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Phone:</span> {merchant.phone || merchant.profile?.phone || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Email:</span> {merchant.email || merchant.profile?.email || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Address:</span> {merchant.address || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">KRA PIN:</span> {merchant.kra_pin || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">M-Pesa Till:</span> {merchant.mpesa_till || 'Not provided'}</p>
                                                         </div>
                                                     </div>
                                                     <div>
-                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Documents</p>
+                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Submitted Documents</p>
                                                         {renderMerchantDocuments(merchant)}
                                                     </div>
                                                 </div>
@@ -586,8 +663,23 @@ export default function Approvals() {
                                                 animate={{ opacity: 1, height: 'auto' }}
                                                 className="mt-3 p-4 bg-gray-50 rounded-xl"
                                             >
-                                                <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Verified Documents & Equipment</p>
-                                                {renderRiderDocuments(rider)}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Courier Information</p>
+                                                        <div className="space-y-1.5 text-sm">
+                                                            <p><span className="text-gray-500 font-medium">Full Name:</span> {rider.name || rider.profile?.full_name || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Phone:</span> {rider.phone || rider.profile?.phone || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Email:</span> {rider.email || rider.profile?.email || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">National ID:</span> {rider.national_id || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">M-Pesa Payout:</span> {rider.mpesa_phone || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Vehicle / Plate:</span> {rider.vehicle_type} {rider.vehicle_plate ? `(${rider.vehicle_plate})` : ''}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Verified Documents & Equipment</p>
+                                                        {renderRiderDocuments(rider)}
+                                                    </div>
+                                                </div>
                                             </motion.div>
                                         )}
                                     </div>

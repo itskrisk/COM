@@ -98,6 +98,9 @@ export default function MerchantOnboarding() {
     }, [profile, navigate, user, storeName, phone]);
 
     const [permitFile, setPermitFile] = useState<File | null>(null);
+    const [kraDocName, setKraDocName] = useState<string | null>(null);
+    const [kraFile, setKraFile] = useState<File | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -107,9 +110,18 @@ export default function MerchantOnboarding() {
         }
     };
 
+    const handleKraUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            setKraDocName(file.name);
+            setKraFile(file);
+        }
+    };
+
     const handleSubmitOnboarding = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setSubmitError(null);
 
         try {
             if (user?.id) {
@@ -135,33 +147,79 @@ export default function MerchantOnboarding() {
                     }
                 }
 
+                // Upload KRA PIN document if provided
+                let kraDocUrl = '';
+                if (kraFile) {
+                    const uploadRes = await uploadFile('documents', `merchants/${user.id}`, kraFile);
+                    if (uploadRes.url) {
+                        kraDocUrl = uploadRes.url;
+                    }
+                }
+
                 const docsPayload: Record<string, any> = {};
                 if (permitDocName || docUrl) {
+                    docsPayload.business_permit = docUrl;
                     docsPayload.businessPermit = {
                         url: docUrl,
                         filename: permitDocName || 'Business Registration Permit',
                         uploadedAt: new Date().toISOString()
                     };
                 }
+                if (kraDocName || kraDocUrl) {
+                    docsPayload.kra_pin = kraDocUrl;
+                    docsPayload.kraPin = {
+                        url: kraDocUrl,
+                        filename: kraDocName || 'KRA PIN Certificate',
+                        uploadedAt: new Date().toISOString()
+                    };
+                }
 
-                await supabase
+                const merchantPayload: Record<string, any> = {
+                    id: user.id,
+                    business_name: storeName.trim(),
+                    address: `${branchName} - ${address.trim()}`,
+                    phone: phone.trim(),
+                    kra_pin: kraPin.trim(),
+                    health_permit: businessPermitNumber.trim(),
+                    business_permit_url: docUrl || null,
+                    kra_pin_url: kraDocUrl || null,
+                    mpesa_till: mpesaTill.trim(),
+                    status: 'PENDING',
+                    onboarding_completed: true,
+                    email: user.email || '',
+                    owner_name: profile?.full_name || user.email?.split('@')[0] || '',
+                    documents: docsPayload,
+                    operating_hours: { hours: operatingHours },
+                    pack_time_min: Number(packTimeMin) || 20,
+                    created_at: new Date().toISOString()
+                };
+
+                const { error: upsertError } = await supabase
                     .from('merchants')
-                    .upsert({
+                    .upsert(merchantPayload, { onConflict: 'id' });
+
+                if (upsertError) {
+                    console.warn('Merchant full upsert warning, retrying with core columns:', upsertError);
+                    const corePayload = {
                         id: user.id,
                         business_name: storeName.trim(),
                         address: `${branchName} - ${address.trim()}`,
                         phone: phone.trim(),
                         kra_pin: kraPin.trim(),
                         health_permit: businessPermitNumber.trim(),
-                        business_permit_url: docUrl || null,
                         mpesa_till: mpesaTill.trim(),
                         status: 'PENDING',
                         onboarding_completed: true,
                         email: user.email || '',
-                        owner_name: profile?.full_name || user.email?.split('@')[0] || '',
                         documents: docsPayload,
                         created_at: new Date().toISOString()
-                    }, { onConflict: 'id' });
+                    };
+                    const { error: retryError } = await supabase
+                        .from('merchants')
+                        .upsert(corePayload, { onConflict: 'id' });
+
+                    if (retryError) throw retryError;
+                }
 
                 // Move the profile to pending_approval so ProtectedRoute stops
                 // bouncing submitted users back to the onboarding form.
@@ -171,13 +229,12 @@ export default function MerchantOnboarding() {
                 }).eq('id', user.id);
             }
             setSubmitted(true);
-        } catch (err) {
-                console.error('Error saving onboarding data:', err);
-                // Still allow proceeding to review state
-                setSubmitted(true);
-            } finally {
-                setLoading(false);
-            }
+        } catch (err: any) {
+            console.error('Error saving onboarding data:', err);
+            setSubmitError(err?.message || 'Failed to submit onboarding data. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -484,26 +541,57 @@ export default function MerchantOnboarding() {
                             </div>
 
                             {/* Document Upload Area (Hairline Border, No Rounded Box) */}
-                            <div className="space-y-2 pt-2">
-                                <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
-                                    Upload Business Registration / Permit Document
-                                </label>
-                                <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-6 sm:py-8 px-4 sm:px-6 flex flex-col items-center justify-center cursor-pointer text-center">
-                                    <UploadCloud size={24} className="text-neutral-400 mb-2" />
-                                    <span className="text-xs font-medium text-black">
-                                        {permitDocName ? permitDocName : 'Select PDF or Image of Business Registration'}
-                                    </span>
-                                    <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 mt-1">
-                                        Max size 10MB · Stored on Supabase Storage
-                                    </span>
-                                    <input
-                                        type="file"
-                                        accept=".pdf,image/*"
-                                        onChange={handleFileUpload}
-                                        className="hidden"
-                                    />
-                                </label>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pt-2">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                        Single Business Permit (PDF / Image)
+                                    </label>
+                                    <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-6 px-4 flex flex-col items-center justify-center cursor-pointer text-center">
+                                        <UploadCloud size={22} className="text-neutral-400 mb-2" />
+                                        <span className="text-xs font-medium text-black">
+                                            {permitDocName ? permitDocName : 'Select Business Permit'}
+                                        </span>
+                                        <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 mt-1">
+                                            PDF or Image · Max 10MB
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept=".pdf,image/*"
+                                            onChange={handleFileUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500 block">
+                                        KRA PIN Certificate (PDF / Image)
+                                    </label>
+                                    <label className="border border-dashed border-neutral-300 hover:border-black transition-colors py-6 px-4 flex flex-col items-center justify-center cursor-pointer text-center">
+                                        <UploadCloud size={22} className="text-neutral-400 mb-2" />
+                                        <span className="text-xs font-medium text-black">
+                                            {kraDocName ? kraDocName : 'Select KRA Certificate'}
+                                        </span>
+                                        <span className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 mt-1">
+                                            PDF or Image · Max 10MB
+                                        </span>
+                                        <input
+                                            type="file"
+                                            accept=".pdf,image/*"
+                                            onChange={handleKraUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                </div>
                             </div>
+
+                            {/* Inline Error Banner */}
+                            {submitError && (
+                                <div className="border-b border-red-500 pb-3 flex items-start gap-2 text-red-600 text-xs font-mono">
+                                    <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                                    <span>{submitError}</span>
+                                </div>
+                            )}
 
                             {/* Button Bar */}
                             <div className="pt-6 border-t border-neutral-200 flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3">

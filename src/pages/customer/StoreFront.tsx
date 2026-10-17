@@ -29,22 +29,25 @@ export default function StoreFront() {
             const productsResult = await publicApi.getStoreProducts(id);
             if (productsResult.data && productsResult.data.length > 0) {
                 // Normalize snake_case DB fields → camelCase expected by SupermarketStore.tsx
-                setMerchantProducts(productsResult.data.map((p: any) => ({
-                    id: p.id,
-                    name: p.name,
-                    description: p.description || '',
-                    categoryId: p.category_id || p.category || 'General',
-                    category: p.category_id || p.category || 'General',
-                    price: Number(p.price) || 0,
-                    oldPrice: p.compare_price ? Number(p.compare_price) : null,
-                    promo: Boolean(p.is_featured),
-                    isFeatured: Boolean(p.is_featured),
-                    stockLevel: p.stock_level ?? 50,
-                    isAvailable: p.is_available ?? true,
-                    imageUrl: p.image_url || p.imageUrl || '',
-                    unit: p.unit || 'unit',
-                    sku: p.sku || `SKU-${p.id?.slice(-4)?.toUpperCase() || '0000'}`,
-                })));
+                setMerchantProducts(productsResult.data.map((p: any) => {
+                    const resolvedCategory = p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || 'Food Cupboard';
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        description: p.description || '',
+                        categoryId: resolvedCategory,
+                        category: resolvedCategory,
+                        price: Number(p.price) || 0,
+                        oldPrice: p.compare_price ? Number(p.compare_price) : null,
+                        promo: Boolean(p.is_featured),
+                        isFeatured: Boolean(p.is_featured),
+                        stockLevel: p.stock_level ?? 50,
+                        isAvailable: p.is_available ?? true,
+                        imageUrl: p.image_url || p.imageUrl || '',
+                        unit: p.unit || 'unit',
+                        sku: p.sku || `SKU-${p.id?.slice(-4)?.toUpperCase() || '0000'}`,
+                    };
+                }));
             } else {
                 setMerchantProducts([]);
             }

@@ -97,10 +97,13 @@ export default function CourierOnboarding() {
     }, [profile, navigate, user, fullName, phone]);
 
     const [idDocFile, setIdDocFile] = useState<File | null>(null);
+    const [licenseDocFile, setLicenseDocFile] = useState<File | null>(null);
+    const [submitError, setSubmitError] = useState<string | null>(null);
 
     const handleSubmitOnboarding = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
+        setSubmitError(null);
 
         try {
             if (user?.id) {
@@ -113,36 +116,82 @@ export default function CourierOnboarding() {
                     }
                 }
 
+                // Upload Driving License if provided
+                let licenseDocUrl = '';
+                if (licenseDocFile) {
+                    const uploadRes = await uploadFile('documents', `riders/${user.id}`, licenseDocFile);
+                    if (uploadRes.url) {
+                        licenseDocUrl = uploadRes.url;
+                    }
+                }
+
                 const docsPayload: Record<string, any> = {};
                 if (idDocName || docUrl) {
                     docsPayload.id = {
                         url: docUrl,
-                        filename: idDocName || 'National ID / License',
+                        filename: idDocName || 'National ID Card',
                         uploadedAt: new Date().toISOString()
                     };
+                    docsPayload.id_doc = docUrl;
+                }
+                if (licenseDocName || licenseDocUrl) {
+                    docsPayload.license = {
+                        url: licenseDocUrl,
+                        filename: licenseDocName || "Driver's License / Good Conduct",
+                        uploadedAt: new Date().toISOString()
+                    };
+                    docsPayload.license_doc = licenseDocUrl;
                 }
 
-                await supabase
+                const riderPayload: Record<string, any> = {
+                    id: user.id,
+                    vehicle_type: vehicleType,
+                    name: fullName.trim() || profile?.full_name || '',
+                    phone: phone.trim() || profile?.phone || '',
+                    email: user.email || '',
+                    national_id: idNumber.trim(),
+                    vehicle_plate: (vehicleType === 'Motorbike' || vehicleType === 'Car') ? vehiclePlate.trim().toUpperCase() : null,
+                    mpesa_phone: mpesaPhone.trim() || phone.trim(),
+                    status: 'PENDING',
+                    onboarding_completed: true,
+                    is_online: false,
+                    has_helmet: hasHelmet,
+                    has_thermal_bag: hasThermalBag,
+                    has_id_doc: Boolean(idDocName || idNumber || docUrl),
+                    has_license: Boolean(licenseDocName || licenseDocUrl),
+                    id_doc_url: docUrl || null,
+                    license_url: licenseDocUrl || null,
+                    documents: docsPayload,
+                    created_at: new Date().toISOString()
+                };
+
+                const { error: riderErr } = await supabase
                     .from('riders')
-                    .upsert({
+                    .upsert(riderPayload, { onConflict: 'id' });
+
+                if (riderErr) {
+                    console.warn('Rider full upsert warning, retrying with core columns:', riderErr);
+                    const corePayload = {
                         id: user.id,
                         vehicle_type: vehicleType,
-                        name: fullName.trim() || profile?.full_name || '',
-                        phone: phone.trim() || profile?.phone || '',
-                        email: user.email || '',
                         national_id: idNumber.trim(),
-                        vehicle_plate: vehiclePlate.trim().toUpperCase(),
+                        vehicle_plate: (vehicleType === 'Motorbike' || vehicleType === 'Car') ? vehiclePlate.trim().toUpperCase() : null,
                         status: 'PENDING',
                         onboarding_completed: true,
                         is_online: false,
                         has_helmet: hasHelmet,
                         has_thermal_bag: hasThermalBag,
                         has_id_doc: Boolean(idDocName || idNumber || docUrl),
-                        has_license: Boolean(licenseDocName),
-                        id_doc_url: docUrl || null,
+                        has_license: Boolean(licenseDocName || licenseDocUrl),
                         documents: docsPayload,
                         created_at: new Date().toISOString()
-                    }, { onConflict: 'id' });
+                    };
+                    const { error: retryErr } = await supabase
+                        .from('riders')
+                        .upsert(corePayload, { onConflict: 'id' });
+
+                    if (retryErr) throw retryErr;
+                }
 
                 // Move the profile to pending_approval so ProtectedRoute stops
                 // bouncing submitted riders back to the onboarding form.
@@ -152,12 +201,12 @@ export default function CourierOnboarding() {
                 }).eq('id', user.id);
             }
             setSubmitted(true);
-        } catch (err) {
-                console.error('Error saving courier onboarding data:', err);
-                setSubmitted(true);
-            } finally {
-                setLoading(false);
-            }
+        } catch (err: any) {
+            console.error('Error saving courier onboarding data:', err);
+            setSubmitError(err?.message || 'Failed to submit courier application. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleLogout = async () => {

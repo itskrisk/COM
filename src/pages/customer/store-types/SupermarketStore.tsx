@@ -288,7 +288,14 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                     <div className="flex items-center gap-2">
                         {/* Cart - Modern with badge */}
                         <button
-                            onClick={() => navigate('/checkout')}
+                            onClick={() => {
+                                const cart = JSON.parse(localStorage.getItem('muncheez_cart_items') || '[]');
+                                if (cart.length > 0) {
+                                    window.dispatchEvent(new CustomEvent('open-glass-cart'));
+                                } else {
+                                    navigate('/checkout');
+                                }
+                            }}
                             className="relative w-10 h-10 bg-white text-[#4A90E2] rounded-xl flex items-center justify-center shadow-sm hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
                             aria-label="View cart"
                         >

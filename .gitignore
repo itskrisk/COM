@@ -39,3 +39,4 @@ temp_munchezz/
 
 # Local verification scripts (not part of the app)
 verify-migration.js
+.env*

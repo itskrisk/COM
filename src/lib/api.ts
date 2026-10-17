@@ -5,7 +5,7 @@
 import { supabase } from './supabaseClient';
 import { authService, profileService, merchantService, riderService, productService, categoryService, orderService, walletService, complaintService, realtimeService, publicStoreService, reviewService, riderLocationService, dispatchService, notificationService, financialService, cartService } from './supabaseService';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_BASE = import.meta.env.VITE_API_URL || '';
 
 async function adminFetch(path: string, options: RequestInit = {}) {
   const token = localStorage.getItem('adminAccessToken');
@@ -190,7 +190,7 @@ export const customerApi = {
 
   // M-Pesa Payment Integration
   initiatePayment: async (orderId: string, phoneNumber: string) => {
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_BASE = import.meta.env.VITE_API_URL || '';
     const token = localStorage.getItem('accessToken');
 
     const response = await fetch(`${API_BASE}/api/payments/initiate`, {
@@ -207,7 +207,7 @@ export const customerApi = {
   },
 
   getPaymentStatus: async (paymentId: string) => {
-    const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const API_BASE = import.meta.env.VITE_API_URL || '';
     const token = localStorage.getItem('accessToken');
 
     const response = await fetch(`${API_BASE}/api/payments/${paymentId}/status`, {

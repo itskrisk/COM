@@ -239,10 +239,22 @@ export const merchantService = {
     return { data, error };
   },
 
-  async updateMerchant(userId: string, updates: Partial<Merchant>) {
+  async updateMerchant(userId: string, updates: Partial<Merchant> & Record<string, any>) {
+    const cleanUpdates: Record<string, any> = { ...updates };
+
+    // Normalize operating_hours to jsonb
+    if (typeof cleanUpdates.operating_hours === 'string') {
+      cleanUpdates.operating_hours = { hours: cleanUpdates.operating_hours };
+    }
+
+    // Map bulk_limit to bulk_purchase_limit
+    if (cleanUpdates.bulk_limit !== undefined && cleanUpdates.bulk_purchase_limit === undefined) {
+      cleanUpdates.bulk_purchase_limit = Number(cleanUpdates.bulk_limit);
+    }
+
     const { data, error } = await supabase
       .from('merchants')
-      .update(updates)
+      .update(cleanUpdates)
       .eq('id', userId)
       .select()
       .single();
@@ -310,45 +322,120 @@ export const riderService = {
 // ============================================
 
 export const productService = {
-  async getProducts(merchantId?: string) {
+  async getProducts(merchantId?: string, includeUnavailable: boolean = false) {
     let query = supabase
       .from('products')
-      .select('*')
-      .eq('is_available', true);
+      .select('*, category:categories(*)');
+
+    if (!includeUnavailable) {
+      query = query.eq('is_available', true);
+    }
 
     if (merchantId) {
       query = query.eq('merchant_id', merchantId);
     }
 
-    const { data, error } = await query;
+    const { data, error } = await query.order('created_at', { ascending: false });
     return { data, error };
   },
 
   async getProduct(id: string) {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('*, category:categories(*)')
       .eq('id', id)
       .single();
     return { data, error };
   },
 
-  async createProduct(product: Partial<Product>) {
+  async createProduct(product: Partial<Product> & Record<string, any>) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    let categoryId: string | null | undefined = product.category_id;
+    let categoryName = product.category || '';
+
+    // If category_id was given as text name (e.g. 'Fruits & Vegetables'), separate it
+    if (categoryId && !isUUID.test(categoryId)) {
+      categoryName = categoryId;
+      categoryId = null;
+    }
+
+    // If we have a category name and merchant_id, ensure category exists in categories table to get a valid UUID
+    if (!categoryId && categoryName && product.merchant_id) {
+      try {
+        const { data: existingCat } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('merchant_id', product.merchant_id)
+          .ilike('name', categoryName)
+          .maybeSingle();
+
+        if (existingCat?.id) {
+          categoryId = existingCat.id;
+        } else {
+          const { data: newCat } = await supabase
+            .from('categories')
+            .insert({
+              merchant_id: product.merchant_id,
+              name: categoryName,
+              is_active: true
+            })
+            .select('id')
+            .maybeSingle();
+          if (newCat?.id) categoryId = newCat.id;
+        }
+      } catch (catErr) {
+        console.warn('[productService] Category resolve warning:', catErr);
+      }
+    }
+
+    const payload: Record<string, any> = {
+      merchant_id: product.merchant_id,
+      name: product.name,
+      description: product.description || '',
+      price: Number(product.price) || 0,
+      image_url: product.image_url || null,
+      is_available: product.is_available ?? true,
+      stock_level: product.stock_level ?? 50,
+      is_featured: Boolean(product.is_featured),
+      sku: product.sku || null,
+      unit: product.unit || 'unit',
+      category_id: categoryId || null,
+      category: categoryName || null,
+      compare_price: product.compare_price ? Number(product.compare_price) : null,
+      tags: categoryName ? [categoryName] : (product.tags || [])
+    };
+
     const { data, error } = await supabase
       .from('products')
-      .insert(product)
-      .select()
+      .insert(payload)
+      .select('*, category:categories(*)')
       .single();
+
     return { data, error };
   },
 
-  async updateProduct(id: string, updates: Partial<Product>) {
+  async updateProduct(id: string, updates: Partial<Product> & Record<string, any>) {
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const cleanUpdates: Record<string, any> = { ...updates };
+
+    if (cleanUpdates.category_id && !isUUID.test(cleanUpdates.category_id)) {
+      if (!cleanUpdates.category) cleanUpdates.category = cleanUpdates.category_id;
+      delete cleanUpdates.category_id;
+    }
+
+    if (cleanUpdates.price !== undefined) cleanUpdates.price = Number(cleanUpdates.price);
+    if (cleanUpdates.stock_level !== undefined) cleanUpdates.stock_level = Number(cleanUpdates.stock_level);
+    if (cleanUpdates.compare_price !== undefined) {
+      cleanUpdates.compare_price = cleanUpdates.compare_price ? Number(cleanUpdates.compare_price) : null;
+    }
+
     const { data, error } = await supabase
       .from('products')
-      .update(updates)
+      .update(cleanUpdates)
       .eq('id', id)
-      .select()
+      .select('*, category:categories(*)')
       .single();
+
     return { data, error };
   },
 
@@ -695,14 +782,12 @@ export const publicStoreService = {
   async getStoreProducts(merchantId: string, options?: { category?: string; search?: string; featured?: boolean }) {
     const { category, search, featured } = options || {};
 
-    // Verify merchant is public and active
+    // Verify merchant exists
     const { data: merchant, error: merchantError } = await supabase
       .from('merchants')
-      .select('id')
+      .select('id, status, is_active')
       .eq('id', merchantId)
-      .eq('status', 'APPROVED')
-      .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
     if (merchantError || !merchant) {
       return { data: null, error: 'Store not found or not available' };
@@ -712,12 +797,16 @@ export const publicStoreService = {
       .from('products')
       .select('*, category:categories(*)')
       .eq('merchant_id', merchantId)
-      .eq('is_available', true)
-      .neq('stock_level', 0);
+      .eq('is_available', true);
 
-    // Filter by category
-    if (category) {
-      query = query.eq('category_id', category);
+    // Filter by category (handles both UUIDs and category text names)
+    if (category && category !== 'All' && category !== 'General') {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      if (isUUID.test(category)) {
+        query = query.eq('category_id', category);
+      } else {
+        query = query.or(`category.ilike.%${category}%,tags.cs.{${category}}`);
+      }
     }
 
     // Search
