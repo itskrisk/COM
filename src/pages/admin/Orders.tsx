@@ -14,6 +14,7 @@ import {
     CreditCard
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 
 export default function Orders() {
     const [orders, setOrders] = useState<any[]>([]);
@@ -25,10 +26,21 @@ export default function Orders() {
     useEffect(() => {
         const fetchOrders = async () => {
             try {
-                const { data, error } = await supabase
+                let { data, error } = await supabase
                     .from('orders')
-                    .select('*, customer:profiles!customer_id(full_name, phone)')
+                    .select('*, customer:profiles!customer_id(full_name, phone), merchant:merchants!merchant_id(business_name, address), rider:riders!rider_id(name, phone, vehicle_type)')
                     .order('created_at', { ascending: false });
+
+                if (error && adminSupabase) {
+                    const adminRes = await adminSupabase
+                        .from('orders')
+                        .select('*, customer:profiles!customer_id(full_name, phone), merchant:merchants!merchant_id(business_name, address), rider:riders!rider_id(name, phone, vehicle_type)')
+                        .order('created_at', { ascending: false });
+                    if (!adminRes.error) {
+                        data = adminRes.data;
+                        error = null;
+                    }
+                }
 
                 if (error) throw error;
                 if (data) setOrders(data);

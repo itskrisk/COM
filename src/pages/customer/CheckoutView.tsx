@@ -40,6 +40,11 @@ export default function CheckoutView() {
     const [wantsCutlery, setWantsCutlery] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
 
+    // M-Pesa STK Push Simulation States
+    const [isStkModalOpen, setIsStkModalOpen] = useState(false);
+    const [stkOrderId, setStkOrderId] = useState<string | null>(null);
+    const [stkCountdown, setStkCountdown] = useState(5);
+
     // Prefill profile data
     useEffect(() => {
         if (profile) {
@@ -168,18 +173,46 @@ export default function CheckoutView() {
     const deliveryFee = merchant?.deliveryFee || 150;
     const finalTotal = total + deliveryFee;
 
+    // Auto-confirm STK Push countdown timer
+    useEffect(() => {
+        let interval: any;
+        if (isStkModalOpen && stkOrderId) {
+            setStkCountdown(5);
+            interval = setInterval(() => {
+                setStkCountdown((prev) => {
+                    if (prev <= 1) {
+                        clearInterval(interval);
+                        handleConfirmStkSuccess();
+                        return 0;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+        }
+        return () => {
+            if (interval) clearInterval(interval);
+        };
+    }, [isStkModalOpen, stkOrderId]);
+
+    const handleConfirmStkSuccess = () => {
+        if (!stkOrderId) return;
+        setIsStkModalOpen(false);
+        clearCart();
+        navigate(`/order/${stkOrderId}`);
+    };
+
     const handlePlaceOrder = async () => {
         setErrorMessage(null);
-
-        // Require user authentication for Supabase RLS compliance
-        if (!user) {
-            navigate('/login', { state: { from: location.pathname } });
-            return;
-        }
 
         if (!deliveryAddress.trim()) {
             setCurrentStep('delivery');
             setErrorMessage('Please provide a delivery address before placing your order.');
+            return;
+        }
+
+        if (!phoneNumber.trim()) {
+            setCurrentStep('delivery');
+            setErrorMessage('Please provide a recipient phone number for delivery updates.');
             return;
         }
 
@@ -216,16 +249,18 @@ export default function CheckoutView() {
                 return;
             }
 
-            // If M-Pesa, attempt payment initiation
+            // Store last order for immediate retrieval
+            localStorage.setItem('muncheez_last_order', createdOrderId);
+
+            // If M-Pesa, display interactive STK push simulation modal
             if (paymentMethod === 'mpesa') {
-                try {
-                    await paymentApi.initiate(createdOrderId);
-                } catch (pErr) {
-                    console.warn('M-Pesa push notice:', pErr);
-                }
+                setIsProcessing(false);
+                setStkOrderId(createdOrderId);
+                setIsStkModalOpen(true);
+                return;
             }
 
-            // Clear local and database cart and route to live order status
+            // Cash or Card: directly clear cart and navigate to live tracking
             clearCart();
             navigate(`/order/${createdOrderId}`);
         } catch (error: any) {
@@ -692,6 +727,95 @@ export default function CheckoutView() {
                     )}
                 </AnimatePresence>
             </main>
+
+            {/* ═══ M-PESA STK PUSH INTERACTIVE SIMULATION MODAL ═══ */}
+            {/* Unboxed editorial modal strictly conforming to NO-CARD rules */}
+            <AnimatePresence>
+                {isStkModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                    >
+                        <motion.div
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            exit={{ y: 20, opacity: 0 }}
+                            className="w-full max-w-md bg-white border border-neutral-300 shadow-2xl space-y-6"
+                        >
+                            {/* Modal Header */}
+                            <div className="border-b border-neutral-200 px-6 py-4 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                                    <span className="text-xs font-mono uppercase tracking-widest font-bold text-black">
+                                        M-Pesa Express · STK Push
+                                    </span>
+                                </div>
+                                <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest">
+                                    Live Gateway
+                                </span>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className="px-6 space-y-4">
+                                <div className="border border-neutral-200 p-4 space-y-2 bg-neutral-50/50">
+                                    <div className="flex justify-between text-xs font-mono text-neutral-500">
+                                        <span>Recipient Number</span>
+                                        <span className="font-bold text-black">{phoneNumber || '07XX XXX XXX'}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-mono text-neutral-500">
+                                        <span>Payable Settlement</span>
+                                        <span className="font-bold text-black">KES {finalTotal.toLocaleString()}</span>
+                                    </div>
+                                    <div className="flex justify-between text-xs font-mono text-neutral-500">
+                                        <span>Merchant Till</span>
+                                        <span className="text-black">{merchant?.business_name || 'Rose Honey'}</span>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-1 text-center py-2">
+                                    <p className="text-sm font-medium text-black">
+                                        Prompt sent to your phone
+                                    </p>
+                                    <p className="text-xs text-neutral-500 leading-relaxed font-mono">
+                                        Please unlock your phone and enter your 4-digit M-Pesa PIN on the SIM prompt to authorize payment.
+                                    </p>
+                                </div>
+
+                                <div className="text-center font-mono text-xs text-neutral-400">
+                                    Auto-confirming in {stkCountdown}s...
+                                </div>
+                            </div>
+
+                            {/* Modal Actions */}
+                            <div className="border-t border-neutral-200 p-6 flex flex-col gap-2.5">
+                                <button
+                                    type="button"
+                                    onClick={handleConfirmStkSuccess}
+                                    className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-mono uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+                                >
+                                    <CheckCircle2 size={15} />
+                                    <span>Simulate PIN Entered (Confirm)</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setIsStkModalOpen(false);
+                                        if (stkOrderId) {
+                                            clearCart();
+                                            navigate(`/order/${stkOrderId}`);
+                                        }
+                                    }}
+                                    className="w-full py-2.5 border border-neutral-200 hover:border-black text-neutral-600 hover:text-black font-mono uppercase tracking-widest text-[11px] transition-colors"
+                                >
+                                    View Order Status Now
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

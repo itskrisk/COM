@@ -1,10 +1,19 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Clock, ChevronLeft, Package, Bike, MapPin } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { orderService, riderLocationService } from '../../lib/supabaseService';
-import { useAuth } from '../../context/AuthContext';
-import OrderTrackingMap from '../../components/ui/shared/OrderTrackingMap';
+import {
+    ChevronLeft,
+    Package,
+    Bike,
+    MapPin,
+    CheckCircle2,
+    Clock,
+    Phone,
+    Store,
+    AlertCircle,
+    ArrowRight
+} from 'lucide-react';
+import { useEffect, useState, useCallback } from 'react';
+import { orderService } from '../../lib/supabaseService';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function OrderStatus() {
@@ -14,226 +23,440 @@ export default function OrderStatus() {
 
     const [order, setOrder] = useState<any>(null);
     const [merchant, setMerchant] = useState<any>(null);
-    const [progress, setProgress] = useState(0);
+    const [rider, setRider] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadOrder();
-        const timer = setTimeout(() => setProgress(35), 500);
-        return () => clearTimeout(timer);
-    }, [effectiveOrderId]);
+    const loadOrderData = useCallback(async () => {
+        if (!effectiveOrderId) return;
+        try {
+            const result = await orderService.getOrder(effectiveOrderId);
+            if (result.data) {
+                setOrder(result.data);
+                if (result.data.merchant) {
+                    setMerchant(result.data.merchant);
+                } else if (result.data.merchant_id) {
+                    const { data: mData } = await supabase
+                        .from('merchants')
+                        .select('*')
+                        .eq('id', result.data.merchant_id)
+                        .single();
+                    if (mData) setMerchant(mData);
+                }
 
-    const loadOrder = async () => {
-        const result = await orderService.getOrder(effectiveOrderId);
-        if (result.data) {
-            setOrder(result.data);
-            // Load merchant info
-            if (result.data.merchant_id) {
-                const { data: merchantData } = await supabase
-                    .from('merchants')
-                    .select('*')
-                    .eq('id', result.data.merchant_id)
-                    .single();
-                if (merchantData) {
-                    setMerchant(merchantData);
+                if (result.data.rider) {
+                    setRider(result.data.rider);
+                } else if (result.data.rider_id) {
+                    const { data: rData } = await supabase
+                        .from('riders')
+                        .select('*')
+                        .eq('id', result.data.rider_id)
+                        .single();
+                    if (rData) setRider(rData);
                 }
             }
+        } catch (e) {
+            console.error('Failed to fetch order tracking:', e);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
-    };
+    }, [effectiveOrderId]);
 
-    const getStatusText = (status: string) => {
+    useEffect(() => {
+        loadOrderData();
+
+        // Real-time Supabase channel for instant status progression
+        const channel = supabase.channel(`order_live_${effectiveOrderId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'orders',
+                    filter: `id=eq.${effectiveOrderId}`
+                },
+                (payload) => {
+                    if (payload.new) {
+                        setOrder((prev: any) => ({ ...prev, ...payload.new }));
+                        loadOrderData();
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [effectiveOrderId, loadOrderData]);
+
+    const getLifecycleStep = (status: string) => {
         switch (status) {
-            case 'CREATED': return 'Order Created';
-            case 'PAYMENT_PENDING': return 'Awaiting Payment';
-            case 'PAYMENT_CONFIRMED': return 'Payment Confirmed';
-            case 'ACCEPTED': return 'Order Accepted';
-            case 'PREPARING': return 'Preparing your order';
-            case 'READY_FOR_PICKUP': return 'Ready for pickup';
-            case 'RIDER_ASSIGNED': return 'Rider assigned';
-            case 'PICKED_UP': return 'Picked up';
-            case 'OUT_FOR_DELIVERY': return 'Out for delivery';
-            case 'DELIVERED': return 'Delivered';
-            case 'COMPLETED': return 'Completed';
-            case 'CANCELLED': return 'Cancelled';
-            default: return status;
+            case 'CREATED':
+            case 'PAYMENT_PENDING':
+                return 0;
+            case 'PAYMENT_CONFIRMED':
+            case 'AWAITING_MERCHANT_ACTION':
+            case 'ACCEPTED':
+                return 1;
+            case 'PREPARING':
+            case 'PACKING':
+                return 2;
+            case 'READY_FOR_PICKUP':
+            case 'RIDER_ASSIGNED':
+                return 3;
+            case 'PICKED_UP':
+            case 'OUT_FOR_DELIVERY':
+                return 4;
+            case 'DELIVERED':
+            case 'COMPLETED':
+                return 5;
+            default:
+                return 1;
         }
     };
 
-    const getStatusIcon = (status: string) => {
-        if (status === 'DELIVERED' || status === 'COMPLETED') {
-            return <Package size={40} className="text-green-600" />;
+    const getStatusNarrative = (status: string) => {
+        switch (status) {
+            case 'CREATED':
+            case 'PAYMENT_PENDING':
+                return {
+                    headline: 'Payment Processing',
+                    subtext: 'Verifying payment details with network gateway.',
+                    badgeColor: 'text-amber-800 border-amber-300 bg-amber-50'
+                };
+            case 'PAYMENT_CONFIRMED':
+            case 'AWAITING_MERCHANT_ACTION':
+            case 'ACCEPTED':
+                return {
+                    headline: 'Order Confirmed',
+                    subtext: `Sent directly to ${merchant?.business_name || 'the merchant'} preparation desk.`,
+                    badgeColor: 'text-blue-800 border-blue-300 bg-blue-50'
+                };
+            case 'PREPARING':
+            case 'PACKING':
+                return {
+                    headline: 'Merchant Packing Items',
+                    subtext: 'Your fresh products are being hand-picked, weighed, and bagged.',
+                    badgeColor: 'text-indigo-800 border-indigo-300 bg-indigo-50'
+                };
+            case 'READY_FOR_PICKUP':
+                return {
+                    headline: 'Packed & Ready for Dispatch',
+                    subtext: 'Sealed package awaiting arrival of the assigned dispatch courier.',
+                    badgeColor: 'text-emerald-800 border-emerald-300 bg-emerald-50'
+                };
+            case 'RIDER_ASSIGNED':
+            case 'PICKED_UP':
+                return {
+                    headline: 'Courier Heading to Pickup',
+                    subtext: `${rider?.name || 'Assigned rider'} is on route to collect your order.`,
+                    badgeColor: 'text-purple-800 border-purple-300 bg-purple-50'
+                };
+            case 'OUT_FOR_DELIVERY':
+                return {
+                    headline: 'Out for Delivery',
+                    subtext: 'Courier is in transit with your order to the destination address.',
+                    badgeColor: 'text-purple-800 border-purple-300 bg-purple-50'
+                };
+            case 'DELIVERED':
+            case 'COMPLETED':
+                return {
+                    headline: 'Order Delivered',
+                    subtext: 'Package safely delivered to your designated address.',
+                    badgeColor: 'text-green-800 border-green-300 bg-green-50'
+                };
+            case 'CANCELLED':
+            case 'DECLINED':
+                return {
+                    headline: 'Order Cancelled',
+                    subtext: 'This order was cancelled or could not be fulfilled.',
+                    badgeColor: 'text-red-800 border-red-300 bg-red-50'
+                };
+            default:
+                return {
+                    headline: status?.replace(/_/g, ' ') || 'Order In Progress',
+                    subtext: 'Tracking live updates from store and delivery team.',
+                    badgeColor: 'text-neutral-800 border-neutral-300 bg-neutral-50'
+                };
         }
-        if (status === 'CANCELLED') {
-            return <Package size={40} className="text-red-600" />;
-        }
-        return <Package size={40} className="text-[#D4AF37]" />;
     };
-
-    const showRider = order?.status === 'RIDER_ASSIGNED' || 
-                      order?.status === 'PICKED_UP' || 
-                      order?.status === 'OUT_FOR_DELIVERY' ||
-                      order?.status === 'IN_TRANSIT';
 
     if (loading) {
         return (
-            <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#D4AF37]"></div>
+            <div className="min-h-screen bg-white text-black flex items-center justify-center font-mono">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="w-5 h-5 border-2 border-black/20 border-t-black animate-spin" />
+                    <span className="text-xs uppercase tracking-widest text-neutral-400">Loading Order Tracking...</span>
+                </div>
             </div>
         );
     }
 
     if (!order) {
         return (
-            <div className="min-h-screen bg-[#FDFBF7] flex items-center justify-center">
-                <div className="text-center">
-                    <h2 className="text-2xl font-bold mb-4">Order not found</h2>
-                    <button onClick={() => navigate('/')} className="text-[#D4AF37] font-bold">
-                        Go back home
+            <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white flex flex-col justify-between">
+                <header className="border-b border-neutral-200 px-6 sm:px-12 py-4">
+                    <button
+                        onClick={() => navigate('/stores')}
+                        className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors"
+                    >
+                        <ChevronLeft size={16} />
+                        Stores
                     </button>
-                </div>
+                </header>
+                <main className="max-w-xl mx-auto w-full px-6 py-16 text-center space-y-4">
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">Order Verification</span>
+                    <h1 className="text-3xl font-light tracking-tight text-black">Order Not Found</h1>
+                    <p className="text-xs text-neutral-500 leading-relaxed max-w-sm mx-auto">
+                        We could not find an order matching identifier #{effectiveOrderId.slice(0, 8)}. Please check your order history.
+                    </p>
+                    <button
+                        onClick={() => navigate('/stores')}
+                        className="inline-flex items-center gap-2 px-6 py-3.5 bg-black text-white text-xs font-mono uppercase tracking-widest hover:bg-neutral-800 transition-colors"
+                    >
+                        Return to Catalogues
+                    </button>
+                </main>
+                <footer className="border-t border-neutral-200 py-4 text-center text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                    Muncheez Operations · Nairobi
+                </footer>
             </div>
         );
     }
 
+    const narrative = getStatusNarrative(order.status);
+    const activeStepIndex = getLifecycleStep(order.status);
+    const isCancelled = order.status === 'CANCELLED' || order.status === 'DECLINED';
+
+    const lifecycleStages = [
+        { label: 'Placed', desc: 'Order received' },
+        { label: 'Confirmed', desc: 'Routed to kitchen/store' },
+        { label: 'Packing', desc: 'Hand-picked & bagged' },
+        { label: 'Ready', desc: 'Awaiting courier' },
+        { label: 'Transit', desc: 'Out for delivery' },
+        { label: 'Delivered', desc: 'Dropped off' }
+    ];
+
     return (
-        <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-sans pb-12">
-            {/* Header */}
-            <header className="bg-white border-b border-gray-100 px-6 py-4 sticky top-0 z-50">
-                <div className="max-w-2xl mx-auto flex items-center justify-between">
-                    <button onClick={() => navigate('/')} className="w-10 h-10 flex items-center justify-center hover:bg-gray-50 rounded-xl transition-all">
-                        <ChevronLeft size={20} />
-                    </button>
-                    <h1 className="font-heading font-black tracking-tight">Order #{orderId?.slice(0, 8)}</h1>
-                    <div className="w-10" />
+        <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-20">
+            {/* Header: Edge-to-edge unboxed editorial banner */}
+            <header className="border-b border-neutral-200 px-4 sm:px-10 py-3.5 sticky top-0 bg-white/95 backdrop-blur z-30 flex items-center justify-between">
+                <button
+                    onClick={() => navigate('/stores')}
+                    className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors min-h-[44px]"
+                >
+                    <ChevronLeft size={16} />
+                    <span>Stores</span>
+                </button>
+                <div className="text-center">
+                    <span className="font-heading font-bold text-xl tracking-tighter block leading-tight">
+                        Muncheez<span className="text-[#D4AF37]">.</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest block">
+                        Order #{effectiveOrderId.slice(0, 8).toUpperCase()}
+                    </span>
+                </div>
+                <div className="text-right">
+                    <span className="text-xs font-mono font-bold text-black block">
+                        KES {order.total?.toLocaleString()}
+                    </span>
+                    <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest block">
+                        {order.items?.length || 0} items
+                    </span>
                 </div>
             </header>
 
-            <main className="max-w-2xl mx-auto px-6 py-8 space-y-8">
-                {/* Status Card */}
-                <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    className="bg-white rounded-[2.5rem] p-8 shadow-[0_12px_48px_-12px_rgba(0,0,0,0.05)] text-center relative overflow-hidden"
-                >
-                    <div className="absolute top-0 left-0 w-full h-2 bg-gray-100">
-                        <motion.div
-                            className="h-full bg-[#D4AF37]"
-                            initial={{ width: 0 }}
-                            animate={{ width: `${progress}%` }}
-                            transition={{ duration: 1.5, ease: "circOut" }}
-                        />
+            <main className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-8">
+                {/* ═══ HERO STATUS: UNBOXED EDITORIAL TYPOGRAPHY ═══ */}
+                <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className={`text-[10px] font-mono uppercase tracking-widest px-2.5 py-1 border ${narrative.badgeColor}`}>
+                            {order.status.replace(/_/g, ' ')}
+                        </span>
+                        <div className="flex items-center gap-2 text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span>Live Updates</span>
+                        </div>
                     </div>
 
-                    <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6 ring-8 ${
-                        order.status === 'DELIVERED' || order.status === 'COMPLETED' 
-                            ? 'bg-green-50 text-green-600 ring-green-50/50' 
-                            : order.status === 'CANCELLED'
-                            ? 'bg-red-50 text-red-600 ring-red-50/50'
-                            : 'bg-green-50 text-green-600 ring-green-50/50'
-                    }`}>
-                        {getStatusIcon(order.status)}
+                    <div>
+                        <h1 className="text-2xl sm:text-3xl font-light tracking-tight text-black mb-1.5">
+                            {narrative.headline}
+                        </h1>
+                        <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed">
+                            {narrative.subtext}
+                        </p>
                     </div>
 
-                    <h2 className="text-3xl font-heading font-black tracking-tighter mb-2">
-                        {getStatusText(order.status)}
-                    </h2>
-                    <p className="text-gray-400 font-medium">
-                        {order.status === 'PREPARING' && 'The kitchen is working on your magic.'}
-                        {order.status === 'RIDER_ASSIGNED' && 'A rider is on the way to pick up your order.'}
-                        {order.status === 'PICKED_UP' && 'Your order has been picked up!'}
-                        {order.status === 'OUT_FOR_DELIVERY' && 'Your order is on its way!'}
-                        {order.status === 'DELIVERED' && 'Your order has been delivered!'}
-                        {order.status === 'CANCELLED' && 'This order has been cancelled.'}
-                    </p>
+                    {/* Progress Bar & Stepper: Edge-to-edge hairline divider */}
+                    {!isCancelled && (
+                        <div className="pt-2 space-y-3">
+                            <div className="w-full h-1 bg-neutral-100 overflow-hidden">
+                                <motion.div
+                                    className="h-full bg-black"
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(100, Math.max(12, ((activeStepIndex + 1) / lifecycleStages.length) * 100))}%` }}
+                                    transition={{ duration: 0.8, ease: 'easeOut' }}
+                                />
+                            </div>
 
-                    {showRider && (
-                        <div className="mt-8 flex items-center justify-center gap-2 text-xs font-bold uppercase tracking-widest bg-gray-50 py-3 rounded-xl mx-auto max-w-[200px]">
-                            <MapPin size={16} className="text-[#D4AF37]" />
-                            <span>Tracking live</span>
+                            <div className="grid grid-cols-6 text-center text-[9px] sm:text-[10px] font-mono uppercase tracking-wider text-neutral-400">
+                                {lifecycleStages.map((stage, idx) => {
+                                    const isDone = idx <= activeStepIndex;
+                                    const isCurrent = idx === activeStepIndex;
+                                    return (
+                                        <div key={stage.label} className="space-y-0.5">
+                                            <span className={`block font-medium ${isCurrent ? 'text-black font-bold' : isDone ? 'text-neutral-700' : 'text-neutral-300'}`}>
+                                                {stage.label}
+                                            </span>
+                                            {isCurrent && (
+                                                <div className="w-1 h-1 rounded-full bg-black mx-auto" />
+                                            )}
+                                        </div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     )}
-                </motion.div>
+                </section>
 
-                {/* Map Tracking */}
-                {showRider && order.rider_id && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        <h3 className="font-heading font-black text-xl px-2 mb-4">Live Tracking</h3>
-                        <OrderTrackingMap
-                            orderId={orderId || ''}
-                            merchantLat={merchant?.lat}
-                            merchantLng={merchant?.lng}
-                            customerLat={order.delivery_lat}
-                            customerLng={order.delivery_lng}
-                        />
-                    </motion.div>
-                )}
-
-                {/* Rider Card */}
-                {showRider && (
-                    <motion.div
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        transition={{ delay: 0.3 }}
-                        className="bg-white rounded-[2rem] p-6 border border-gray-100 flex items-center gap-6"
-                    >
-                        <div className="w-16 h-16 bg-[#D4AF37]/10 rounded-2xl flex items-center justify-center">
-                            <Bike size={24} className="text-[#D4AF37]" />
-                        </div>
-                        <div>
-                            <h3 className="font-heading font-black text-lg">Rider Assigned</h3>
-                            <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">
-                                {order.status === 'RIDER_ASSIGNED' && 'Heading to merchant'}
-                                {order.status === 'PICKED_UP' && 'Picked up your order'}
-                                {order.status === 'OUT_FOR_DELIVERY' && 'Delivering to you'}
-                            </p>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Order Details */}
-                <div className="space-y-6">
-                    <h3 className="font-heading font-black text-xl px-2">Order Summary</h3>
-                    <div className="bg-white rounded-[2rem] p-8 border border-gray-100">
-                        <div className="flex items-center gap-4 mb-8 pb-8 border-b border-gray-100">
-                            <div className="w-12 h-12 rounded-xl bg-gray-100 overflow-hidden">
-                                {merchant?.logo_url && (
-                                    <img src={merchant.logo_url} alt={merchant?.business_name} className="w-full h-full object-cover" />
-                                )}
-                            </div>
-                            <div>
-                                <h4 className="font-bold text-lg leading-none mb-1">{merchant?.business_name}</h4>
-                                <span className="text-xs text-gray-400 font-bold uppercase tracking-widest">{merchant?.type}</span>
+                {/* ═══ STORE & COURIER ASSIGNMENT: UNBOXED HAIRLINE DIVIDERS ═══ */}
+                <section className="border-t border-b border-neutral-200 py-6 space-y-6">
+                    {/* Merchant Details */}
+                    <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-3">
+                            <Store size={18} className="text-neutral-400 shrink-0 mt-0.5" />
+                            <div className="space-y-0.5">
+                                <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">
+                                    Fulfilling Store
+                                </span>
+                                <h2 className="text-sm font-medium text-black">
+                                    {merchant?.business_name || 'Market Hub'}
+                                </h2>
+                                <p className="text-xs text-neutral-500 font-mono">
+                                    {merchant?.address || 'Nairobi'}
+                                </p>
                             </div>
                         </div>
+                        {merchant?.phone && (
+                            <a
+                                href={`tel:${merchant.phone}`}
+                                className="text-xs font-mono uppercase tracking-widest text-neutral-600 hover:text-black border border-neutral-300 hover:border-black px-3 py-1.5 transition-colors shrink-0"
+                            >
+                                Contact Store
+                            </a>
+                        )}
+                    </div>
 
-                        <div className="space-y-4">
-                            {order.items?.map((item: any, i: number) => (
-                                <div key={i} className="flex justify-between items-start">
-                                    <div className="flex gap-3">
-                                        <span className="font-bold text-gray-300">x{item.quantity}</span>
-                                        <span className="font-bold text-gray-900">{item.name}</span>
-                                    </div>
-                                    <span className="font-medium text-gray-500">{(item.price * item.quantity).toLocaleString()}</span>
+                    {/* Courier Details */}
+                    {rider ? (
+                        <div className="border-t border-neutral-100 pt-5 flex items-start justify-between gap-4">
+                            <div className="flex items-start gap-3">
+                                <Bike size={18} className="text-neutral-400 shrink-0 mt-0.5" />
+                                <div className="space-y-0.5">
+                                    <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">
+                                        Assigned Courier
+                                    </span>
+                                    <h3 className="text-sm font-medium text-black">
+                                        {rider.name || rider.full_name || 'Dispatch Courier'}
+                                    </h3>
+                                    <p className="text-xs text-neutral-500 font-mono">
+                                        {rider.vehicle_type || 'Motorbike'} · {rider.phone || 'Fleet Dispatch'}
+                                    </p>
                                 </div>
-                            ))}
+                            </div>
+                            {rider.phone && (
+                                <a
+                                    href={`tel:${rider.phone}`}
+                                    className="text-xs font-mono uppercase tracking-widest text-neutral-600 hover:text-black border border-neutral-300 hover:border-black px-3 py-1.5 transition-colors shrink-0"
+                                >
+                                    Call Rider
+                                </a>
+                            )}
                         </div>
+                    ) : (
+                        <div className="border-t border-neutral-100 pt-5 flex items-center gap-3 text-neutral-400 font-mono text-xs">
+                            <Clock size={16} />
+                            <span>Courier dispatch assignment in progress once packing finishes.</span>
+                        </div>
+                    )}
 
-                        <div className="mt-8 pt-8 border-t border-gray-100 flex justify-between items-center">
-                            <span className="font-black text-xl">Total</span>
-                            <span className="font-heading font-black text-2xl tracking-tight">KES {order.total?.toLocaleString()}</span>
+                    {/* Delivery Destination */}
+                    <div className="border-t border-neutral-100 pt-5 flex items-start gap-3">
+                        <MapPin size={18} className="text-neutral-400 shrink-0 mt-0.5" />
+                        <div className="space-y-0.5">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block">
+                                Delivering To
+                            </span>
+                            <p className="text-sm text-black">
+                                {order.delivery_address || 'Address provided at checkout'}
+                            </p>
+                            {order.delivery_instructions && (
+                                <p className="text-xs text-neutral-500 font-mono pt-0.5">
+                                    Notes: {order.delivery_instructions}
+                                </p>
+                            )}
                         </div>
                     </div>
-                </div>
+                </section>
 
-                <div className="text-center pt-8">
-                    <button className="text-gray-400 font-bold text-xs uppercase tracking-widest hover:text-[#D4AF37] transition-colors">
-                        Need Help? Contact Support
+                {/* ═══ ORDER BASKET ITEMS: UNBOXED EDITORIAL LIST ═══ */}
+                <section className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xs font-mono uppercase tracking-widest text-neutral-400">
+                            Package Line Items ({order.items?.length || 0})
+                        </h2>
+                        <span className="text-xs font-mono text-neutral-500">
+                            Payment: {order.payment_method || 'MPESA'} ({order.payment_status || 'CONFIRMED'})
+                        </span>
+                    </div>
+
+                    <div className="border-t border-b border-neutral-200 divide-y divide-neutral-100">
+                        {(order.items || []).map((item: any, i: number) => (
+                            <div key={i} className="py-3 flex items-center justify-between gap-3 text-xs font-mono">
+                                <div className="flex items-center gap-2.5 truncate">
+                                    <span className="font-bold text-neutral-400 min-w-[24px]">
+                                        {item.quantity}x
+                                    </span>
+                                    <span className="text-black font-medium truncate">
+                                        {item.name}
+                                    </span>
+                                </div>
+                                <span className="text-neutral-500 shrink-0">
+                                    KES {((Number(item.price) || 0) * (Number(item.quantity) || 1)).toLocaleString()}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Financial Breakdown */}
+                    <div className="space-y-1.5 text-xs font-mono pt-2">
+                        <div className="flex justify-between text-neutral-500">
+                            <span className="uppercase tracking-widest">Courier Delivery</span>
+                            <span>KES {(order.delivery_fee || 150).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-black font-bold pt-2 border-t border-neutral-100 text-sm">
+                            <span className="uppercase tracking-widest">Total Paid</span>
+                            <span>KES {order.total?.toLocaleString()}</span>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Footer Navigation */}
+                <div className="pt-6 border-t border-neutral-200 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <button
+                        onClick={() => navigate('/stores')}
+                        className="w-full sm:w-auto px-6 py-3 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors"
+                    >
+                        Browse Other Stores
                     </button>
+                    <a
+                        href="https://wa.me/254700000000"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full sm:w-auto px-6 py-3 bg-black hover:bg-neutral-800 text-white text-xs font-mono uppercase tracking-widest text-center transition-colors"
+                    >
+                        Muncheez Live Help
+                    </a>
                 </div>
             </main>
         </div>

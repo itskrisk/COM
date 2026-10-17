@@ -185,18 +185,22 @@ export const customerApi = {
     if (rawPm === 'CASH') pm = 'CASH';
     else if (rawPm === 'CARD') pm = 'CARD';
 
+    const initialStatus = pm === 'CASH' ? 'CREATED' : 'PAYMENT_CONFIRMED';
+    const initialPaymentStatus = pm === 'CASH' ? 'PENDING' : 'CONFIRMED';
+
     const result = await orderService.createOrder({
       customer_id: customerId,
       merchant_id: data.merchantId,
-      status: 'CREATED',
+      status: initialStatus,
       total,
       delivery_fee: deliveryFee,
       service_fee: serviceFee,
       delivery_address: data.deliveryAddress,
       delivery_instructions: data.deliveryInstructions,
       payment_method: pm,
-      payment_status: 'PENDING',
+      payment_status: initialPaymentStatus,
       wants_cutlery: Boolean(data.wantsCutlery),
+      notes: `Phone: ${data.phoneNumber || ''}${data.deliveryInstructions ? ' | ' + data.deliveryInstructions : ''}`,
       items: data.items
     });
 

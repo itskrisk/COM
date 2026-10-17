@@ -63,13 +63,14 @@ export interface SupermarketProduct {
 
 export interface SupermarketOrder {
     id: string;
+    displayId?: string;
     customerName: string;
     customerPhone: string;
     address: string;
     placedAt: string;
     items: Array<{ name: string; quantity: number; price: number; unit?: string }>;
     total: number;
-    status: 'CREATED' | 'PACKING' | 'READY_FOR_PICKUP' | 'OUT_FOR_DELIVERY' | 'COMPLETED';
+    status: 'CREATED' | 'PAYMENT_PENDING' | 'PAYMENT_CONFIRMED' | 'AWAITING_MERCHANT_ACTION' | 'ACCEPTED' | 'PREPARING' | 'PACKING' | 'READY_FOR_PICKUP' | 'RIDER_ASSIGNED' | 'PICKED_UP' | 'OUT_FOR_DELIVERY' | 'DELIVERED' | 'COMPLETED' | 'CANCELLED';
     courierName?: string;
     courierPhone?: string;
     courierVehicle?: string;
@@ -250,15 +251,16 @@ export default function MerchantDashboard() {
             const { data: dbOrders } = await orderService.getOrders(undefined, mId);
             if (dbOrders && dbOrders.length > 0) {
                 const mapped: SupermarketOrder[] = dbOrders.map((o: any) => ({
-                    id: o.id.slice(0, 8).toUpperCase(),
+                    id: o.id,
+                    displayId: '#' + o.id.slice(0, 8).toUpperCase(),
                     customerName: o.customer?.full_name || 'Customer',
-                    customerPhone: o.customer?.phone || '+254 700 000000',
+                    customerPhone: o.customer?.phone || (o.notes?.match(/Phone:\s*([^\s|]+)/)?.[1]) || '+254 700 000000',
                     address: o.delivery_address || 'Nairobi',
                     placedAt: new Date(o.created_at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }),
                     items: (o.items || []).map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.price, unit: i.unit })),
                     total: o.total,
                     status: o.status as SupermarketOrder['status'],
-                    courierName: o.rider?.full_name,
+                    courierName: o.rider?.name || o.rider?.full_name,
                     courierPhone: o.rider?.phone,
                     courierVehicle: o.rider?.vehicle_type
                 }));
@@ -315,9 +317,10 @@ export default function MerchantDashboard() {
             if (payload.new?.merchant_id !== merchantId) return;
             const o = payload.new;
             const newOrder: SupermarketOrder = {
-                id: o.id.slice(0, 8).toUpperCase(),
-                customerName: 'New Customer',
-                customerPhone: '+254 700 000000',
+                id: o.id,
+                displayId: '#' + o.id.slice(0, 8).toUpperCase(),
+                customerName: 'Customer',
+                customerPhone: (o.notes?.match(/Phone:\s*([^\s|]+)/)?.[1]) || '+254 700 000000',
                 address: o.delivery_address || 'Nairobi',
                 placedAt: 'Just now',
                 items: o.items || [],
@@ -325,7 +328,7 @@ export default function MerchantDashboard() {
                 status: o.status as SupermarketOrder['status']
             };
             if (payload.eventType === 'INSERT') {
-                setOrders(prev => [newOrder, ...prev]);
+                setOrders(prev => [newOrder, ...prev.filter(item => item.id !== newOrder.id)]);
             } else if (payload.eventType === 'UPDATE') {
                 setOrders(prev => prev.map(existing =>
                     existing.id === newOrder.id ? { ...existing, status: newOrder.status } : existing
@@ -339,7 +342,6 @@ export default function MerchantDashboard() {
     const syncOrderStatus = useCallback(async (orderId: string, newStatus: string) => {
         if (!profile?.id) return;
         try {
-            // Find the full UUID from current orders list — orderId is truncated display id
             await orderService.updateOrderStatus(orderId, newStatus, profile.id);
         } catch (err) {
             console.error('[MerchantDashboard] Order status sync failed:', err);
@@ -952,14 +954,17 @@ export default function MerchantDashboard() {
                                 <div key={order.id} className="p-6 flex flex-col lg:flex-row lg:items-center justify-between gap-6 hover:bg-neutral-50/50 transition-colors">
                                     <div className="space-y-2 max-w-xl">
                                         <div className="flex items-center gap-3">
-                                            <span className="font-mono text-sm font-bold text-black">{order.id}</span>
+                                            <span className="font-mono text-sm font-bold text-black">{order.displayId || '#' + order.id.slice(0, 8).toUpperCase()}</span>
                                             <span className="text-neutral-300">·</span>
                                             <span className="text-xs text-neutral-500 font-mono">{order.placedAt}</span>
                                             <span className="text-neutral-300">·</span>
                                             <span className={`text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border ${
-                                                order.status === 'CREATED' ? 'border-amber-300 text-amber-800 bg-amber-50' :
-                                                order.status === 'PACKING' ? 'border-blue-300 text-blue-800 bg-blue-50' :
+                                                order.status === 'CREATED' || order.status === 'PAYMENT_PENDING' ? 'border-amber-300 text-amber-800 bg-amber-50' :
+                                                order.status === 'PAYMENT_CONFIRMED' || order.status === 'ACCEPTED' ? 'border-blue-300 text-blue-800 bg-blue-50' :
+                                                order.status === 'PACKING' || order.status === 'PREPARING' ? 'border-indigo-300 text-indigo-800 bg-indigo-50' :
                                                 order.status === 'READY_FOR_PICKUP' ? 'border-emerald-300 text-emerald-800 bg-emerald-50' :
+                                                order.status === 'OUT_FOR_DELIVERY' ? 'border-purple-300 text-purple-800 bg-purple-50' :
+                                                order.status === 'DELIVERED' || order.status === 'COMPLETED' ? 'border-green-300 text-green-800 bg-green-50' :
                                                 'border-neutral-200 text-neutral-600'
                                             }`}>
                                                 {order.status.replace(/_/g, ' ')}
@@ -1004,26 +1009,36 @@ export default function MerchantDashboard() {
                                         </div>
 
                                         <div className="flex items-center gap-2">
-                                            {order.status === 'CREATED' && (
+                                            {(order.status === 'CREATED' || order.status === 'PAYMENT_CONFIRMED' || order.status === 'AWAITING_MERCHANT_ACTION') && (
                                                 <button
-                                                    onClick={() => handleUpdateOrderStatus(order.id, 'PACKING')}
-                                                    className="px-5 py-2 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-colors"
+                                                    onClick={() => handleUpdateOrderStatus(order.id, 'PREPARING')}
+                                                    className="px-5 py-2 bg-black text-white hover:bg-neutral-800 text-xs font-mono uppercase tracking-widest transition-colors min-h-[38px]"
                                                 >
-                                                    Accept & Pack
+                                                    Accept & Start Prep
                                                 </button>
                                             )}
-                                            {order.status === 'PACKING' && (
+                                            {(order.status === 'ACCEPTED' || order.status === 'PACKING' || order.status === 'PREPARING') && (
                                                 <button
                                                     onClick={() => handleUpdateOrderStatus(order.id, 'READY_FOR_PICKUP')}
-                                                    className="px-5 py-2 bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-1.5"
+                                                    className="px-5 py-2 bg-emerald-700 text-white hover:bg-emerald-800 text-xs font-mono uppercase tracking-widest transition-colors flex items-center gap-1.5 min-h-[38px]"
                                                 >
                                                     <CheckCircle2 size={13} />
-                                                    Ready for Pickup
+                                                    Mark Ready for Pickup
                                                 </button>
                                             )}
                                             {order.status === 'READY_FOR_PICKUP' && (
                                                 <span className="text-xs font-mono text-emerald-700 uppercase tracking-widest border border-emerald-200 bg-emerald-50 px-3 py-1.5">
-                                                    Awaiting Courier Arrival
+                                                    Ready · Awaiting Courier
+                                                </span>
+                                            )}
+                                            {order.status === 'OUT_FOR_DELIVERY' && (
+                                                <span className="text-xs font-mono text-purple-700 uppercase tracking-widest border border-purple-200 bg-purple-50 px-3 py-1.5">
+                                                    Out with Courier
+                                                </span>
+                                            )}
+                                            {(order.status === 'DELIVERED' || order.status === 'COMPLETED') && (
+                                                <span className="text-xs font-mono text-green-700 uppercase tracking-widest border border-green-200 bg-green-50 px-3 py-1.5">
+                                                    Delivered
                                                 </span>
                                             )}
                                         </div>

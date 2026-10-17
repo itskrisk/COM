@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { dispatchService, walletService, riderService } from '../../lib/supabaseService';
+import { dispatchService, walletService, riderService, orderService } from '../../lib/supabaseService';
+import { supabase } from '../../lib/supabaseClient';
 import {
     Bike,
     MapPin,
@@ -36,6 +37,7 @@ import { useAuth } from '../../context/AuthContext';
 
 interface DispatchOffer {
     id: string;
+    orderId?: string;
     supermarketName: string;
     supermarketBranch: string;
     supermarketAddress: string;
@@ -193,12 +195,14 @@ export default function CourierDashboard() {
 
             // Load pending dispatch offers
             const { data: offers } = await dispatchService.getPendingOffers(rId);
+            let mappedOffers: DispatchOffer[] = [];
             if (offers && offers.length > 0) {
-                const mapped: DispatchOffer[] = offers.map((o: any) => ({
+                mappedOffers = offers.map((o: any) => ({
                     id: o.id,
-                    supermarketName: o.order?.store?.name || 'Muncheez Supermarket',
+                    orderId: o.order_id || o.order?.id,
+                    supermarketName: o.order?.store?.name || o.order?.merchant?.business_name || 'Muncheez Supermarket',
                     supermarketBranch: o.order?.store?.branch || 'Nairobi',
-                    supermarketAddress: o.order?.store?.address || 'Nairobi CBD',
+                    supermarketAddress: o.order?.store?.address || o.order?.merchant?.address || 'Nairobi CBD',
                     dropoffAddress: o.order?.delivery_address || 'Customer Address',
                     customerName: o.order?.customer?.full_name || 'Customer',
                     customerPhone: o.order?.customer?.phone || '+254 700 000000',
@@ -209,8 +213,41 @@ export default function CourierDashboard() {
                     status: 'OFFERED',
                     paymentMethod: o.order?.payment_method === 'CASH' ? 'CASH_ON_DELIVERY' : 'MPESA_PREPAID'
                 }));
-                setAvailableOffers(mapped);
             }
+
+            // Also load orders ready for pickup or being packed in the sector
+            try {
+                const { data: readyOrders } = await supabase
+                    .from('orders')
+                    .select('*, merchant:merchants(business_name, address)')
+                    .in('status', ['READY_FOR_PICKUP', 'PACKING'])
+                    .is('rider_id', null)
+                    .limit(6);
+
+                if (readyOrders && readyOrders.length > 0) {
+                    const extraOffers: DispatchOffer[] = readyOrders.map((ro: any) => ({
+                        id: ro.id,
+                        orderId: ro.id,
+                        supermarketName: ro.merchant?.business_name || 'Rose Honey',
+                        supermarketBranch: 'Westlands',
+                        supermarketAddress: ro.merchant?.address || 'Nairobi',
+                        dropoffAddress: ro.delivery_address || 'Customer Address',
+                        customerName: 'Customer',
+                        customerPhone: (ro.notes?.match(/Phone:\s*([^\s|]+)/)?.[1]) || '+254 700 000000',
+                        distanceKm: 2.8,
+                        itemsCount: (ro.items || []).length,
+                        payoutKES: 250,
+                        placedAt: new Date(ro.created_at).toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }),
+                        status: 'OFFERED',
+                        paymentMethod: ro.payment_method === 'CASH' ? 'CASH_ON_DELIVERY' : 'MPESA_PREPAID'
+                    }));
+                    mappedOffers = [...extraOffers, ...mappedOffers];
+                }
+            } catch (rErr) {
+                console.warn('Ready orders fetch notice:', rErr);
+            }
+
+            setAvailableOffers(mappedOffers);
 
             // Load wallet ledger
             const { data: ledger } = await walletService.getEntries(rId);
@@ -317,40 +354,67 @@ export default function CourierDashboard() {
         totalDeliveriesAllTime: riderPerf.totalOrders || realCompletedDeliveries
     };
 
-    // Accept Offer (local + Supabase)
+    // Accept Offer (local + Supabase order assignment)
     const handleAcceptOffer = useCallback(async (offer: DispatchOffer) => {
         const mission: DispatchOffer = { ...offer, status: 'HEADING_TO_STORE' };
         setActiveMission(mission);
         setAvailableOffers((prev) => prev.filter((o) => o.id !== offer.id));
-        // Sync acceptance to Supabase
+
+        const targetOrderId = offer.orderId || offer.id;
         try {
             await dispatchService.respondToOffer(offer.id, 'ACCEPTED');
-        } catch (err) {
-            console.error('[CourierDashboard] Accept offer sync failed:', err);
+        } catch {
+            // Non-blocking if it was a direct order offer
         }
-    }, []);
 
-    // Progression Stepper (local + Supabase)
+        if (targetOrderId && riderId) {
+            try {
+                await orderService.updateOrderStatus(targetOrderId, 'RIDER_ASSIGNED', riderId);
+                await supabase.from('orders').update({ rider_id: riderId }).eq('id', targetOrderId);
+            } catch (err) {
+                console.error('[CourierDashboard] Order assignment sync failed:', err);
+            }
+        }
+    }, [riderId]);
+
+    // Progression Stepper (local + Supabase order updates)
     const handleProgressMission = useCallback(async () => {
         if (!activeMission) return;
+        const targetOrderId = activeMission.orderId || activeMission.id;
 
         if (activeMission.status === 'HEADING_TO_STORE') {
             setActiveMission({ ...activeMission, status: 'AT_STORE' });
         } else if (activeMission.status === 'AT_STORE') {
             setActiveMission({ ...activeMission, status: 'PICKED_UP' });
+            if (targetOrderId && riderId) {
+                try {
+                    await orderService.updateOrderStatus(targetOrderId, 'OUT_FOR_DELIVERY', riderId);
+                } catch (err) {
+                    console.error('[CourierDashboard] Order OUT_FOR_DELIVERY sync failed:', err);
+                }
+            }
         } else if (activeMission.status === 'PICKED_UP') {
             // Delivery completed!
+            if (targetOrderId && riderId) {
+                try {
+                    await orderService.updateOrderStatus(targetOrderId, 'DELIVERED', riderId);
+                } catch (err) {
+                    console.error('[CourierDashboard] Order DELIVERED sync failed:', err);
+                }
+            }
+
             const newTx: WalletTransaction = {
                 id: `TX-${Date.now().toString().slice(-4)}`,
                 type: 'CREDIT',
                 amount: activeMission.payoutKES,
-                description: `Supermarket Delivery Dispatch (${activeMission.id})`,
+                description: `Supermarket Delivery Dispatch (${activeMission.id.slice(0, 8)})`,
                 timestamp: 'Just now',
                 referenceId: activeMission.id
             };
             setWalletBalance((prev) => prev + activeMission.payoutKES);
             setWalletTransactions((prev) => [newTx, ...prev]);
             setActiveMission(null);
+
             // Sync wallet credit to Supabase
             if (riderId) {
                 try {
