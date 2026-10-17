@@ -93,6 +93,8 @@ export default function Merchants() {
                         mpesaShortcode: m.mpesa_shortcode || '',
                         mpesaTillNumber: m.mpesa_till || '',
                         kraPin: m.kra_pin || '',
+                        businessPermitNumber: m.health_permit || m.business_permit || '',
+                        operatingHours: typeof m.operating_hours === 'object' && m.operating_hours?.hours ? m.operating_hours.hours : (typeof m.operating_hours === 'string' ? m.operating_hours : '08:00 AM - 10:00 PM'),
                         createdAt: m.created_at,
                         documents: docs,
                         settings: {
@@ -691,6 +693,8 @@ function ApplicationDetailDrawer({ merchant, tab, onTabChange, onClose, onApprov
                                     <InfoGrid items={[
                                         { label: 'M-Pesa Buy Goods Till', value: merchant.mpesaTillNumber || '—' },
                                         { label: 'KRA PIN Number', value: merchant.kraPin || '—' },
+                                        { label: 'Business Permit No.', value: (merchant as any).businessPermitNumber || '—' },
+                                        { label: 'Operating Hours', value: merchant.operatingHours || '08:00 AM - 10:00 PM' },
                                         { label: 'M-Pesa Shortcode', value: merchant.mpesaShortcode || '—', full: true },
                                     ]} />
                                 </Section>

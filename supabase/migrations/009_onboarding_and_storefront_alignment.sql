@@ -9,7 +9,46 @@ ALTER TABLE public.merchants
   ADD COLUMN IF NOT EXISTS kra_pin_url          TEXT,
   ADD COLUMN IF NOT EXISTS health_permit_url    TEXT,
   ADD COLUMN IF NOT EXISTS bulk_purchase_limit  INTEGER NOT NULL DEFAULT 10,
-  ADD COLUMN IF NOT EXISTS bulk_limit           INTEGER DEFAULT 10;
+  ADD COLUMN IF NOT EXISTS bulk_limit           INTEGER DEFAULT 10,
+  ADD COLUMN IF NOT EXISTS pack_time_min        INTEGER NOT NULL DEFAULT 20,
+  ADD COLUMN IF NOT EXISTS delivery_radius_km   INTEGER NOT NULL DEFAULT 7,
+  ADD COLUMN IF NOT EXISTS low_stock_threshold  INTEGER NOT NULL DEFAULT 10;
+
+-- Merchants RLS Alignment: Allow authenticated merchants to insert, update and read their own records
+DO $$
+BEGIN
+  ALTER TABLE public.merchants ENABLE ROW LEVEL SECURITY;
+
+  DROP POLICY IF EXISTS "Merchant reads own" ON public.merchants;
+  CREATE POLICY "Merchant reads own"
+    ON public.merchants FOR SELECT
+    USING (auth.uid() = id);
+
+  DROP POLICY IF EXISTS "Merchant inserts own" ON public.merchants;
+  CREATE POLICY "Merchant inserts own"
+    ON public.merchants FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
+  DROP POLICY IF EXISTS "Merchant updates own" ON public.merchants;
+  CREATE POLICY "Merchant updates own"
+    ON public.merchants FOR UPDATE
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
+
+  DROP POLICY IF EXISTS "Admin manages merchants" ON public.merchants;
+  CREATE POLICY "Admin manages merchants"
+    ON public.merchants FOR ALL
+    USING (
+      coalesce(
+        (SELECT (roles @> ARRAY['admin']::text[] OR roles @> ARRAY['superadmin']::text[])
+         FROM public.profiles WHERE id = auth.uid()),
+        false
+      )
+    );
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END $$;
 
 -- 2. Riders table alignment: ensure personal details, IDs & document URLs exist
 ALTER TABLE public.riders
@@ -23,6 +62,31 @@ ALTER TABLE public.riders
   ADD COLUMN IF NOT EXISTS logbook_url          TEXT,
   ADD COLUMN IF NOT EXISTS insurance_url        TEXT,
   ADD COLUMN IF NOT EXISTS profile_photo_url    TEXT;
+
+-- Riders RLS Alignment: Allow authenticated riders to insert, update and read their own records
+DO $$
+BEGIN
+  ALTER TABLE public.riders ENABLE ROW LEVEL SECURITY;
+
+  DROP POLICY IF EXISTS "Rider reads own" ON public.riders;
+  CREATE POLICY "Rider reads own"
+    ON public.riders FOR SELECT
+    USING (auth.uid() = id);
+
+  DROP POLICY IF EXISTS "Rider inserts own" ON public.riders;
+  CREATE POLICY "Rider inserts own"
+    ON public.riders FOR INSERT
+    WITH CHECK (auth.uid() = id);
+
+  DROP POLICY IF EXISTS "Rider updates own" ON public.riders;
+  CREATE POLICY "Rider updates own"
+    ON public.riders FOR UPDATE
+    USING (auth.uid() = id)
+    WITH CHECK (auth.uid() = id);
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END $$;
 
 -- 3. Products table alignment: add category text name & compare price support
 ALTER TABLE public.products

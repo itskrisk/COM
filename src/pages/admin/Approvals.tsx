@@ -560,13 +560,15 @@ export default function Approvals() {
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Business & Contact Info</p>
-                                                        <div className="space-y-1.5 text-sm">
+                                                         <div className="space-y-1.5 text-sm">
                                                             <p><span className="text-gray-500 font-medium">Owner / Rep:</span> {merchant.owner_name || merchant.profile?.full_name || 'Not provided'}</p>
                                                             <p><span className="text-gray-500 font-medium">Phone:</span> {merchant.phone || merchant.profile?.phone || 'Not provided'}</p>
                                                             <p><span className="text-gray-500 font-medium">Email:</span> {merchant.email || merchant.profile?.email || 'Not provided'}</p>
                                                             <p><span className="text-gray-500 font-medium">Address:</span> {merchant.address || 'Not provided'}</p>
                                                             <p><span className="text-gray-500 font-medium">KRA PIN:</span> {merchant.kra_pin || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Business Permit No:</span> {merchant.health_permit || (merchant as any).business_permit || 'Not provided'}</p>
                                                             <p><span className="text-gray-500 font-medium">M-Pesa Till:</span> {merchant.mpesa_till || 'Not provided'}</p>
+                                                            <p><span className="text-gray-500 font-medium">Operating Hours:</span> {typeof (merchant as any).operating_hours === 'object' && (merchant as any).operating_hours?.hours ? (merchant as any).operating_hours.hours : (typeof (merchant as any).operating_hours === 'string' ? (merchant as any).operating_hours : '08:00 AM - 10:00 PM')}</p>
                                                         </div>
                                                     </div>
                                                     <div>

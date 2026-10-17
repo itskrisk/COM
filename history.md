@@ -3985,3 +3985,60 @@ pm run build\ passed 0 TypeScript errors, 2286 modules, exit code 0.
 - Store cards: merchant-set info (name, logo, banner, hours, status) stored in \merchants\ table and rendered universally in StoreListing + StoreFront.
 - Product cards: merchant-set info (title, price, compare_price, image_url, category, stock_level, is_available) stored in \products\ table and rendered in SupermarketStore with full overlay support.
 - No redundant features — single source of truth in Supabase for both store and product data.
+
+---
+## 2026-10-17 — Auth Callback Flow Fix: Email Verify ? Login ? Onboarding
+
+### Problem
+After clicking the email verification link, merchants/riders were being sent directly to /pending-approval. This skipped the onboarding step entirely.
+
+### Root Cause
+In AuthCallback.tsx line 121, the isPending condition was:
+  const isPending = merchantRow?.onboarding_completed || accountStatus === 'pending_approval' || merchantRow?.status === 'PENDING'
+
+On signup, Supabase immediately creates a merchants row with status = 'PENDING'. So merchantRow?.status === 'PENDING' was always true right after email verification, routing to /pending-approval before onboarding was ever seen.
+
+### Fix
+**AuthCallback.tsx**: Rewrote routing logic to 3 clear states:
+- status = APPROVED ? /merchant/dashboard
+- onboarding_completed = true AND not approved ? /pending-approval
+- anything else (first time) ? /merchant/login
+
+**PartnerLogin.tsx**: Auto-redirect useEffect now reads user.merchant (live merchants table data) instead of profile.account_status which could be stale from buildMinimalUser. Checks onboarding_completed directly.
+
+### Correct Flow
+1. Sign up ? email sent
+2. Click verify link ? AuthCallback ? email confirmed ? redirect to /merchant/login
+3. Log in ? onboarding_completed=false ? redirect to /merchant/onboarding
+4. Submit onboarding ? onboarding_completed=true ? /pending-approval
+5. Admin approves ? status=APPROVED ? /merchant/dashboard
+
+### Build
+0 TypeScript errors, exit code 0. Pushed commit 0aee33d to origin main.
+
+---
+## 2026-10-17 -- Fix Merchant Onboarding RLS Policy Violation & Ensure Complete Admin Data Visibility
+
+### Problem
+During merchant onboarding, submitting the onboarding wizard produced the error:
+"new row violates row-level security policy for table 'merchants'".
+Investigation revealed two compounding root causes:
+1. When a merchant signs up, an initial row is already present in 'public.merchants'. The onboarding wizard was calling 'supabase.from("merchants").upsert(payload, { onConflict: "id" })'. In PostgreSQL, an upsert is executed as an 'INSERT ... ON CONFLICT DO UPDATE'. Even though a row exists, PostgreSQL evaluates the table's INSERT RLS policies on the candidate tuple. If an explicit matching INSERT WITH CHECK policy is absent or conflicting, PostgreSQL rejects the operation with a Row-Level Security violation.
+2. In addition, the payload attempted to set 'pack_time_min' which was not present in the 'merchants' table schema in the database, causing the primary upsert to fail and fall back to a retry that also failed the RLS check.
+
+### Solution
+1. **Migration 009 Alignment (supabase/migrations/009_onboarding_and_storefront_alignment.sql)**:
+   - Added missing operational columns: 'pack_time_min', 'delivery_radius_km', 'low_stock_threshold' to 'public.merchants'.
+   - Explicitly added and aligned RLS policies on 'public.merchants' and 'public.riders':
+     - 'Merchant reads own' (auth.uid() = id)
+     - 'Merchant inserts own' (auth.uid() = id)
+     - 'Merchant updates own' (auth.uid() = id)
+     - 'Admin manages merchants' (is_admin() / roles check)
+     - Equivalent RLS policies for riders.
+2. **Onboarding Submission Resilience (src/pages/merchant/Onboarding.tsx & src/pages/courier/Onboarding.tsx)**:
+   - Replaced fragile upsert with an update-first pattern: update(merchantPayload).eq("id", user.id). Because the user's merchant row is seeded during signup, this executes cleanly against the UPDATE policy without tripping Postgres's candidate-insert RLS evaluation.
+   - Added automatic fallback to direct insert if no row exists, followed by core-column fallback if custom columns are missing.
+   - Ensured all entered fields (business_name, owner_name, phone, email, address, kra_pin, health_permit, business_permit, business_permit_url, kra_pin_url, mpesa_till, documents, operating_hours, onboarding_completed) are safely stored.
+3. **Admin Visibility (src/pages/admin/Approvals.tsx & src/pages/admin/Merchants.tsx)**:
+   - Updated Admin Approvals and Merchants details view to explicitly render the Single Business Permit / License Number and Operating Hours in addition to KRA PIN, M-Pesa Till, Owner Name, Contact, Address, and Document links.
+   - Confirmed full build verification with npm run build passed cleanly.

@@ -165,32 +165,46 @@ export default function CourierOnboarding() {
                     created_at: new Date().toISOString()
                 };
 
-                const { error: riderErr } = await supabase
+                // Try updating existing rider row first
+                const { data: updateData, error: riderErr } = await supabase
                     .from('riders')
-                    .upsert(riderPayload, { onConflict: 'id' });
+                    .update(riderPayload)
+                    .eq('id', user.id)
+                    .select();
 
-                if (riderErr) {
-                    console.warn('Rider full upsert warning, retrying with core columns:', riderErr);
-                    const corePayload = {
-                        id: user.id,
-                        vehicle_type: vehicleType,
-                        national_id: idNumber.trim(),
-                        vehicle_plate: (vehicleType === 'Motorbike' || vehicleType === 'Car') ? vehiclePlate.trim().toUpperCase() : null,
-                        status: 'PENDING',
-                        onboarding_completed: true,
-                        is_online: false,
-                        has_helmet: hasHelmet,
-                        has_thermal_bag: hasThermalBag,
-                        has_id_doc: Boolean(idDocName || idNumber || docUrl),
-                        has_license: Boolean(licenseDocName || licenseDocUrl),
-                        documents: docsPayload,
-                        created_at: new Date().toISOString()
-                    };
-                    const { error: retryErr } = await supabase
+                let riderSaved = !riderErr && updateData && updateData.length > 0;
+
+                if (!riderSaved) {
+                    const insertPayload = { id: user.id, ...riderPayload };
+                    const { error: insErr } = await supabase
                         .from('riders')
-                        .upsert(corePayload, { onConflict: 'id' });
+                        .insert(insertPayload);
 
-                    if (retryErr) throw retryErr;
+                    if (insErr) {
+                        console.warn('Rider insert warning, retrying with core columns:', insErr);
+                        const corePayload = {
+                            id: user.id,
+                            vehicle_type: vehicleType,
+                            national_id: idNumber.trim(),
+                            vehicle_plate: (vehicleType === 'Motorbike' || vehicleType === 'Car') ? vehiclePlate.trim().toUpperCase() : null,
+                            status: 'PENDING',
+                            onboarding_completed: true,
+                            is_online: false,
+                            documents: docsPayload,
+                            created_at: new Date().toISOString()
+                        };
+                        const { error: coreUpdateErr } = await supabase
+                            .from('riders')
+                            .update(corePayload)
+                            .eq('id', user.id);
+
+                        if (coreUpdateErr) {
+                            const { error: retryErr } = await supabase
+                                .from('riders')
+                                .upsert(corePayload, { onConflict: 'id' });
+                            if (retryErr) throw retryErr;
+                        }
+                    }
                 }
 
                 // Move the profile to pending_approval so ProtectedRoute stops

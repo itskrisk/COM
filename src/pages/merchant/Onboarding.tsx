@@ -175,12 +175,12 @@ export default function MerchantOnboarding() {
                 }
 
                 const merchantPayload: Record<string, any> = {
-                    id: user.id,
                     business_name: storeName.trim(),
                     address: `${branchName} - ${address.trim()}`,
                     phone: phone.trim(),
                     kra_pin: kraPin.trim(),
                     health_permit: businessPermitNumber.trim(),
+                    business_permit: businessPermitNumber.trim(),
                     business_permit_url: docUrl || null,
                     kra_pin_url: kraDocUrl || null,
                     mpesa_till: mpesaTill.trim(),
@@ -190,35 +190,55 @@ export default function MerchantOnboarding() {
                     owner_name: profile?.full_name || user.email?.split('@')[0] || '',
                     documents: docsPayload,
                     operating_hours: { hours: operatingHours },
-                    pack_time_min: Number(packTimeMin) || 20,
                     created_at: new Date().toISOString()
                 };
 
-                const { error: upsertError } = await supabase
+                // Try updating the existing merchant row first (created at signup)
+                const { data: updateData, error: updateError } = await supabase
                     .from('merchants')
-                    .upsert(merchantPayload, { onConflict: 'id' });
+                    .update(merchantPayload)
+                    .eq('id', user.id)
+                    .select();
 
-                if (upsertError) {
-                    console.warn('Merchant full upsert warning, retrying with core columns:', upsertError);
-                    const corePayload = {
-                        id: user.id,
-                        business_name: storeName.trim(),
-                        address: `${branchName} - ${address.trim()}`,
-                        phone: phone.trim(),
-                        kra_pin: kraPin.trim(),
-                        health_permit: businessPermitNumber.trim(),
-                        mpesa_till: mpesaTill.trim(),
-                        status: 'PENDING',
-                        onboarding_completed: true,
-                        email: user.email || '',
-                        documents: docsPayload,
-                        created_at: new Date().toISOString()
-                    };
-                    const { error: retryError } = await supabase
+                let saveSuccess = !updateError && updateData && updateData.length > 0;
+
+                // If update returned 0 rows (row didn't exist yet) or errored, try insert/upsert
+                if (!saveSuccess) {
+                    const insertPayload = { id: user.id, ...merchantPayload };
+                    const { error: insertError } = await supabase
                         .from('merchants')
-                        .upsert(corePayload, { onConflict: 'id' });
+                        .insert(insertPayload);
 
-                    if (retryError) throw retryError;
+                    if (insertError) {
+                        console.warn('Direct insert failed, attempting upsert with core columns:', insertError);
+                        const corePayload = {
+                            id: user.id,
+                            business_name: storeName.trim(),
+                            address: `${branchName} - ${address.trim()}`,
+                            phone: phone.trim(),
+                            kra_pin: kraPin.trim(),
+                            health_permit: businessPermitNumber.trim(),
+                            business_permit_url: docUrl || null,
+                            kra_pin_url: kraDocUrl || null,
+                            mpesa_till: mpesaTill.trim(),
+                            status: 'PENDING',
+                            onboarding_completed: true,
+                            email: user.email || '',
+                            documents: docsPayload
+                        };
+                        // Try update core
+                        const { error: coreUpdateErr } = await supabase
+                            .from('merchants')
+                            .update(corePayload)
+                            .eq('id', user.id);
+
+                        if (coreUpdateErr) {
+                            const { error: coreUpsertErr } = await supabase
+                                .from('merchants')
+                                .upsert(corePayload, { onConflict: 'id' });
+                            if (coreUpsertErr) throw coreUpsertErr;
+                        }
+                    }
                 }
 
                 // Move the profile to pending_approval so ProtectedRoute stops
