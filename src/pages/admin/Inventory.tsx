@@ -22,18 +22,42 @@ import { Product } from '../../types/schema';
 export default function Inventory() {
     const [products, setProducts] = useState<any[]>([]);
     const [merchants, setMerchants] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        const fetchMerchants = async () => {
-            const { data } = await supabase.from('profiles').select('*').eq('role', 'merchant');
-            if (data) {
-                setMerchants(data.map(m => ({
-                    id: m.id,
-                    businessName: m.business_name || m.full_name || 'Partner',
-                })));
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [{ data: merchantData }, { data: productData }] = await Promise.all([
+                    supabase.from('merchants').select('id, business_name, store_type, is_approved').order('created_at', { ascending: false }),
+                    supabase.from('products').select('*, merchants!merchant_id(business_name)').order('created_at', { ascending: false })
+                ]);
+                if (merchantData) {
+                    setMerchants(merchantData.map((m: any) => ({
+                        id: m.id,
+                        businessName: m.business_name || 'Partner',
+                    })));
+                }
+                if (productData) {
+                    setProducts(productData.map((p: any) => ({
+                        ...p,
+                        merchantId: p.merchant_id,
+                        stockLevel: p.stock_level ?? 50,
+                        merchantName: p.merchants?.business_name || 'Unknown Store'
+                    })));
+                }
+            } catch (err) {
+                console.error('Inventory fetch error:', err);
+            } finally {
+                setIsLoading(false);
             }
         };
-        fetchMerchants();
+        fetchData();
+
+        const channel = supabase.channel('admin_inventory_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchData())
+            .subscribe();
+        return () => { supabase.removeChannel(channel); };
     }, []);
     const [searchQuery, setSearchQuery] = useState('');
     const [merchantFilter, setMerchantFilter] = useState<string>('ALL');

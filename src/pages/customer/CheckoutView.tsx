@@ -18,7 +18,9 @@ import {
     AlertCircle,
     LogIn
 } from 'lucide-react';
-import { customerApi, paymentApi } from '../../lib/api';
+import { customerApi } from '../../lib/api';
+import { mpesaService } from '../../lib/mpesaService';
+import { walletService } from '../../lib/walletService';
 
 export default function CheckoutView() {
     const navigate = useNavigate();
@@ -52,6 +54,7 @@ export default function CheckoutView() {
     // M-Pesa STK Push Simulation States
     const [isStkModalOpen, setIsStkModalOpen] = useState(false);
     const [stkOrderId, setStkOrderId] = useState<string | null>(null);
+    const [stkReceiptNumber, setStkReceiptNumber] = useState<string>('');
     const [stkCountdown, setStkCountdown] = useState(5);
 
     // Prefill profile data
@@ -202,11 +205,24 @@ export default function CheckoutView() {
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [isStkModalOpen, stkOrderId]);
+    }, [isStkModalOpen, stkOrderId, stkReceiptNumber]);
 
-    const handleConfirmStkSuccess = () => {
+    const handleConfirmStkSuccess = async () => {
         if (!stkOrderId) return;
         setIsStkModalOpen(false);
+
+        try {
+            // Allocate funds into Merchant, Rider, and Platform wallets via mpesaService
+            await mpesaService.confirmOrderPayment(
+                stkOrderId,
+                stkReceiptNumber || `QKH${Date.now().toString().slice(-6)}`,
+                finalTotal,
+                effectiveMerchantId
+            );
+        } catch (e) {
+            console.error('Payment confirmation error:', e);
+        }
+
         clearCart();
         navigate(`/order/${stkOrderId}`);
     };
@@ -262,15 +278,32 @@ export default function CheckoutView() {
             // Store last order for immediate retrieval
             localStorage.setItem('muncheez_last_order', createdOrderId);
 
-            // If M-Pesa, display interactive STK push simulation modal
+            // If M-Pesa, dispatch STK Push via Daraja API and open modal
             if (paymentMethod === 'mpesa') {
+                const stkRes = await mpesaService.initiateSTKPush({
+                    phoneNumber: phoneNumber.trim(),
+                    amount: finalTotal,
+                    orderId: createdOrderId,
+                    merchantId: effectiveMerchantId
+                });
+
                 setIsProcessing(false);
                 setStkOrderId(createdOrderId);
+                setStkReceiptNumber(stkRes.receiptNumber || `QKH${Date.now().toString().slice(-6)}`);
                 setIsStkModalOpen(true);
                 return;
             }
 
             // Cash or Card: directly clear cart and navigate to live tracking
+            if (paymentMethod === 'cash') {
+                await walletService.allocateOrderRevenue({
+                    orderId: createdOrderId,
+                    totalAmount: finalTotal,
+                    merchantId: effectiveMerchantId,
+                    receiptNumber: `CASH-${createdOrderId.slice(0, 6).toUpperCase()}`
+                });
+            }
+
             clearCart();
             navigate(`/order/${createdOrderId}`);
         } catch (error: any) {
@@ -784,8 +817,14 @@ export default function CheckoutView() {
                                     </div>
                                     <div className="flex justify-between text-xs font-mono text-neutral-500">
                                         <span>Merchant Till</span>
-                                        <span className="text-black">{merchant?.business_name || 'Rose Honey'}</span>
+                                        <span className="text-black">{merchant?.business_name || 'Rose Honey'} (Till 174379)</span>
                                     </div>
+                                    {stkReceiptNumber && (
+                                        <div className="flex justify-between text-xs font-mono text-neutral-500">
+                                            <span>M-Pesa Reference</span>
+                                            <span className="text-black font-bold">{stkReceiptNumber}</span>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="space-y-1 text-center py-1 sm:py-2">
