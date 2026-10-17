@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import { useAuth } from '../../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -164,18 +165,20 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            const { error } = await supabase
+            const updatePayload = activeTab === 'merchants'
+                ? { status: 'APPROVED', is_active: true }
+                : { status: 'APPROVED', is_online: true };
+
+            const { error } = await adminSupabase
                 .from(table)
-                .update({ status: 'APPROVED', is_active: true })
+                .update(updatePayload)
                 .eq('id', id);
 
             if (error) throw error;
 
-            // Sync profile status AND account_status. ProtectedRoute gates on
-            // account_status, so updating only the legacy status column leaves
-            // approved users stuck on the pending-approval screen forever.
+            // Sync profile status AND account_status so user can access dashboard
             try {
-                await supabase.from('profiles').update({
+                await adminSupabase.from('profiles').update({
                     status: 'APPROVED',
                     account_status: 'active'
                 }).eq('id', id);
@@ -203,15 +206,19 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            const { error } = await supabase
+            const updatePayload = activeTab === 'merchants'
+                ? { status: 'REJECTED', is_active: false }
+                : { status: 'REJECTED', is_online: false };
+
+            const { error } = await adminSupabase
                 .from(table)
-                .update({ status: 'REJECTED', is_active: false })
+                .update(updatePayload)
                 .eq('id', id);
 
             if (error) throw error;
 
             try {
-                await supabase.from('profiles').update({
+                await adminSupabase.from('profiles').update({
                     status: 'REJECTED',
                     account_status: 'rejected'
                 }).eq('id', id);
@@ -238,15 +245,19 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            const { error } = await supabase
+            const updatePayload = activeTab === 'merchants'
+                ? { status: 'SUSPENDED', is_active: false }
+                : { status: 'SUSPENDED', is_online: false };
+
+            const { error } = await adminSupabase
                 .from(table)
-                .update({ status: 'SUSPENDED', is_active: false })
+                .update(updatePayload)
                 .eq('id', id);
 
             if (error) throw error;
 
             try {
-                await supabase.from('profiles').update({
+                await adminSupabase.from('profiles').update({
                     status: 'SUSPENDED',
                     account_status: 'suspended'
                 }).eq('id', id);

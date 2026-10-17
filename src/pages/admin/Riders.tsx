@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { Rider } from '../../types/schema';
 import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 
 type ActionType = 'approve' | 'suspend' | 'offboard' | null;
 type DrawerTab = 'details' | 'documents' | 'performance' | 'timeline';
@@ -165,7 +166,9 @@ export default function Riders() {
         else return;
 
         try {
-            await supabase.from('riders').update({ status: newStatus }).eq('id', rider.id);
+            await adminSupabase.from('riders').update({ status: newStatus, is_online: newStatus === 'APPROVED' }).eq('id', rider.id);
+            const accountStatus = newStatus === 'APPROVED' ? 'active' : newStatus === 'SUSPENDED' ? 'suspended' : 'pending_approval';
+            await adminSupabase.from('profiles').update({ status: newStatus, account_status: accountStatus }).eq('id', rider.id);
             await fetchRiders();
         } catch (e) {
             console.error('Action failed:', e);

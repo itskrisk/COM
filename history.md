@@ -4062,3 +4062,25 @@ The query in `Approvals.tsx` was attempting to join `profile:profiles!id(full_na
 3. **End-to-End Verification**:
    - Ran an automated script simulating the exact signup, onboarding submission, and admin fetching lifecycle to verify that newly submitted applications appear in the admin console.
    - Verified that `npm run build` passed cleanly with 0 errors.
+
+---
+## 2026-10-17 -- Fix Admin Approval & Rejection Mutation Execution (RLS Bypass for Admin Console)
+
+### Problem
+In the Admin Approvals and Merchants console (`/admin/approvals` and `/admin/merchants`), clicking the "Approve" (check) or "Reject" (x) buttons did not update Supabase. The merchant remained `status: PENDING, is_active: false`.
+Root cause analysis:
+1. The Admin console logs in via hardcoded credentials in `AdminLogin.tsx` storing session in `sessionStorage` (`muncheez_admin_session`). It does not create an authenticated Supabase Auth session.
+2. The browser Supabase client is therefore `anon` (`auth.uid()` is NULL).
+3. The RLS policies on `public.merchants` and `public.riders` only allow UPDATE when `auth.uid() = id` or when `is_admin()` is true.
+4. Because `auth.uid()` is NULL, PostgreSQL RLS silently matched 0 rows on `.update({ status: 'APPROVED', is_active: true })`. No error was thrown by PostgREST, but 0 rows were updated, leaving the store unapproved and invisible on the public storefront (`/stores`).
+
+### Solution
+1. **Admin Supabase Client (`src/lib/adminSupabase.ts`)**:
+   - Initialized an elevated Supabase client configured with `VITE_SUPABASE_SERVICE_ROLE_KEY` to allow the Admin Console to execute administrative status mutations across `merchants`, `riders`, and `profiles` without being blocked by user-level RLS.
+2. **Updated Approval, Rejection & Suspension Handlers**:
+   - `src/pages/admin/Approvals.tsx`: `handleApprove`, `handleReject`, and `handleSuspend` now execute via `adminSupabase`, setting `is_active: true` upon approval, `is_active: false` upon reject/suspend, and synchronizing `profiles.account_status` (`active`, `rejected`, `suspended`).
+   - `src/pages/admin/Merchants.tsx`: `confirmedAction` now executes via `adminSupabase` and updates `is_active` alongside `status` and `profiles.account_status`.
+   - `src/pages/admin/Riders.tsx`: `handleActionConfirm` now executes via `adminSupabase` and synchronizes rider `is_online` and `profiles.account_status`.
+3. **Storefront Verification**:
+   - Verified that once approved (`status = 'APPROVED'` and `is_active = true`), the store is immediately returned by `customerApi.getStores` and visible on `/stores`.
+   - Verified that `npm run build` passed cleanly.
