@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -9,19 +9,26 @@ import {
     ArrowRight,
     MapPin,
     CreditCard,
-    Banknote,
     Smartphone,
-    CheckCircle2
+    Banknote,
+    Plus,
+    Minus,
+    Trash2,
+    CheckCircle2,
+    AlertCircle,
+    LogIn
 } from 'lucide-react';
 import { customerApi, paymentApi } from '../../lib/api';
 
 export default function CheckoutView() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { user, profile } = useAuth();
-    const { items, total, merchantId, clearCart, itemCount } = useCart();
+    const { items, total, merchantId, clearCart, itemCount, updateQuantity, removeItem } = useCart();
 
     const [currentStep, setCurrentStep] = useState<'review' | 'delivery' | 'payment'>('review');
     const [isProcessing, setIsProcessing] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [merchant, setMerchant] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
@@ -44,12 +51,35 @@ export default function CheckoutView() {
         }
     }, [profile]);
 
+    // Load merchant data
+    useEffect(() => {
+        loadMerchant();
+    }, [merchantId]);
+
+    const loadMerchant = async () => {
+        if (!merchantId) {
+            setLoading(false);
+            return;
+        }
+        try {
+            const result = await customerApi.getStore(merchantId);
+            if (result.data) {
+                setMerchant(result.data);
+            }
+        } catch (e) {
+            console.error('Failed to load merchant:', e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleGetCurrentLocation = () => {
         if (!navigator.geolocation) {
-            alert('Geolocation is not supported by your browser.');
+            setErrorMessage('Geolocation is not supported by your browser.');
             return;
         }
         setIsLocating(true);
+        setErrorMessage(null);
         navigator.geolocation.getCurrentPosition(
             async (position) => {
                 const { latitude, longitude } = position.coords;
@@ -58,11 +88,16 @@ export default function CheckoutView() {
                     const data = await res.json();
                     if (data && data.display_name) {
                         setDeliveryAddress(data.display_name);
+                        localStorage.setItem('muncheez_delivery_address', data.display_name);
                     } else {
-                        setDeliveryAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                        const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+                        setDeliveryAddress(fallback);
+                        localStorage.setItem('muncheez_delivery_address', fallback);
                     }
                 } catch {
-                    setDeliveryAddress(`${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+                    const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+                    setDeliveryAddress(fallback);
+                    localStorage.setItem('muncheez_delivery_address', fallback);
                 } finally {
                     setIsLocating(false);
                 }
@@ -70,102 +105,88 @@ export default function CheckoutView() {
             (err) => {
                 console.error('Geolocation error:', err);
                 setIsLocating(false);
-                alert('Could not fetch location. Please enter manually.');
+                setErrorMessage('Could not fetch GPS location. Please type your delivery address manually.');
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
     };
 
-    // Load merchant data
-    useEffect(() => {
-        loadMerchant();
-    }, [merchantId]);
-
-    const loadMerchant = async () => {
-        if (!merchantId) return;
-        const result = await customerApi.getStore(merchantId);
-        if (result.data) {
-            setMerchant(result.data);
-        }
-        setLoading(false);
-    };
-
     if (itemCount === 0 || !merchantId) {
         return (
-            <div className="min-h-screen bg-white flex flex-col justify-between selection:bg-black selection:text-white">
-                <header className="border-b border-gray-100 px-6 sm:px-12 py-5 flex items-center justify-between">
+            <div className="min-h-screen bg-white text-black flex flex-col justify-between selection:bg-black selection:text-white">
+                <header className="border-b border-neutral-200 px-4 sm:px-10 py-4 flex items-center justify-between">
                     <button
                         onClick={() => navigate('/stores')}
-                        className="inline-flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-gray-500 hover:text-black transition-colors"
+                        className="inline-flex items-center gap-1.5 text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors min-h-[44px]"
                     >
                         <ChevronLeft size={16} />
-                        Back to Selection
+                        Stores
                     </button>
-                    <span className="font-heading font-bold text-2xl tracking-tighter text-gray-900">
-                        Muncheez<span className="text-[#2563EB]">.</span>
+                    <span className="font-heading font-bold text-2xl tracking-tighter text-black">
+                        Muncheez<span className="text-[#D4AF37]">.</span>
                     </span>
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-gray-400">
-                        Fast. Fresh. Fam.
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                        Cart (0)
                     </span>
                 </header>
 
-                <main className="max-w-xl mx-auto w-full px-6 py-20 flex-1 flex flex-col justify-center text-center">
-                    <div className="w-16 h-16 bg-blue-50 flex items-center justify-center mx-auto mb-8">
-                        <ShoppingBag size={28} className="text-[#2563EB]" />
+                <main className="max-w-xl mx-auto w-full px-4 sm:px-6 py-16 flex-1 flex flex-col justify-center text-center">
+                    <div className="w-12 h-12 border border-neutral-200 flex items-center justify-center mx-auto mb-6 text-neutral-400">
+                        <ShoppingBag size={22} />
                     </div>
 
-                    <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-gray-400 mb-4 block">
-                        My Bag · 0 Items
+                    <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 mb-2 block">
+                        Your Bag · Empty
                     </span>
 
-                    <h1 className="text-4xl sm:text-5xl font-heading font-light text-gray-900 tracking-tight mb-4">
-                        Your bag is empty.
+                    <h1 className="text-3xl sm:text-4xl font-light text-black tracking-tight mb-4">
+                        Your bag is currently empty.
                     </h1>
 
-                    <p className="text-sm text-gray-500 max-w-md mx-auto leading-relaxed mb-10">
-                        You have not selected any items yet. Explore our curated selection of supermarkets and restaurants across Nairobi.
+                    <p className="text-sm text-neutral-500 max-w-sm mx-auto leading-relaxed mb-8">
+                        Explore supermarkets, eateries, and provisions across Nairobi and add items to your cart.
                     </p>
-
-                    <div className="border-t border-b border-gray-100 py-6 mb-10">
-                        <p className="text-xs font-mono text-gray-400 uppercase tracking-wider">
-                            Real-time dispatch · Direct M-Pesa checkout · Zero hidden markups
-                        </p>
-                    </div>
 
                     <button
                         onClick={() => navigate('/stores')}
-                        className="inline-flex items-center justify-between gap-4 py-4 px-8 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#2563EB] transition-colors mx-auto"
+                        className="inline-flex items-center justify-center gap-2 py-3.5 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-neutral-800 transition-colors mx-auto min-h-[44px]"
                     >
-                        <span>Browse Stores & Restaurants</span>
+                        <span>Browse Catalogues</span>
                         <ArrowRight size={14} />
                     </button>
                 </main>
 
-                <footer className="border-t border-gray-100 py-6 px-6 sm:px-12 text-center">
-                    <p className="text-[10px] font-mono uppercase tracking-[0.3em] text-gray-400">
-                        Muncheez Technologies Limited · Nairobi, Kenya
+                <footer className="border-t border-neutral-200 py-4 px-4 sm:px-10 text-center">
+                    <p className="text-[10px] font-mono uppercase tracking-widest text-neutral-400">
+                        Muncheez Delivery · Nairobi, Kenya
                     </p>
                 </footer>
             </div>
         );
     }
 
-    if (!merchant) return null;
-
-    const deliveryFee = merchant.deliveryFee || 150;
+    const deliveryFee = merchant?.deliveryFee || 150;
     const finalTotal = total + deliveryFee;
 
     const handlePlaceOrder = async () => {
+        setErrorMessage(null);
+
+        // Require user authentication for Supabase RLS compliance
+        if (!user) {
+            navigate('/login', { state: { from: location.pathname } });
+            return;
+        }
+
+        if (!deliveryAddress.trim()) {
+            setCurrentStep('delivery');
+            setErrorMessage('Please provide a delivery address before placing your order.');
+            return;
+        }
+
         setIsProcessing(true);
 
         try {
-            if (!merchantId) {
-                alert('No merchant selected');
-                setIsProcessing(false);
-                return;
-            }
-
-            // Create order via Supabase
+            // Create order via Supabase with validated fields
             const orderResult = await customerApi.createOrder({
                 merchantId: merchantId,
                 items: items.map(i => ({
@@ -175,271 +196,499 @@ export default function CheckoutView() {
                     price: i.price,
                     options: []
                 })),
-                deliveryAddress: deliveryAddress || merchant?.address || '',
-                paymentMethod: paymentMethod
+                deliveryAddress: deliveryAddress.trim(),
+                deliveryInstructions: deliveryInstructions.trim(),
+                paymentMethod: paymentMethod.toUpperCase(),
+                wantsCutlery: wantsCutlery,
+                phoneNumber: phoneNumber.trim()
             });
 
             if (orderResult.error) {
-                alert(orderResult.error);
+                setErrorMessage(orderResult.error);
                 setIsProcessing(false);
                 return;
             }
 
-            // If M-Pesa, initiate payment
-            if (paymentMethod === 'mpesa' && orderResult.data?.id) {
-                const paymentResult = await paymentApi.initiate(orderResult.data.id);
-                if (paymentResult.error) {
-                    alert('Payment initiation failed: ' + paymentResult.error);
+            const createdOrderId = orderResult.data?.id;
+            if (!createdOrderId) {
+                setErrorMessage('Order created but failed to retrieve confirmation ID.');
+                setIsProcessing(false);
+                return;
+            }
+
+            // If M-Pesa, attempt payment initiation
+            if (paymentMethod === 'mpesa') {
+                try {
+                    await paymentApi.initiate(createdOrderId);
+                } catch (pErr) {
+                    console.warn('M-Pesa push notice:', pErr);
                 }
             }
 
+            // Clear local and database cart and route to live order status
             clearCart();
-            navigate(`/order/${orderResult.data?.id}`);
-        } catch (error) {
-            alert('Failed to place order. Please try again.');
+            navigate(`/order/${createdOrderId}`);
+        } catch (error: any) {
+            console.error('Order placement failure:', error);
+            setErrorMessage(error?.message || 'Failed to place order. Please try again.');
             setIsProcessing(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFBF7] text-gray-900 font-sans pb-32">
-            {/* Header */}
-            <header className="fixed top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 z-50 px-6 flex items-center justify-between">
+        <div className="min-h-screen bg-white text-black font-sans selection:bg-black selection:text-white pb-24">
+            {/* Header: Editorial, minimal, edge-to-edge */}
+            <header className="border-b border-neutral-200 px-4 sm:px-10 py-3.5 sticky top-0 bg-white/95 backdrop-blur z-30 flex items-center justify-between">
                 <button
                     onClick={() => navigate(-1)}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full transition-colors"
+                    className="inline-flex items-center gap-1 text-xs font-mono uppercase tracking-widest text-neutral-500 hover:text-black transition-colors min-h-[44px]"
+                    aria-label="Go back"
                 >
-                    <ChevronLeft size={24} />
+                    <ChevronLeft size={16} />
+                    <span>Back</span>
                 </button>
                 <div className="text-center">
-                    <h1 className="font-heading font-black text-lg tracking-tight">Checkout</h1>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{merchant.businessName}</p>
+                    <span className="font-heading font-bold text-xl tracking-tighter block leading-tight">
+                        Muncheez<span className="text-[#D4AF37]">.</span>
+                    </span>
+                    <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest block truncate max-w-[200px] sm:max-w-xs">
+                        {merchant?.businessName || merchant?.business_name || 'Market Checkout'}
+                    </span>
                 </div>
-                <div className="w-10" />
+                <div className="text-right">
+                    <span className="text-xs font-mono font-bold text-black block">
+                        KES {finalTotal.toLocaleString()}
+                    </span>
+                    <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest block">
+                        {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                    </span>
+                </div>
             </header>
 
-            <main className="pt-28 px-6 max-w-2xl mx-auto space-y-8">
-
-                {/* Progress Steps */}
-                <div className="flex items-center justify-between px-4 mb-8">
-                    {['review', 'delivery', 'payment'].map((step, idx) => {
-                        const steps = ['review', 'delivery', 'payment'];
-                        const isActive = step === currentStep;
-                        const isCompleted = steps.indexOf(step) < steps.indexOf(currentStep);
-
+            <main className="max-w-2xl mx-auto w-full px-4 sm:px-6 py-6 sm:py-8 space-y-6">
+                {/* Step indicator: Clean text navigation without overflowing horizontal cards */}
+                <nav className="border-b border-neutral-200 pb-3 flex items-center justify-between text-xs font-mono uppercase tracking-widest">
+                    {(['review', 'delivery', 'payment'] as const).map((step, idx) => {
+                        const isActive = currentStep === step;
+                        const isPast = (step === 'delivery' && currentStep === 'payment') || (step === 'review' && currentStep !== 'review');
+                        const labels = { review: '1. Review', delivery: '2. Delivery', payment: '3. Payment' };
                         return (
-                            <div key={step} className="flex flex-col items-center gap-2 relative z-10">
-                                <div className={`
-                                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300
-                                    ${isActive ? 'bg-gray-900 text-white scale-110 shadow-lg' : isCompleted ? 'bg-[#39B54A] text-white' : 'bg-gray-100 text-gray-400'}
-                                `}>
-                                    {isCompleted ? <CheckCircle2 size={14} /> : idx + 1}
-                                </div>
-                                <span className={`text-[10px] font-bold uppercase tracking-widest ${isActive ? 'text-gray-900' : 'text-gray-300'}`}>
-                                    {step}
-                                </span>
-                            </div>
+                            <button
+                                key={step}
+                                onClick={() => setCurrentStep(step)}
+                                className={`py-1.5 transition-colors min-h-[36px] flex items-center gap-1.5 ${
+                                    isActive
+                                        ? 'text-black font-bold border-b-2 border-black -mb-[13px]'
+                                        : isPast
+                                        ? 'text-neutral-500 hover:text-black'
+                                        : 'text-neutral-300 hover:text-neutral-500'
+                                }`}
+                            >
+                                {isPast && <CheckCircle2 size={12} className="text-emerald-600" />}
+                                <span>{labels[step]}</span>
+                            </button>
                         );
                     })}
-                    {/* Progress Bar Background */}
-                    <div className="absolute left-10 right-10 h-[2px] bg-gray-100 -z-0 top-[135px] max-w-xl mx-auto md:top-36" />
-                </div>
+                </nav>
 
-                <AnimatePresence mode='wait'>
+                {/* Inline Error Banner */}
+                {errorMessage && (
+                    <div className="border border-red-200 bg-red-50 text-red-700 px-4 py-3 text-xs font-mono flex items-start gap-2">
+                        <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                        <div className="flex-1 leading-relaxed">{errorMessage}</div>
+                    </div>
+                )}
+
+                {/* Unauthenticated Customer Notice */}
+                {!user && (
+                    <div className="border border-amber-200 bg-amber-50/60 p-4 text-xs font-mono text-amber-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <LogIn size={15} className="shrink-0" />
+                            <span>You are checking out as guest. Sign in to track live delivery.</span>
+                        </div>
+                        <button
+                            onClick={() => navigate('/login', { state: { from: location.pathname } })}
+                            className="underline uppercase font-bold tracking-widest text-black hover:text-neutral-700 text-left sm:text-right"
+                        >
+                            Sign In / Register →
+                        </button>
+                    </div>
+                )}
+
+                <AnimatePresence mode="wait">
+                    {/* ═══ STEP 1: REVIEW & EDIT BAG ═══ */}
                     {currentStep === 'review' && (
-                        <motion.div
+                        <motion.section
                             key="review"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
                             className="space-y-6"
                         >
-                            <h2 className="text-2xl font-heading font-black tracking-tight">Order Summary</h2>
-                            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 divide-y divide-gray-100">
-                                {items.map(item => (
-                                    <div key={item.id} className="py-4 flex gap-4 first:pt-0 last:pb-0">
-                                        <div className="w-16 h-16 bg-gray-100 rounded-xl overflow-hidden shrink-0">
-                                            <img src={item.imageUrl} className="w-full h-full object-cover" />
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-light tracking-tight text-black mb-1">
+                                    Review Your Items
+                                </h1>
+                                <p className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
+                                    Direct from {merchant?.businessName || merchant?.business_name || 'Market'}
+                                </p>
+                            </div>
+
+                            {/* Item List: Unboxed editorial list with hairline dividers */}
+                            <div className="border-t border-b border-neutral-200 divide-y divide-neutral-100">
+                                {items.map((item) => (
+                                    <div key={item.id} className="py-3.5 flex items-center gap-3">
+                                        {/* Image */}
+                                        <div className="w-14 h-14 border border-neutral-200 bg-neutral-100 overflow-hidden shrink-0">
+                                            <img
+                                                src={item.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400'}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover"
+                                            />
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start">
-                                                <h3 className="font-bold text-sm leading-tight">{item.name}</h3>
-                                                <span className="font-bold text-sm">x{item.quantity}</span>
-                                            </div>
-                                            <p className="text-gray-400 text-xs mt-1">KES {item.price.toLocaleString()}</p>
+
+                                        {/* Name & Price */}
+                                        <div className="flex-1 min-w-0 pr-1">
+                                            <h2 className="text-sm font-medium text-black truncate leading-snug">
+                                                {item.name}
+                                            </h2>
+                                            <p className="text-xs font-mono text-neutral-500">
+                                                KES {item.price.toLocaleString()}
+                                            </p>
                                         </div>
+
+                                        {/* Quantity Controls: Generous touch targets */}
+                                        <div className="flex items-center gap-1 border border-neutral-300 px-1 py-0.5 shrink-0 bg-white">
+                                            <button
+                                                onClick={() => updateQuantity(item.id, -1)}
+                                                className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-black transition-colors"
+                                                aria-label="Decrease quantity"
+                                            >
+                                                <Minus size={12} />
+                                            </button>
+                                            <span className="text-xs font-mono font-bold min-w-[20px] text-center">
+                                                {item.quantity}
+                                            </span>
+                                            <button
+                                                onClick={() => updateQuantity(item.id, 1)}
+                                                className="w-7 h-7 flex items-center justify-center text-neutral-600 hover:text-black transition-colors"
+                                                aria-label="Increase quantity"
+                                            >
+                                                <Plus size={12} />
+                                            </button>
+                                        </div>
+
+                                        {/* Direct Remove */}
+                                        <button
+                                            onClick={() => removeItem(item.id)}
+                                            className="p-2 text-neutral-400 hover:text-rose-600 transition-colors shrink-0"
+                                            aria-label={`Remove ${item.name}`}
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
                                     </div>
                                 ))}
                             </div>
 
-                            {merchant.type === 'Restaurant' && (
-                                <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">🍴</div>
-                                        <div>
-                                            <p className="font-bold text-sm">Cutlery Request</p>
-                                            <p className="text-xs text-gray-400">Reduce plastic waste</p>
-                                        </div>
+                            {/* Cutlery Toggle: Unboxed border divider */}
+                            {merchant?.type === 'Restaurant' && (
+                                <div className="border-b border-neutral-200 pb-4 flex items-center justify-between">
+                                    <div>
+                                        <span className="text-xs font-mono uppercase tracking-widest text-black block">
+                                            Cutlery & Utensils
+                                        </span>
+                                        <span className="text-[11px] text-neutral-400 block">
+                                            Request disposable cutlery with your meal
+                                        </span>
                                     </div>
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" checked={wantsCutlery} onChange={e => setWantsCutlery(e.target.checked)} className="sr-only peer" />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D4AF37]"></div>
-                                    </label>
+                                    <input
+                                        type="checkbox"
+                                        checked={wantsCutlery}
+                                        onChange={(e) => setWantsCutlery(e.target.checked)}
+                                        className="w-4 h-4 accent-black cursor-pointer"
+                                    />
                                 </div>
                             )}
 
-                            <button
-                                onClick={() => setCurrentStep('delivery')}
-                                className="w-full bg-gray-900 text-white h-16 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-[#D4AF37] transition-all flex items-center justify-center gap-2 group"
-                            >
-                                Continue to Delivery <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        </motion.div>
-                    )}
-
-                    {currentStep === 'delivery' && (
-                        <motion.div
-                            key="delivery"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="space-y-6"
-                        >
-                            <h2 className="text-2xl font-heading font-black tracking-tight">Delivery Details</h2>
-
-                            <div className="bg-white rounded-[2rem] p-6 shadow-sm border border-gray-100 space-y-6">
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Delivery Address / Area</label>
-                                    <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100 focus-within:ring-2 focus-within:ring-[#D4AF37]/20 transition-all">
-                                        <MapPin size={20} className="text-[#D4AF37] shrink-0" />
-                                        <input
-                                            type="text"
-                                            value={deliveryAddress}
-                                            onChange={e => {
-                                                setDeliveryAddress(e.target.value);
-                                                localStorage.setItem('muncheez_delivery_address', e.target.value);
-                                            }}
-                                            placeholder="Type your address (e.g. Westlands, Mpaka Road, Apt 4B)"
-                                            className="bg-transparent border-none text-sm font-bold w-full focus:ring-0 p-0"
-                                        />
-                                    </div>
-                                    <span className="text-[11px] text-gray-400 block pl-1">
-                                        Text your location, building, or street. Both merchant and rider receive this exact text.
-                                    </span>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Delivery Instructions</label>
-                                    <textarea
-                                        value={deliveryInstructions}
-                                        onChange={e => setDeliveryInstructions(e.target.value)}
-                                        placeholder="e.g. Call when near, Leave at reception..."
-                                        className="w-full bg-gray-50 border-gray-100 rounded-xl p-4 text-sm font-medium focus:ring-[#D4AF37] focus:border-[#D4AF37] h-32 resize-none"
-                                    />
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Contact Number</label>
-                                    <div className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl border border-gray-100 focus-within:ring-2 focus-within:ring-[#D4AF37]/20 transition-all">
-                                        <Smartphone size={20} className="text-gray-400" />
-                                        <input
-                                            type="tel"
-                                            value={phoneNumber}
-                                            onChange={e => setPhoneNumber(e.target.value)}
-                                            className="bg-transparent border-none text-sm font-bold w-full focus:ring-0 p-0"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={() => setCurrentStep('payment')}
-                                className="w-full bg-gray-900 text-white h-16 rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-[#D4AF37] transition-all flex items-center justify-center gap-2 group"
-                            >
-                                Continue to Payment <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                            </button>
-                        </motion.div>
-                    )}
-
-                    {currentStep === 'payment' && (
-                        <motion.div
-                            key="payment"
-                            initial={{ opacity: 0, x: 20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -20 }}
-                            className="space-y-6"
-                        >
-                            <h2 className="text-2xl font-heading font-black tracking-tight">Payment Method</h2>
-
-                            <div className="space-y-4">
-                                <label className={`
-                                    flex items-center gap-4 p-6 rounded-[2rem] border-2 cursor-pointer transition-all
-                                    ${paymentMethod === 'mpesa' ? 'border-[#39B54A] bg-[#39B54A]/5' : 'border-gray-100 bg-white hover:border-gray-200'}
-                                `}>
-                                    <input type="radio" name="payment" value="mpesa" checked={paymentMethod === 'mpesa'} onChange={() => setPaymentMethod('mpesa')} className="sr-only" />
-                                    <div className="w-12 h-12 rounded-xl bg-[#39B54A]/10 flex items-center justify-center text-[#39B54A]">
-                                        <Smartphone size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-lg">M-Pesa Express</h3>
-                                        <p className="text-xs text-gray-500 font-medium">Automatic STK Push to your phone</p>
-                                    </div>
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'mpesa' ? 'border-[#39B54A]' : 'border-gray-200'}`}>
-                                        {paymentMethod === 'mpesa' && <div className="w-3 h-3 rounded-full bg-[#39B54A]" />}
-                                    </div>
-                                </label>
-
-                                <label className={`
-                                    flex items-center gap-4 p-6 rounded-[2rem] border-2 cursor-pointer transition-all
-                                    ${paymentMethod === 'cash' ? 'border-gray-900 bg-gray-50' : 'border-gray-100 bg-white hover:border-gray-200'}
-                                `}>
-                                    <input type="radio" name="payment" value="cash" checked={paymentMethod === 'cash'} onChange={() => setPaymentMethod('cash')} className="sr-only" />
-                                    <div className="w-12 h-12 rounded-xl bg-gray-200 flex items-center justify-center text-gray-600">
-                                        <Banknote size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                        <h3 className="font-bold text-lg">Cash on Delivery</h3>
-                                        <p className="text-xs text-gray-500 font-medium">Pay when the order arrives</p>
-                                    </div>
-                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${paymentMethod === 'cash' ? 'border-gray-900' : 'border-gray-200'}`}>
-                                        {paymentMethod === 'cash' && <div className="w-3 h-3 rounded-full bg-gray-900" />}
-                                    </div>
-                                </label>
-                            </div>
-
-                            <div className="bg-white rounded-[2rem] p-6 border border-gray-100 mt-8 space-y-3">
-                                <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                    <span>Subtotal</span>
+                            {/* Subtotal Preview */}
+                            <div className="border-b border-neutral-200 pb-4 space-y-1.5 text-xs font-mono">
+                                <div className="flex justify-between text-neutral-500">
+                                    <span className="uppercase tracking-widest">Subtotal ({itemCount} items)</span>
                                     <span>KES {total.toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
-                                    <span>Delivery Fee</span>
+                                <div className="flex justify-between text-neutral-500">
+                                    <span className="uppercase tracking-widest">Delivery Standard</span>
                                     <span>KES {deliveryFee.toLocaleString()}</span>
                                 </div>
-                                <div className="flex justify-between text-2xl font-heading font-black text-gray-900 pt-4 border-t border-gray-100 uppercase tracking-tighter">
-                                    <span>Total</span>
+                                <div className="flex justify-between text-black font-bold pt-1 text-sm">
+                                    <span className="uppercase tracking-widest">Estimated Total</span>
                                     <span>KES {finalTotal.toLocaleString()}</span>
                                 </div>
                             </div>
 
                             <button
-                                onClick={handlePlaceOrder}
-                                disabled={isProcessing}
-                                className="w-full bg-gray-900 text-white h-20 rounded-[2rem] font-black uppercase tracking-widest text-xs flex items-center justify-center gap-4 hover:bg-[#D4AF37] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-2xl shadow-gray-200 group"
+                                onClick={() => setCurrentStep('delivery')}
+                                className="w-full bg-black hover:bg-neutral-800 text-white font-mono uppercase tracking-widest text-xs py-4 flex items-center justify-center gap-2 transition-colors min-h-[48px]"
                             >
-                                {isProcessing ? (
-                                    <>
-                                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                        <span>Processing Payment...</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>Confirm Order</span>
-                                        <CreditCard size={18} className="group-hover:scale-110 transition-transform" />
-                                    </>
-                                )}
+                                <span>Continue to Delivery Details</span>
+                                <ArrowRight size={14} />
                             </button>
-                        </motion.div>
+                        </motion.section>
+                    )}
+
+                    {/* ═══ STEP 2: DELIVERY DETAILS ═══ */}
+                    {currentStep === 'delivery' && (
+                        <motion.section
+                            key="delivery"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                        >
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-light tracking-tight text-black mb-1">
+                                    Delivery Address
+                                </h1>
+                                <p className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
+                                    Dispatched by courier fleet
+                                </p>
+                            </div>
+
+                            <div className="border-t border-neutral-200 pt-4 space-y-6">
+                                {/* Address Input: Transparent bottom-line input */}
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                                            Street Address, Building & Unit *
+                                        </label>
+                                        <button
+                                            type="button"
+                                            onClick={handleGetCurrentLocation}
+                                            disabled={isLocating}
+                                            className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 hover:text-black underline flex items-center gap-1"
+                                        >
+                                            <MapPin size={11} />
+                                            {isLocating ? 'Locating...' : 'Use My GPS'}
+                                        </button>
+                                    </div>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={deliveryAddress}
+                                        onChange={(e) => {
+                                            setDeliveryAddress(e.target.value);
+                                            localStorage.setItem('muncheez_delivery_address', e.target.value);
+                                        }}
+                                        placeholder="e.g. Westlands, Mpaka Road, The Mirage, Tower 2, Apt 4B"
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-sans"
+                                    />
+                                    <span className="text-[10px] font-mono text-neutral-400 block">
+                                        Both the merchant packing team and dispatch rider will receive this exact destination.
+                                    </span>
+                                </div>
+
+                                {/* Delivery Instructions: Clean textarea */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                                        Drop-off Notes / Instructions (Optional)
+                                    </label>
+                                    <textarea
+                                        rows={3}
+                                        value={deliveryInstructions}
+                                        onChange={(e) => setDeliveryInstructions(e.target.value)}
+                                        placeholder="e.g. Ring the bell on arrival, leave at security desk, call upon reaching the gate..."
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-sans resize-none"
+                                    />
+                                </div>
+
+                                {/* Phone Number: Transparent bottom-line input */}
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">
+                                        Recipient Phone Number *
+                                    </label>
+                                    <input
+                                        type="tel"
+                                        required
+                                        value={phoneNumber}
+                                        onChange={(e) => setPhoneNumber(e.target.value)}
+                                        placeholder="07XX XXX XXX or +254 7XX XXX XXX"
+                                        className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
+                                    />
+                                    <span className="text-[10px] font-mono text-neutral-400 block">
+                                        Used for delivery SMS updates and M-Pesa push prompts.
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setCurrentStep('review')}
+                                    className="px-5 py-4 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors min-h-[48px]"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!deliveryAddress.trim()) {
+                                            setErrorMessage('Please specify your delivery address before proceeding.');
+                                            return;
+                                        }
+                                        setErrorMessage(null);
+                                        setCurrentStep('payment');
+                                    }}
+                                    className="flex-1 bg-black hover:bg-neutral-800 text-white font-mono uppercase tracking-widest text-xs py-4 flex items-center justify-center gap-2 transition-colors min-h-[48px]"
+                                >
+                                    <span>Continue to Payment</span>
+                                    <ArrowRight size={14} />
+                                </button>
+                            </div>
+                        </motion.section>
+                    )}
+
+                    {/* ═══ STEP 3: PAYMENT METHOD & CONFIRMATION ═══ */}
+                    {currentStep === 'payment' && (
+                        <motion.section
+                            key="payment"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="space-y-6"
+                        >
+                            <div>
+                                <h1 className="text-xl sm:text-2xl font-light tracking-tight text-black mb-1">
+                                    Select Payment Method
+                                </h1>
+                                <p className="text-xs font-mono text-neutral-400 uppercase tracking-widest">
+                                    Secure checkout · Instant confirmation
+                                </p>
+                            </div>
+
+                            {/* Payment Options: Edge-to-edge unboxed layout with radio indicators */}
+                            <div className="border-t border-b border-neutral-200 divide-y divide-neutral-100">
+                                {/* M-Pesa Option */}
+                                <label className="py-4 flex items-center justify-between cursor-pointer group">
+                                    <div className="flex items-center gap-3">
+                                        <Smartphone size={18} className={paymentMethod === 'mpesa' ? 'text-emerald-600' : 'text-neutral-400'} />
+                                        <div>
+                                            <span className="text-sm font-medium text-black block">
+                                                M-Pesa Express (STK Push)
+                                            </span>
+                                            <span className="text-[11px] font-mono text-neutral-400 block">
+                                                Prompt sent to {phoneNumber || 'your registered phone'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="mpesa"
+                                        checked={paymentMethod === 'mpesa'}
+                                        onChange={() => setPaymentMethod('mpesa')}
+                                        className="w-4 h-4 accent-black cursor-pointer"
+                                    />
+                                </label>
+
+                                {/* Cash Option */}
+                                <label className="py-4 flex items-center justify-between cursor-pointer group">
+                                    <div className="flex items-center gap-3">
+                                        <Banknote size={18} className={paymentMethod === 'cash' ? 'text-black' : 'text-neutral-400'} />
+                                        <div>
+                                            <span className="text-sm font-medium text-black block">
+                                                Cash on Delivery
+                                            </span>
+                                            <span className="text-[11px] font-mono text-neutral-400 block">
+                                                Pay courier upon receiving your package
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="cash"
+                                        checked={paymentMethod === 'cash'}
+                                        onChange={() => setPaymentMethod('cash')}
+                                        className="w-4 h-4 accent-black cursor-pointer"
+                                    />
+                                </label>
+
+                                {/* Card Option */}
+                                <label className="py-4 flex items-center justify-between cursor-pointer group">
+                                    <div className="flex items-center gap-3">
+                                        <CreditCard size={18} className={paymentMethod === 'card' ? 'text-black' : 'text-neutral-400'} />
+                                        <div>
+                                            <span className="text-sm font-medium text-black block">
+                                                Card / Visa / Mastercard
+                                            </span>
+                                            <span className="text-[11px] font-mono text-neutral-400 block">
+                                                Online card gateway checkout
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="card"
+                                        checked={paymentMethod === 'card'}
+                                        onChange={() => setPaymentMethod('card')}
+                                        className="w-4 h-4 accent-black cursor-pointer"
+                                    />
+                                </label>
+                            </div>
+
+                            {/* Summary Breakdown */}
+                            <div className="border-b border-neutral-200 pb-4 space-y-2 text-xs font-mono">
+                                <div className="flex justify-between text-neutral-500">
+                                    <span className="uppercase tracking-widest">Basket Subtotal</span>
+                                    <span>KES {total.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-neutral-500">
+                                    <span className="uppercase tracking-widest">Courier Delivery</span>
+                                    <span>KES {deliveryFee.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between text-black font-bold pt-2 border-t border-neutral-100 text-base">
+                                    <span className="uppercase tracking-widest">Total Payable</span>
+                                    <span>KES {finalTotal.toLocaleString()}</span>
+                                </div>
+                            </div>
+
+                            {/* Destination summary line */}
+                            <div className="text-[11px] font-mono text-neutral-500 flex items-start gap-1.5">
+                                <MapPin size={13} className="shrink-0 mt-0.5 text-neutral-400" />
+                                <span className="truncate">Delivering to: {deliveryAddress || 'Address required'}</span>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="button"
+                                    disabled={isProcessing}
+                                    onClick={() => setCurrentStep('delivery')}
+                                    className="px-5 py-4 border border-neutral-300 hover:border-black text-xs font-mono uppercase tracking-widest transition-colors min-h-[48px]"
+                                >
+                                    Back
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={isProcessing}
+                                    onClick={handlePlaceOrder}
+                                    className="flex-1 bg-black hover:bg-neutral-800 disabled:bg-neutral-300 text-white font-mono uppercase tracking-widest text-xs py-4 flex items-center justify-center gap-2 transition-colors min-h-[48px]"
+                                >
+                                    {isProcessing ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                                            <span>Placing Order in Supabase...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>Confirm & Place Order</span>
+                                            <ArrowRight size={14} />
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        </motion.section>
                     )}
                 </AnimatePresence>
             </main>

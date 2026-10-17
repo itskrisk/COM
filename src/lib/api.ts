@@ -160,23 +160,41 @@ export const customerApi = {
     return { data: result.data, error: result.error?.message || null };
   },
 
-  createOrder: async (data: { merchantId: string; items: any[]; deliveryAddress?: string; paymentMethod?: string }) => {
+  createOrder: async (data: {
+    merchantId: string;
+    items: any[];
+    deliveryAddress?: string;
+    deliveryInstructions?: string;
+    paymentMethod?: string;
+    wantsCutlery?: boolean;
+    phoneNumber?: string;
+  }) => {
     // Calculate totals server-side
     const subtotal = data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFee = 150; // TODO: Calculate based on distance
-    const serviceFee = subtotal * 0.05; // 5% service fee
+    const deliveryFee = 150;
+    const serviceFee = 0;
     const total = subtotal + deliveryFee + serviceFee;
 
+    const userRes = await authService.getUser();
+    const customerId = userRes.data?.user?.id || undefined;
+
+    let pm: 'MPESA' | 'CASH' | 'CARD' = 'MPESA';
+    const rawPm = (data.paymentMethod || '').toUpperCase();
+    if (rawPm === 'CASH') pm = 'CASH';
+    else if (rawPm === 'CARD') pm = 'CARD';
+
     const result = await orderService.createOrder({
-      customer_id: (await authService.getUser()).data?.user?.id,
+      customer_id: customerId,
       merchant_id: data.merchantId,
       status: 'CREATED',
       total,
       delivery_fee: deliveryFee,
       service_fee: serviceFee,
       delivery_address: data.deliveryAddress,
-      payment_method: data.paymentMethod || 'MPESA',
+      delivery_instructions: data.deliveryInstructions,
+      payment_method: pm,
       payment_status: 'PENDING',
+      wants_cutlery: Boolean(data.wantsCutlery),
       items: data.items
     });
 

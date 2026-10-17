@@ -8,7 +8,8 @@ import OrderTrackingMap from '../../components/ui/shared/OrderTrackingMap';
 import { supabase } from '../../lib/supabaseClient';
 
 export default function OrderStatus() {
-    const { orderId } = useParams();
+    const { id, orderId } = useParams();
+    const effectiveOrderId = id || orderId || '';
     const navigate = useNavigate();
 
     const [order, setOrder] = useState<any>(null);
@@ -20,10 +21,10 @@ export default function OrderStatus() {
         loadOrder();
         const timer = setTimeout(() => setProgress(35), 500);
         return () => clearTimeout(timer);
-    }, [orderId]);
+    }, [effectiveOrderId]);
 
     const loadOrder = async () => {
-        const result = await orderService.getOrder(orderId || '');
+        const result = await orderService.getOrder(effectiveOrderId);
         if (result.data) {
             setOrder(result.data);
             // Load merchant info

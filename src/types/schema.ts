@@ -143,6 +143,12 @@ export interface Order {
         options?: string[]; // e.g. "Spicy", "No Onion"
     }>;
     total: number; // Simplified to match OrdersView expectation
+    customer_id?: string;
+    merchant_id?: string;
+    delivery_fee?: number;
+    service_fee?: number;
+    payment_method?: string;
+    payment_status?: string;
     payment?: {
         method: string;
         status: string;
@@ -153,6 +159,8 @@ export interface Order {
     placedAt?: Date;
     time_placed?: string; // For display: "2 mins ago"
     delivery_address?: string;
+    delivery_instructions?: string;
+    wants_cutlery?: boolean;
     notes?: string;
     riderId?: string; // Link to assigned Rider
 }

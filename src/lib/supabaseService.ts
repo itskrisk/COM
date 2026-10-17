@@ -75,6 +75,8 @@ export interface Order {
   delivery_fee: number;
   service_fee: number;
   delivery_address?: string;
+  delivery_instructions?: string;
+  wants_cutlery?: boolean;
   payment_method: string;
   payment_status: string;
   mpesa_code?: string;

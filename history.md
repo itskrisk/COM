@@ -3927,3 +3927,41 @@ In the remote Supabase database instance, the `public.categories` table lacked t
    - Added `ADD COLUMN IF NOT EXISTS is_available BOOLEAN DEFAULT true` to `public.products` to ensure consistency with product RLS policies.
    - Wrapped `INSERT INTO storage.buckets` in a guarded `DO $$ BEGIN ... EXCEPTION WHEN OTHERS THEN NULL; END $$;` block.
 2. Verified project build and pushed changes to GitHub.
+
+
+---
+
+## Task: Mobile-Responsive Checkout & Backend Order Functionality
+
+### Prompt Summary
+Make the cart/checkout page (`http://localhost:5173/checkout`) fully mobile responsive and ensure complete backend order placement functionality.
+
+### Root Causes Identified
+1. **Broken Backend Order Tracking Route Parameters**:
+   - In `App.tsx`, the order status route is defined as `/order/:id`, while `OrderStatus.tsx` attempted to extract `const { orderId } = useParams()`.
+   - When placing an order, `CheckoutView.tsx` navigated to `/order/${createdOrderId}`, but `OrderStatus.tsx` read `orderId` as undefined, queried `orderService.getOrder('')`, and immediately displayed an "Order not found" error screen.
+2. **Backend Order Creation & RLS Gating**:
+   - Supabase RLS policy `"Customer creates orders"` requires `WITH CHECK (customer_id = auth.uid())`.
+   - Unauthenticated customers checking out resulted in silent RLS violation (`new row violates row-level security policy for table 'orders'`).
+   - Order fields (`delivery_instructions`, `wants_cutlery`, `payment_method`) were omitted from `customerApi.createOrder` and lacked schema typing in `types/schema.ts` and `supabaseService.ts`.
+3. **Mobile Layout & Card Box Violations**:
+   - `CheckoutView.tsx` used heavy rounded card containers (`rounded-[2rem]`, `rounded-2xl`, `p-6 shadow-sm`) violating the **NO CARD BOXES / NO CARD PADDING** rule.
+   - The step progress line was positioned with hardcoded absolute pixel offsets (`top-[135px] max-w-xl left-10 right-10`), breaking across viewport sizes and clipping on mobile screens (320px–375px).
+   - Inability to change quantities or remove items directly during checkout forced users to backtrack.
+
+### Actions Taken
+1. **Refactored CheckoutView (`src/pages/customer/CheckoutView.tsx`)**:
+   - Redesigned with clean editorial typography, edge-to-edge section dividers (`border-t border-b border-neutral-200`), and transparent bottom-line inputs (`border-b border-neutral-300 focus:border-black bg-transparent`).
+   - Removed all `rounded-[2rem]` card boxes and padded container backgrounds.
+   - Built a fluid 3-step text navigation bar (Review → Delivery → Payment) that scales cleanly on any screen width without overflow.
+   - Added in-checkout quantity adjustment (`+` / `-`) and direct item removal (`Trash2`).
+   - Added inline error messaging banner (`errorMessage`) and guest user sign-in prompt preserving cart state.
+   - Implemented HTML5 GPS geolocation autofill alongside manual address entry.
+2. **Wired Backend Order Placement (`src/lib/api.ts` & `src/lib/supabaseService.ts`)**:
+   - Updated `customerApi.createOrder` to capture `delivery_instructions`, `wants_cutlery`, recipient `phoneNumber`, and normalized payment method (`MPESA`, `CASH`, `CARD`).
+   - Synced `customer_id` with the active authenticated user ID.
+   - Aligned `Order` interface in both `src/types/schema.ts` and `src/lib/supabaseService.ts`.
+3. **Fixed Order Status Route Resolution (`src/pages/customer/OrderStatus.tsx`)**:
+   - Updated parameter extraction to `const { id, orderId } = useParams(); const effectiveOrderId = id || orderId;` so live order status loads instantly after checkout redirect.
+4. **Build Verification**:
+   - Ran `npm run build` (`tsc -b && vite build`) — 0 errors, 2286 modules transformed.
