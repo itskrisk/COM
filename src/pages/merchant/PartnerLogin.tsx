@@ -21,14 +21,17 @@ export default function PartnerLogin() {
         if (!authLoading && user && profile) {
             const roles: string[] = profile.roles || (profile.role ? [profile.role] : []);
             if (roles.includes('merchant')) {
-                const status = profile.account_status || profile.status;
-                if (status === 'active' || status === 'APPROVED') {
+                // Use live merchant table data when available (avoids stale profile.account_status)
+                const merchantRow = user.merchant;
+                if (merchantRow?.status === 'APPROVED') {
                     navigate('/merchant/dashboard', { replace: true });
-                } else if (status === 'pending_approval') {
-                    navigate('/pending-approval', { replace: true });
-                } else if (status === 'rejected') {
+                } else if (merchantRow?.status === 'REJECTED') {
                     navigate('/rejected', { replace: true });
+                } else if (merchantRow?.onboarding_completed) {
+                    // Onboarding submitted but not yet approved → show pending
+                    navigate('/pending-approval', { replace: true });
                 } else {
+                    // No onboarding yet — go to onboarding
                     navigate('/merchant/onboarding', { replace: true });
                 }
             } else if (roles.includes('admin')) {

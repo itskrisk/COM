@@ -3965,3 +3965,23 @@ Make the cart/checkout page (`http://localhost:5173/checkout`) fully mobile resp
    - Updated parameter extraction to `const { id, orderId } = useParams(); const effectiveOrderId = id || orderId;` so live order status loads instantly after checkout redirect.
 4. **Build Verification**:
    - Ran `npm run build` (`tsc -b && vite build`) â€” 0 errors, 2286 modules transformed.
+
+---
+## 2026-10-17 — Store Card & Product Card Universal Visibility Fix
+
+### Prompt
+User confirmed that store cards and product cards must be fully set/manipulated by merchants and stored in Supabase, and products must universally appear in their respective shops after upload.
+
+### Actions Taken
+1. **supabaseService.ts — getStores()**: Removed \.eq('is_active', true)\ filter. All APPROVED merchants now appear in StoreListing with their dynamic Open/Closed badge — not hidden when paused.
+2. **supabaseService.ts — getStore()**: Removed \.eq('is_active', true)\ filter. A merchant's storefront page (/stores/:id) is always accessible for APPROVED merchants regardless of open/closed state.
+3. **supabaseService.ts — getStoreProducts()**: Removed \.eq('is_available', true)\ filter. ALL products are returned and SupermarketStore.tsx renders OUT OF STOCK / UNAVAILABLE overlays on them — products don't silently disappear.
+4. **supabaseService.ts — updateProduct()**: Added full category string-to-UUID resolution (mirrors createProduct). If a merchant edits a product category, the name is resolved to an existing categories row UUID or a new one is created.
+5. **Build**: \
+pm run build\ passed 0 TypeScript errors, 2286 modules, exit code 0.
+6. **Git**: Committed da426ce and pushed to origin main.
+
+### Result
+- Store cards: merchant-set info (name, logo, banner, hours, status) stored in \merchants\ table and rendered universally in StoreListing + StoreFront.
+- Product cards: merchant-set info (title, price, compare_price, image_url, category, stock_level, is_available) stored in \products\ table and rendered in SupermarketStore with full overlay support.
+- No redundant features — single source of truth in Supabase for both store and product data.

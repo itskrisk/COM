@@ -117,26 +117,32 @@ export default function AuthCallback() {
 
                     // Route by detected role and portal status
                     if (role === 'merchant') {
-                        const isApproved = merchantRow?.status === 'APPROVED' || accountStatus === 'active' || accountStatus === 'APPROVED';
-                        const isPending = merchantRow?.onboarding_completed || accountStatus === 'pending_approval' || merchantRow?.status === 'PENDING';
+                        const isApproved = merchantRow?.status === 'APPROVED';
+                        // Only show pending-approval AFTER onboarding has been submitted
+                        const onboardingDone = Boolean(merchantRow?.onboarding_completed);
+                        const isPending = onboardingDone && !isApproved;
                         
                         if (isApproved) {
                             navigate('/merchant/dashboard', { replace: true });
                         } else if (isPending) {
                             navigate('/pending-approval', { replace: true });
                         } else {
-                            navigate('/merchant/onboarding', { replace: true });
+                            // First time after email verify — go to onboarding
+                            navigate('/merchant/login', { replace: true });
                         }
                     } else if (role === 'courier' || role === 'rider') {
-                        const isApproved = riderRow?.status === 'APPROVED' || accountStatus === 'active' || accountStatus === 'APPROVED';
-                        const isPending = riderRow?.onboarding_completed || accountStatus === 'pending_approval' || riderRow?.status === 'PENDING';
+                        const isApproved = riderRow?.status === 'APPROVED';
+                        // Only show pending-approval AFTER onboarding has been submitted
+                        const onboardingDone = Boolean(riderRow?.onboarding_completed);
+                        const isPending = onboardingDone && !isApproved;
                         
                         if (isApproved) {
                             navigate('/rider/dashboard', { replace: true });
                         } else if (isPending) {
                             navigate('/pending-approval', { replace: true });
                         } else {
-                            navigate('/rider/onboarding', { replace: true });
+                            // First time after email verify — go to rider login
+                            navigate('/rider/login', { replace: true });
                         }
                     } else if (role === 'admin') {
                         navigate('/admin/dashboard', { replace: true });
