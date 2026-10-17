@@ -27,9 +27,19 @@ ALTER TABLE public.riders
 -- 3. Products table alignment: add category text name & compare price support
 ALTER TABLE public.products
   ADD COLUMN IF NOT EXISTS category             TEXT,
-  ADD COLUMN IF NOT EXISTS compare_price        NUMERIC(10,2);
+  ADD COLUMN IF NOT EXISTS compare_price        NUMERIC(10,2),
+  ADD COLUMN IF NOT EXISTS is_available         BOOLEAN DEFAULT true;
 
--- 4. Fix RLS on products: Merchants can always manage their own products
+-- 4. Categories table alignment: ensure is_active exists
+DO $$
+BEGIN
+  IF to_regclass('public.categories') IS NOT NULL THEN
+    ALTER TABLE public.categories
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+  END IF;
+END $$;
+
+-- 5. Fix RLS on products: Merchants can always manage their own products
 -- (previous policy blocked inventory management when store was paused/closed)
 DO $$
 BEGIN
@@ -47,10 +57,13 @@ BEGIN
   END IF;
 END $$;
 
--- 5. Fix RLS on categories: Merchants can manage their own categories
+-- 6. Fix RLS on categories: Merchants can manage their own categories
 DO $$
 BEGIN
   IF to_regclass('public.categories') IS NOT NULL THEN
+    ALTER TABLE public.categories
+      ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT true;
+
     DROP POLICY IF EXISTS "Merchant manages own categories" ON public.categories;
     CREATE POLICY "Merchant manages own categories"
       ON public.categories FOR ALL
@@ -60,14 +73,20 @@ BEGIN
     DROP POLICY IF EXISTS "Active categories public" ON public.categories;
     CREATE POLICY "Active categories public"
       ON public.categories FOR SELECT
-      USING (is_active = true);
+      USING (true);
   END IF;
 END $$;
 
--- 6. Storage bucket 'documents' alignment
-INSERT INTO storage.buckets (id, name, public)
-VALUES ('documents', 'documents', true)
-ON CONFLICT (id) DO UPDATE SET public = true;
+-- 7. Storage bucket 'documents' alignment
+DO $$
+BEGIN
+  INSERT INTO storage.buckets (id, name, public)
+  VALUES ('documents', 'documents', true)
+  ON CONFLICT (id) DO UPDATE SET public = true;
+EXCEPTION
+  WHEN OTHERS THEN
+    NULL;
+END $$;
 
 -- Storage policies for 'documents' bucket
 DO $$
