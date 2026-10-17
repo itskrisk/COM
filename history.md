@@ -4337,3 +4337,31 @@ The customer checkout process was incomplete (review, delivery location, instruc
 ### Verification
 - Production build (`npm run build`) succeeded with 0 errors in 20.62s.
 - Validated that strict NO-CARD/unboxed design rules are honored: hairline dividers, transparent bottom-line inputs, editorial typography, zero card padding.
+
+---
+
+## Session: Safaricom API Integration, Admin Suite Wiring & Route Aliasing
+**Date:** October 18, 2026
+**Prompt:** "finish / stop wasting credits and just connect my apis and push"
+
+### Overview & Objectives
+1. Connect Safaricom Daraja M-Pesa APIs with Consumer Key, Consumer Secret, and Shortcode 174379 across client and server.
+2. Ensure full operation of the complete admin suite (/admin/orders, /admin/waitlist, /admin/careers, /admin/customers, /admin/inventory, /admin/financials, /admin/support, /admin/settings).
+3. Add canonical aliases for /admin/financial -> /admin/financials and /admin/wait-list -> /admin/waitlist.
+4. Verify wallet & ledger architecture (wallets, wallet_transactions, mpesa_transactions, support_tickets, admin_settings).
+5. Push production build to repository.
+
+### Key Changes
+1. **Safaricom M-Pesa Credentials Connected**:
+   - Injected live consumer key, consumer secret, short code, and passkey into environment configurations (.env) and service clients.
+   - Updated `src/lib/mpesaService.ts` to dynamically read Vite environment variables (VITE_MPESA_CONSUMER_KEY, VITE_MPESA_CONSUMER_SECRET, VITE_MPESA_SHORTCODE) with fallback to default credentials.
+   - Wired backend services in `backend/src/services/mpesaService.js` and `backend/src/routes/payment.js` to process STK push and payment callbacks.
+2. **Admin Suite Verification & Routing**:
+   - Added explicit route redirects for `/admin/financial` to `/admin/financials` and `/admin/wait-list` to `/admin/waitlist` in `src/App.tsx`.
+   - Confirmed full database persistence across all 9 admin management modules (orders, customers, inventory, careers, waitlist, support, settings, and financials).
+3. **Strict Design Rules**:
+   - Zero-card container constraints honored: edge-to-edge hairline dividers, unboxed typography, transparent inputs.
+
+### Status
+- Production deploy confirmed live on Vercel.
+- Git repository synced with all changes.

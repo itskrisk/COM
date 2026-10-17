@@ -185,10 +185,12 @@ export default function App() {
                     <Route path="/admin/orders" element={<AdminOrders />} />
                     <Route path="/admin/customers" element={<AdminCustomers />} />
                     <Route path="/admin/financials" element={<AdminFinancials />} />
+                    <Route path="/admin/financial" element={<Navigate to="/admin/financials" replace />} />
                     <Route path="/admin/inventory" element={<AdminInventory />} />
                     <Route path="/admin/marketing" element={<AdminMarketing />} />
                     <Route path="/admin/approvals" element={<AdminApprovals />} />
                     <Route path="/admin/waitlist" element={<AdminWaitlist />} />
+                    <Route path="/admin/wait-list" element={<Navigate to="/admin/waitlist" replace />} />
                     <Route path="/admin/careers" element={<AdminCareers />} />
                     <Route path="/admin/settings" element={<AdminSettings />} />
                     <Route path="/admin/support" element={<AdminSupport />} />

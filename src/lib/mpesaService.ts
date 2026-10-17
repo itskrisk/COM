@@ -4,11 +4,11 @@ import { walletService } from './walletService';
 
 // Safaricom Daraja API Configuration
 export const MPESA_CONFIG = {
-    consumerKey: 'hNY8AACKWRniHG91pB9PCP11v55i4sOdaGeIAVk8xxidr2AL',
-    consumerSecret: 'PTwPUvKELJu5RW6oV9mJWzi5Gua4Oab0uHFQKXdIntd7haRWZo8Jdgc5LceptxAA',
-    shortcode: '174379',
-    passkey: 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
-    env: 'sandbox' as 'sandbox' | 'production',
+    consumerKey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MPESA_CONSUMER_KEY) || 'hNY8AACKWRniHG91pB9PCP11v55i4sOdaGeIAVk8xxidr2AL',
+    consumerSecret: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MPESA_CONSUMER_SECRET) || 'PTwPUvKELJu5RW6oV9mJWzi5Gua4Oab0uHFQKXdIntd7haRWZo8Jdgc5LceptxAA',
+    shortcode: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MPESA_SHORTCODE) || '174379',
+    passkey: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MPESA_PASSKEY) || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919',
+    env: ((typeof import.meta !== 'undefined' && import.meta.env?.VITE_MPESA_ENVIRONMENT) || 'sandbox') as 'sandbox' | 'production',
     callbackUrl: 'https://muncheez.co.ke/api/mpesa/callback'
 };
 
