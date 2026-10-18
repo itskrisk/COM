@@ -13,11 +13,6 @@ import { supabase } from '../../../lib/supabaseClient';
 import { orderService, profileService, complaintService } from '../../../lib/supabaseService';
 import CookieModal from './CookieModal';
 
-interface ProfileModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-}
-
 type ModalView =
     | 'main'
     | 'profile'
@@ -33,14 +28,26 @@ type ModalView =
     | 'policies'
     | 'delete-account';
 
+interface ProfileModalProps {
+    isOpen: boolean;
+    onClose: () => void;
+    initialView?: ModalView;
+}
+
 // No default mock data - show empty state if user has no data
 
-const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
+const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialView = 'main' }) => {
     const { user, profile, signOut, resetPassword, refreshUser } = useAuth();
     const navigate = useNavigate();
     const { addItem } = useCart();
 
-    const [view, setView] = useState<ModalView>('main');
+    const [view, setView] = useState<ModalView>(initialView);
+
+    useEffect(() => {
+        if (isOpen) {
+            setView(initialView || 'main');
+        }
+    }, [isOpen, initialView]);
     const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
 
     // Profile Form State

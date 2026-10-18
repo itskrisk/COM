@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Plus, Minus, Search, ShoppingBag, Menu, X, User, Zap, Clock, Star, ArrowLeft, ArrowRight, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../../context/CartContext';
+import StorefrontNav from '../../../components/layout/StorefrontNav';
 import LocationModal from '../../../components/marketing/LocationModal';
 import ProfileModal from '../../../components/ui/shared/ProfileModal';
 import GlassCart from '../../../components/ui/shared/GlassCart';
@@ -60,8 +61,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
 
 // Modal & Menu States
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
-    const { isOpen: isProfileOpen, open: openProfile, close: closeProfile } = useProfileGuard();
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const { isOpen: isProfileOpen, open: openProfile, close: closeProfile, initialView } = useProfileGuard();
 
     // Unified location handler - saves to both localStorage and Supabase profile
     const handleLocationSelect = async (loc: string) => {
@@ -261,70 +261,24 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
             >
                 <div className="absolute inset-0 z-[5] opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat mix-blend-overlay" />
 
-                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 mb-2 relative z-30">
-                    <div className="flex items-center gap-4">
-                        <button onClick={() => setIsMenuOpen(true)} className="lg:hidden w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/10 hover:bg-white/20 transition-colors"><Menu size={20} /></button>
-                        <div onClick={() => navigate('/')} className="cursor-pointer flex items-center gap-0 shrink-0 text-2xl font-heading font-bold tracking-tighter">
-                            Muncheez<span className="text-[#D4AF37]">.</span>
-                        </div>
-
-                        {/* Location - Minimal */}
-                        <button
-                            onClick={() => setIsLocationModalOpen(true)}
-                            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white/5 border border-white/10 rounded-full cursor-pointer hover:bg-white/10 transition-all"
-                            aria-label="Delivery location"
-                        >
-                            <MapPin size={11} className="text-[#D4AF37]" />
-                            <span className="text-[10px] font-medium uppercase tracking-wider truncate max-w-[160px] text-white/90">
-                                {userLocation || 'Delivery location'}
-                            </span>
-                        </button>
-                    </div>
-                    <div className="flex-1 max-w-md relative">
-                        <Search size={12} className="absolute left-4 top-1/2 -translate-y-1/2 text-white/30" />
-                        <input type="text" placeholder="Search the market..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 backdrop-blur-md rounded-full outline-none text-xs placeholder:text-white/20" />
-                    </div>
-                    <div className="flex items-center gap-2">
-                        {/* Cart - Modern with badge */}
-                        <button
-                            onClick={() => {
-                                const cart = JSON.parse(localStorage.getItem('muncheez_cart_items') || '[]');
-                                if (cart.length > 0) {
-                                    window.dispatchEvent(new CustomEvent('open-glass-cart'));
-                                } else {
-                                    navigate('/checkout');
-                                }
-                            }}
-                            className="relative w-10 h-10 bg-white text-[#4A90E2] rounded-xl flex items-center justify-center shadow-sm hover:bg-white/90 transition-all hover:scale-105 active:scale-95"
-                            aria-label="View cart"
-                        >
-                            <ShoppingBag size={18} />
-                            {(() => {
-                                const cart = JSON.parse(localStorage.getItem('muncheez_cart_items') || '[]');
-                                const count = cart.reduce((sum: number, item: any) => sum + (item.quantity || 1), 0);
-                                return count > 0 ? (
-                                    <span className="absolute -top-1.5 -right-1.5 bg-[#D4AF37] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-white shadow-md">
-                                        {count > 99 ? '99+' : count}
-                                    </span>
-                                ) : null;
-                            })()}
-                        </button>
-
-                        {/* Profile / Account */}
-                        <button
-                            onClick={() => openProfile()}
-                            aria-label="Open account"
-                            className="w-9 h-9 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center cursor-pointer hover:bg-white/20 transition-all duration-300 hover:scale-105 active:scale-95 shrink-0"
-                        >
-                            <span className="text-[11px] font-semibold tracking-tight text-white/90 leading-none select-none">
-                                {profile?.full_name
-                                    ? profile.full_name.split(' ').slice(0, 2).map((n: string) => n.charAt(0)).join('').toUpperCase()
-                                    : <User size={15} className="text-white/70" />}
-                            </span>
-                        </button>
-                    </div>
-                </div>
+                {/* Storefront Navigation (Responsive Web & Mobile) */}
+                <StorefrontNav
+                    searchQuery={searchTerm}
+                    onSearchChange={setSearchTerm}
+                    searchPlaceholder={`Search ${merchant?.name || 'store'} products...`}
+                    userLocation={userLocation}
+                    onOpenLocation={() => setIsLocationModalOpen(true)}
+                    onOpenProfile={(view) => openProfile(view)}
+                    onCategoriesClick={() => {
+                        setViewingCategoryDeepDive(null);
+                        setActiveTab('Shop');
+                        const el = document.getElementById('store-taxonomy-categories');
+                        if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }}
+                    onOffersClick={() => setActiveTab('Deals')}
+                    activeCategory={viewingCategoryDeepDive || (activeTab === 'Deals' ? 'Deals' : undefined)}
+                    currentTab={activeTab === 'Deals' ? 'offers' : 'home'}
+                />
 
                 {/* NAVIGATION TABS (PORTED TO HEADER V17) */}
                 <div className="max-w-7xl mx-auto relative z-30 mb-8 border-b border-white/5 flex items-center justify-between">
@@ -342,89 +296,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                     )}
                 </div>
 
-                {/* High-End Mobile Menu Overlay (Matching Home Navbar) */}
-                <AnimatePresence>
-                    {isMenuOpen && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -20 }}
-                            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                            className="fixed inset-0 z-[600] bg-black/90 backdrop-blur-3xl pt-28 px-8 flex flex-col justify-between pb-12"
-                        >
-                            {/* Mobile Menu Logo */}
-                            <button
-                                onClick={() => { setIsMenuOpen(false); navigate('/'); }}
-                                className="absolute top-8 left-8 flex items-center gap-2 group text-left"
-                            >
-                                <span className="font-heading font-bold text-2xl tracking-tighter text-white">
-                                    Muncheez<span className="text-[#4A90E2]">.</span>
-                                </span>
-                            </button>
 
-                            {/* Close Button */}
-                            <button
-                                onClick={() => setIsMenuOpen(false)}
-                                className="absolute top-8 right-8 p-3 text-white/50 hover:text-white transition-colors"
-                            >
-                                <X size={28} strokeWidth={1.5} />
-                            </button>
-
-                            {/* Navigation Links */}
-                            <div className="flex flex-col gap-6 mt-6">
-                                {[
-                                    { label: 'The Market', path: '/c/stores?v=market' },
-                                    { label: 'Home', path: '/' },
-                                    { label: 'Our Story', path: '/our-story' }
-                                ].map((link, i) => (
-                                    <motion.button
-                                        key={link.label}
-                                        initial={{ x: -20, opacity: 0 }}
-                                        animate={{ x: 0, opacity: 1 }}
-                                        transition={{ delay: 0.1 + (i * 0.04) }}
-                                        onClick={() => { navigate(link.path); setIsMenuOpen(false); }}
-                                        className="flex items-center gap-4 group text-left"
-                                    >
-                                        <span className="text-[#4A90E2]/60 font-mono text-xs group-hover:text-[#4A90E2] transition-colors pt-0.5">
-                                            0{i + 1}
-                                        </span>
-                                        <span className="text-lg font-heading font-light tracking-wide text-white group-hover:text-[#4A90E2] transition-colors">
-                                            {link.label}
-                                        </span>
-                                    </motion.button>
-                                ))}
-                            </div>
-
-                            {/* Auth & Profile Actions */}
-                            <div className="flex flex-col gap-3 mt-8">
-                                {user ? (
-                                    <button
-                                        onClick={() => { setIsMenuOpen(false); openProfile(); }}
-                                        className="w-full py-3.5 px-6 bg-[#4A90E2] text-white rounded-xl text-xs font-bold uppercase tracking-widest flex items-center justify-between shadow-lg"
-                                    >
-                                        <span>{profile?.full_name || user.email?.split('@')[0] || 'My Profile'}</span>
-                                        <User size={16} />
-                                    </button>
-                                ) : (
-                                    <>
-                                        <button
-                                            onClick={() => { setIsMenuOpen(false); navigate('/login'); }}
-                                            className="w-full py-3.5 text-center text-xs font-bold uppercase tracking-widest bg-white text-black rounded-xl hover:bg-gray-100 transition-all"
-                                        >
-                                            Log In
-                                        </button>
-                                        <button
-                                            onClick={() => { setIsMenuOpen(false); navigate('/signup'); }}
-                                            className="w-full py-3.5 text-center text-xs font-bold uppercase tracking-widest border border-white/20 text-white rounded-xl hover:bg-white/10 transition-all"
-                                        >
-                                            Create Account
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
 
                 <div className="max-w-7xl mx-auto relative z-20 mb-8">
                     <motion.h1 key={viewingCategoryDeepDive || 'main'} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="text-5xl md:text-8xl font-heading font-light tracking-tighter text-white leading-[0.85]">
@@ -644,7 +516,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
             <Footer />
 
             <LocationModal isOpen={isLocationModalOpen} onClose={() => setIsLocationModalOpen(false)} onSelectLocation={handleLocationSelect} />
-            <ProfileModal isOpen={isProfileOpen} onClose={() => closeProfile()} />
+            <ProfileModal isOpen={isProfileOpen} onClose={() => closeProfile()} initialView={initialView} />
 
             {/* NEW GLASS CART (SHARED COMPONENT) */}
             <GlassCart merchant={merchant} />

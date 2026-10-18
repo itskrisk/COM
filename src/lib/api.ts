@@ -4,6 +4,7 @@
 
 import { supabase } from './supabaseClient';
 import { authService, profileService, merchantService, riderService, productService, categoryService, orderService, walletService, complaintService, realtimeService, publicStoreService, reviewService, riderLocationService, dispatchService, notificationService, financialService, cartService } from './supabaseService';
+import { normalizeKenyanPhone } from '../utils/phone';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
 
@@ -35,11 +36,25 @@ async function adminFetch(path: string, options: RequestInit = {}) {
 
 export const authApi = {
   signup: async (data: { email: string; password: string; name: string; phone?: string; role: string }) => {
+    const normalizedPhone = data.phone ? normalizeKenyanPhone(data.phone) : undefined;
     const result = await authService.signUp(data.email, data.password, {
       full_name: data.name,
-      phone: data.phone,
+      phone: normalizedPhone,
       role: data.role
     });
+    if (result.data?.user?.id) {
+      fetch('/api/auth/sync-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: result.data.user.id,
+          email: data.email,
+          phone: normalizedPhone,
+          fullName: data.name,
+          role: data.role
+        })
+      }).catch(() => {});
+    }
     return {
       user: result.data?.user || null,
       token: result.data?.session?.access_token || null,
@@ -48,13 +63,28 @@ export const authApi = {
   },
 
   signupMerchant: async (data: { email: string; password: string; name: string; phone?: string; business_name?: string; business_type?: string }) => {
+    const normalizedPhone = data.phone ? normalizeKenyanPhone(data.phone) : undefined;
     const result = await authService.signUp(data.email, data.password, {
       full_name: data.name,
-      phone: data.phone,
+      phone: normalizedPhone,
       business_name: data.business_name,
       business_type: data.business_type,
       role: 'merchant'
     });
+    if (result.data?.user?.id) {
+      fetch('/api/auth/sync-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: result.data.user.id,
+          email: data.email,
+          phone: normalizedPhone,
+          fullName: data.name,
+          role: 'merchant',
+          merchantType: data.business_type
+        })
+      }).catch(() => {});
+    }
     return {
       user: result.data?.user || null,
       token: result.data?.session?.access_token || null,
@@ -63,11 +93,25 @@ export const authApi = {
   },
 
   signupCourier: async (data: { email: string; password: string; name: string; phone?: string }) => {
+    const normalizedPhone = data.phone ? normalizeKenyanPhone(data.phone) : undefined;
     const result = await authService.signUp(data.email, data.password, {
       full_name: data.name,
-      phone: data.phone,
+      phone: normalizedPhone,
       role: 'courier'
     });
+    if (result.data?.user?.id) {
+      fetch('/api/auth/sync-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: result.data.user.id,
+          email: data.email,
+          phone: normalizedPhone,
+          fullName: data.name,
+          role: 'courier'
+        })
+      }).catch(() => {});
+    }
     return {
       user: result.data?.user || null,
       token: result.data?.session?.access_token || null,

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { authApi } from '../../lib/api';
 import { supabase } from '../../lib/supabaseClient';
 import { useAuth } from '../../context/AuthContext';
+import { isValidKenyanPhone, normalizeKenyanPhone } from '../../utils/phone';
 import courierImg from '../../assets/images/courierloginndsignup.jpg';
 
 export default function CourierSignup() {
@@ -52,6 +53,11 @@ export default function CourierSignup() {
             return;
         }
 
+        if (!isValidKenyanPhone(phone)) {
+            setError('Please enter a valid Kenyan phone number (e.g. 0712 345 678 or +254 712 345 678).');
+            return;
+        }
+
         if (password.length < 6) {
             setError('Password must be at least 6 characters long.');
             return;
@@ -64,12 +70,14 @@ export default function CourierSignup() {
 
         setLoading(true);
 
+        const normalizedPhone = normalizeKenyanPhone(phone);
+
         try {
             const signupResult = await authApi.signupCourier({
                 email: email.trim(),
                 password: password,
                 name: fullName.trim(),
-                phone: phone.trim()
+                phone: normalizedPhone
             });
 
             if (signupResult.error) throw new Error(signupResult.error);
@@ -89,6 +97,19 @@ export default function CourierSignup() {
                 if (upsertError) {
                     console.warn('Rider record creation notice:', upsertError);
                 }
+
+                // Sync phone and courier info to Supabase Auth & public.profiles
+                fetch('/api/auth/sync-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: signupResult.user.id,
+                        email: email.trim(),
+                        phone: normalizedPhone,
+                        fullName: fullName.trim(),
+                        role: 'courier'
+                    })
+                }).catch(() => {});
             }
 
             // EVENT ORDER: signup -> email confirmation -> login -> onboarding (once) -> approval
@@ -275,7 +296,7 @@ export default function CourierSignup() {
 
                         <div>
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                                Phone Number
+                                Phone Number <span className="text-red-500">*</span>
                             </label>
                             <input
                                 id="courier-signup-phone"
@@ -285,7 +306,7 @@ export default function CourierSignup() {
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
                                 className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                placeholder="+254 700 000 000"
+                                placeholder="0712 345 678 or +254 712 345 678"
                             />
                         </div>
 

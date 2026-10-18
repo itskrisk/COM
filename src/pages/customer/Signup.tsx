@@ -3,6 +3,7 @@ import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut } from 'lucide-reac
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { isValidKenyanPhone, normalizeKenyanPhone } from '../../utils/phone';
 import customerLoginImg from '../../assets/images/customerloginpic.jpg';
 
 export default function Signup() {
@@ -45,8 +46,13 @@ export default function Signup() {
             return;
         }
 
-        if (!fullName.trim() || !email.trim() || !password) {
-            setError('Please fill in all required fields.');
+        if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
+            setError('Please fill in all required fields (Name, Phone, Email, Password).');
+            return;
+        }
+
+        if (!isValidKenyanPhone(phone)) {
+            setError('Please enter a valid Kenyan phone number (e.g. 0712 345 678, 0112 345 678, or +254 712 345 678).');
             return;
         }
 
@@ -62,14 +68,28 @@ export default function Signup() {
 
         setLoading(true);
 
+        const normalizedPhone = normalizeKenyanPhone(phone);
+
         try {
             const { error: signupError } = await signUp(email, password, {
                 name: fullName.trim(),
-                phone: phone.trim() || undefined,
+                phone: normalizedPhone,
                 role: 'customer',
             });
 
             if (signupError) throw new Error(signupError);
+
+            // Trigger sync in background to guarantee Supabase Auth & public.profiles are aligned
+            fetch('/api/auth/sync-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email: email.trim().toLowerCase(),
+                    phone: normalizedPhone,
+                    fullName: fullName.trim(),
+                    role: 'customer'
+                })
+            }).catch(() => {});
 
             navigate('/auth/verify', {
                 state: { email: email.trim() }
@@ -232,16 +252,17 @@ export default function Signup() {
 
                         <div>
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                                Phone Number
+                                Phone Number <span className="text-red-500">*</span>
                             </label>
                             <input
                                 id="customer-signup-phone"
                                 type="tel"
+                                required
                                 disabled={Boolean(user)}
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
                                 className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                placeholder="+254 700 000 000"
+                                placeholder="0712 345 678 or +254 712 345 678"
                             />
                         </div>
 

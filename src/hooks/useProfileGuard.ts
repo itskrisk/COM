@@ -11,14 +11,16 @@ import { useAuth } from '../context/AuthContext';
 export function useProfileGuard() {
   const { user, loading } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [initialView, setInitialView] = useState<any>('main');
 
-  const open = useCallback(() => {
+  const open = useCallback((view: any = 'main') => {
+    setInitialView(view);
     setIsOpen(true);
   }, []);
 
   const close = useCallback(() => setIsOpen(false), []);
 
-  return { isOpen, open, close, isAuthenticated: !!user, loading };
+  return { isOpen, open, close, initialView, isAuthenticated: !!user, loading };
 }
 
 export default useProfileGuard;

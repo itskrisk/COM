@@ -128,18 +128,35 @@ const buildNormalizedUser = async (authUser: SupabaseUser): Promise<User> => {
 
   const roles = [primaryRole];
 
+  const resolvedPhone = authUser.phone || authUser.user_metadata?.phone || profileData?.phone;
+  const resolvedFullName = authUser.user_metadata?.full_name || profileData?.full_name || authUser.email?.split('@')[0] || 'User';
+
+  // If profile in DB is missing phone but auth has it, persist it back to profiles
+  if (!profileData?.phone && resolvedPhone) {
+    Promise.resolve(supabase.from('profiles').update({ phone: resolvedPhone, full_name: resolvedFullName }).eq('id', authUser.id)).catch(() => {});
+  }
+
   return {
     id: authUser.id,
     email: authUser.email || '',
-    fullName: authUser.user_metadata?.full_name || profileData?.full_name || authUser.email?.split('@')[0] || 'User',
-    phone: authUser.user_metadata?.phone || profileData?.phone,
+    fullName: resolvedFullName,
+    phone: resolvedPhone,
     emailVerified: Boolean(authUser.email_confirmed_at),
     loyaltyTier: profileData?.loyalty_tier || 'bronze',
     accountStatus,
     merchant: merchantData,
     rider: riderData,
-    profile: profileData ? { ...profileData, roles, account_status: accountStatus } : {
+    profile: profileData ? {
+      ...profileData,
+      phone: profileData.phone || resolvedPhone,
+      full_name: profileData.full_name || resolvedFullName,
+      roles,
+      account_status: accountStatus
+    } : {
       id: authUser.id,
+      full_name: resolvedFullName,
+      phone: resolvedPhone,
+      email: authUser.email,
       roles,
       status: 'ACTIVE',
       account_status: accountStatus
@@ -158,12 +175,14 @@ const buildMinimalUser = (authUser: SupabaseUser): User => {
 
   // Customers are ALWAYS active once verified. Only partners are pending_onboarding.
   const accountStatus = isPartner ? 'pending_onboarding' : 'active';
+  const phone = authUser.phone || authUser.user_metadata?.phone;
+  const fullName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User';
 
   return {
     id: authUser.id,
     email: authUser.email || '',
-    fullName: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
-    phone: authUser.user_metadata?.phone,
+    fullName,
+    phone,
     emailVerified: Boolean(authUser.email_confirmed_at),
     loyaltyTier: 'bronze',
     accountStatus,
@@ -171,6 +190,9 @@ const buildMinimalUser = (authUser: SupabaseUser): User => {
     rider: null,
     profile: {
       id: authUser.id,
+      full_name: fullName,
+      phone,
+      email: authUser.email,
       roles: [role],
       status: 'ACTIVE',
       account_status: accountStatus,
@@ -360,8 +382,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setUser(minimalUser);
       setProfile(minimalUser.profile);
 
-      // Background DB enrichment — non-blocking
+      // Background DB enrichment & serverless phone synchronization — non-blocking
       const sessionToken = data.session?.access_token || '';
+      const userPhone = data.user.phone || data.user.user_metadata?.phone;
+      const userFullName = data.user.user_metadata?.full_name || minimalUser.fullName;
+
+      fetch('/api/auth/sync-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: data.user.id,
+          email: cleanEmail,
+          phone: userPhone,
+          fullName: userFullName,
+          role: resolvedRole
+        })
+      }).catch(() => {});
+
       buildNormalizedUser(data.user).then(fullUser => {
         setUser(fullUser);
         setProfile(fullUser.profile);
@@ -425,6 +462,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (!data?.user) {
         return { error: 'Signup failed. Please try again.' };
+      }
+
+      // Synchronize phone and profile directly to Supabase via admin sync endpoint
+      if (data.user.id) {
+        fetch('/api/auth/sync-user', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: data.user.id,
+            email: cleanEmail,
+            phone: cleanPhone,
+            fullName: metadata?.name || cleanEmail.split('@')[0],
+            role,
+            merchantType: metadata?.merchantType,
+            vehicleType: metadata?.vehicleType
+          })
+        }).catch(() => {});
       }
 
       // Standard flow: email confirmation required — navigate to verify immediately

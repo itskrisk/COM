@@ -109,6 +109,45 @@ export default function AuthCallback() {
                 const role = detectedRole || 'customer';
                 const accountStatus = profileRow?.account_status || 'pending_onboarding';
 
+                // Sync phone, full name, and role to guarantee Supabase persistence
+                const verifiedPhone = verifiedUser.user_metadata?.phone;
+                const verifiedFullName = verifiedUser.user_metadata?.full_name || verifiedUser.email?.split('@')[0];
+
+                if (verifiedPhone) {
+                    const { error: profileUpdateError } = await supabase.from('profiles').update({
+                        phone: verifiedPhone,
+                        full_name: verifiedFullName,
+                        status: 'ACTIVE'
+                    }).eq('id', verifiedUser.id);
+                    if (profileUpdateError) {
+                        setStatus('error');
+                        setMessage('Email verified, but saving your profile failed. Please sign in and update your profile.');
+                        return;
+                    }
+                } else if (verifiedFullName) {
+                    const { error: profileUpdateError } = await supabase.from('profiles').update({
+                        full_name: verifiedFullName,
+                        status: 'ACTIVE'
+                    }).eq('id', verifiedUser.id);
+                    if (profileUpdateError) {
+                        setStatus('error');
+                        setMessage('Email verified, but saving your profile failed. Please sign in and update your profile.');
+                        return;
+                    }
+                }
+
+                fetch('/api/auth/sync-user', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        userId: verifiedUser.id,
+                        email: verifiedUser.email,
+                        phone: verifiedPhone,
+                        fullName: verifiedFullName,
+                        role
+                    })
+                }).catch(() => {});
+
                 setStatus('success');
                 setMessage('Email verified successfully! Directing you to your portal...');
 
