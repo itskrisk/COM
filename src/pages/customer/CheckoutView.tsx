@@ -16,8 +16,12 @@ import {
     Trash2,
     CheckCircle2,
     AlertCircle,
-    LogIn
+    LogIn,
+    Loader2,
+    RefreshCw,
+    X
 } from 'lucide-react';
+import { supabase } from '../../lib/supabaseClient';
 import { customerApi } from '../../lib/api';
 import { mpesaService } from '../../lib/mpesaService';
 import { walletService } from '../../lib/walletService';
@@ -51,11 +55,14 @@ export default function CheckoutView() {
     const [wantsCutlery, setWantsCutlery] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
 
-    // M-Pesa STK Push Simulation States
+    // Real M-Pesa STK Push Express States (No simulation)
     const [isStkModalOpen, setIsStkModalOpen] = useState(false);
     const [stkOrderId, setStkOrderId] = useState<string | null>(null);
+    const [stkCheckoutRequestId, setStkCheckoutRequestId] = useState<string>('');
     const [stkReceiptNumber, setStkReceiptNumber] = useState<string>('');
-    const [stkCountdown, setStkCountdown] = useState(5);
+    const [stkStatus, setStkStatus] = useState<'PENDING' | 'SUCCESS' | 'FAILED'>('PENDING');
+    const [stkErrorMessage, setStkErrorMessage] = useState<string>('');
+    const [isRetryingStk, setIsRetryingStk] = useState(false);
 
     // Prefill profile data
     useEffect(() => {
@@ -186,45 +193,120 @@ export default function CheckoutView() {
     const deliveryFee = merchant?.deliveryFee || 150;
     const finalTotal = total + deliveryFee;
 
-    // Auto-confirm STK Push countdown timer
+    // Real Safaricom M-Pesa STK Push Network Listener & Poller (No Simulation)
     useEffect(() => {
-        let interval: any;
-        if (isStkModalOpen && stkOrderId) {
-            setStkCountdown(5);
-            interval = setInterval(() => {
-                setStkCountdown((prev) => {
-                    if (prev <= 1) {
-                        clearInterval(interval);
-                        handleConfirmStkSuccess();
-                        return 0;
-                    }
-                    return prev - 1;
-                });
-            }, 1000);
-        }
-        return () => {
-            if (interval) clearInterval(interval);
-        };
-    }, [isStkModalOpen, stkOrderId, stkReceiptNumber]);
+        if (!isStkModalOpen || !stkOrderId) return;
 
-    const handleConfirmStkSuccess = async () => {
-        if (!stkOrderId) return;
-        setIsStkModalOpen(false);
+        let isMounted = true;
+        let pollTimer: any = null;
+
+        // 1. Listen for real callback confirmation via Supabase Realtime
+        const channel = supabase
+            .channel(`mpesa_tx_${stkOrderId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'mpesa_transactions',
+                    filter: `order_id=eq.${stkOrderId}`
+                },
+                (payload: any) => {
+                    const row = payload.new;
+                    if (row && isMounted) {
+                        if (row.status === 'SUCCESS') {
+                            setStkStatus('SUCCESS');
+                            if (row.mpesa_receipt_number) setStkReceiptNumber(row.mpesa_receipt_number);
+                            setTimeout(() => {
+                                clearCart();
+                                navigate(`/order/${stkOrderId}`);
+                            }, 1800);
+                        } else if (row.status === 'FAILED') {
+                            setStkStatus('FAILED');
+                            setStkErrorMessage(row.result_desc || 'Payment was cancelled or failed.');
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        // 2. Poll Safaricom query endpoint every 3 seconds
+        let attempts = 0;
+        const maxAttempts = 35; // ~100s timeout (matches Safaricom PIN prompt lifecycle)
+
+        const pollStatus = async () => {
+            if (!isMounted || attempts >= maxAttempts) {
+                if (attempts >= maxAttempts && isMounted && stkStatus === 'PENDING') {
+                    setStkStatus('FAILED');
+                    setStkErrorMessage('M-Pesa authorization timed out. Please check your phone or retry.');
+                }
+                return;
+            }
+            attempts++;
+
+            try {
+                const res = await mpesaService.queryStatus(stkCheckoutRequestId, stkOrderId);
+                if (!isMounted) return;
+
+                if (res.isComplete) {
+                    if (res.status === 'SUCCESS') {
+                        setStkStatus('SUCCESS');
+                        if (res.receiptNumber) setStkReceiptNumber(res.receiptNumber);
+                        setTimeout(() => {
+                            clearCart();
+                            navigate(`/order/${stkOrderId}`);
+                        }, 1800);
+                        return;
+                    } else if (res.status === 'FAILED') {
+                        setStkStatus('FAILED');
+                        setStkErrorMessage(res.resultDesc || 'M-Pesa prompt cancelled or declined.');
+                        return;
+                    }
+                }
+            } catch (e) {
+                console.error('Polling error:', e);
+            }
+
+            if (isMounted && stkStatus === 'PENDING') {
+                pollTimer = setTimeout(pollStatus, 3000);
+            }
+        };
+
+        pollTimer = setTimeout(pollStatus, 2500);
+
+        return () => {
+            isMounted = false;
+            if (pollTimer) clearTimeout(pollTimer);
+            supabase.removeChannel(channel);
+        };
+    }, [isStkModalOpen, stkOrderId, stkCheckoutRequestId]);
+
+    const handleRetryStkPush = async () => {
+        if (!stkOrderId || isRetryingStk) return;
+        setIsRetryingStk(true);
+        setStkStatus('PENDING');
+        setStkErrorMessage('');
 
         try {
-            // Allocate funds into Merchant, Rider, and Platform wallets via mpesaService
-            await mpesaService.confirmOrderPayment(
-                stkOrderId,
-                stkReceiptNumber || `QKH${Date.now().toString().slice(-6)}`,
-                finalTotal,
-                effectiveMerchantId
-            );
-        } catch (e) {
-            console.error('Payment confirmation error:', e);
-        }
+            const stkRes = await mpesaService.initiateSTKPush({
+                phoneNumber: phoneNumber.trim(),
+                amount: finalTotal,
+                orderId: stkOrderId,
+                merchantId: effectiveMerchantId
+            });
 
-        clearCart();
-        navigate(`/order/${stkOrderId}`);
+            if (stkRes.success && stkRes.checkoutRequestId) {
+                setStkCheckoutRequestId(stkRes.checkoutRequestId);
+            } else {
+                setStkStatus('FAILED');
+                setStkErrorMessage(stkRes.error || 'Failed to resend M-Pesa prompt.');
+            }
+        } catch (e: any) {
+            setStkStatus('FAILED');
+            setStkErrorMessage(e.message || 'Error communicating with M-Pesa.');
+        } finally {
+            setIsRetryingStk(false);
+        }
     };
 
     const handlePlaceOrder = async () => {
@@ -288,8 +370,16 @@ export default function CheckoutView() {
                 });
 
                 setIsProcessing(false);
+
+                if (!stkRes.success) {
+                    setErrorMessage(stkRes.error || 'Failed to dispatch M-Pesa prompt. Please verify your phone number.');
+                    return;
+                }
+
                 setStkOrderId(createdOrderId);
-                setStkReceiptNumber(stkRes.receiptNumber || `QKH${Date.now().toString().slice(-6)}`);
+                setStkCheckoutRequestId(stkRes.checkoutRequestId || '');
+                setStkReceiptNumber(stkRes.receiptNumber || '');
+                setStkStatus('PENDING');
                 setIsStkModalOpen(true);
                 return;
             }
@@ -775,7 +865,7 @@ export default function CheckoutView() {
                 </AnimatePresence>
             </main>
 
-            {/* ═══ M-PESA STK PUSH INTERACTIVE SIMULATION MODAL ═══ */}
+            {/* ═══ REAL SAFARICOM M-PESA DARAJA LIVE MODAL (NO SIMULATION) ═══ */}
             {/* Unboxed editorial modal strictly conforming to NO-CARD rules, 100% mobile responsive */}
             <AnimatePresence>
                 {isStkModalOpen && (
@@ -783,7 +873,7 @@ export default function CheckoutView() {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
                     >
                         <motion.div
                             initial={{ y: 20, opacity: 0 }}
@@ -794,63 +884,105 @@ export default function CheckoutView() {
                             {/* Modal Header */}
                             <div className="border-b border-neutral-200 px-4 sm:px-6 py-3.5 flex items-center justify-between shrink-0">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                                    <div
+                                        className={`w-2.5 h-2.5 rounded-full ${
+                                            stkStatus === 'SUCCESS'
+                                                ? 'bg-emerald-500'
+                                                : stkStatus === 'FAILED'
+                                                ? 'bg-red-500'
+                                                : 'bg-emerald-500 animate-ping'
+                                        }`}
+                                    />
                                     <span className="text-xs font-mono uppercase tracking-widest font-bold text-black">
-                                        M-Pesa Express · STK Push
+                                        M-Pesa Express · Daraja Live
                                     </span>
                                 </div>
                                 <span className="text-[10px] font-mono text-neutral-400 uppercase tracking-widest">
-                                    Live Gateway
+                                    Safaricom STK
                                 </span>
                             </div>
 
                             {/* Modal Body */}
-                            <div className="px-4 sm:px-6 py-4 space-y-4 overflow-y-auto flex-1">
-                                <div className="border border-neutral-200 p-3 sm:p-4 space-y-2 bg-neutral-50/50">
-                                    <div className="flex justify-between text-xs font-mono text-neutral-500">
+                            <div className="px-4 sm:px-6 py-5 space-y-4 overflow-y-auto flex-1">
+                                <div className="border border-neutral-200 p-3 sm:p-4 space-y-2 bg-neutral-50/60 font-mono text-xs">
+                                    <div className="flex justify-between text-neutral-500">
                                         <span>Recipient Number</span>
                                         <span className="font-bold text-black">{phoneNumber || '07XX XXX XXX'}</span>
                                     </div>
-                                    <div className="flex justify-between text-xs font-mono text-neutral-500">
-                                        <span>Payable Settlement</span>
+                                    <div className="flex justify-between text-neutral-500">
+                                        <span>Payable Amount</span>
                                         <span className="font-bold text-black">KES {finalTotal.toLocaleString()}</span>
                                     </div>
-                                    <div className="flex justify-between text-xs font-mono text-neutral-500">
-                                        <span>Merchant Till</span>
-                                        <span className="text-black">{merchant?.business_name || 'Rose Honey'} (Till 174379)</span>
+                                    <div className="flex justify-between text-neutral-500">
+                                        <span>Account Reference</span>
+                                        <span className="text-black font-bold">MUNCHEEZ-{stkOrderId?.slice(0, 6).toUpperCase()}</span>
                                     </div>
                                     {stkReceiptNumber && (
-                                        <div className="flex justify-between text-xs font-mono text-neutral-500">
-                                            <span>M-Pesa Reference</span>
-                                            <span className="text-black font-bold">{stkReceiptNumber}</span>
+                                        <div className="flex justify-between text-neutral-500">
+                                            <span>M-Pesa Receipt</span>
+                                            <span className="text-emerald-700 font-bold">{stkReceiptNumber}</span>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="space-y-1 text-center py-1 sm:py-2">
-                                    <p className="text-sm font-medium text-black">
-                                        Prompt sent to your phone
-                                    </p>
-                                    <p className="text-xs text-neutral-500 leading-relaxed font-mono">
-                                        Please unlock your phone and enter your 4-digit M-Pesa PIN on the SIM prompt to authorize payment.
-                                    </p>
-                                </div>
+                                {stkStatus === 'PENDING' && (
+                                    <div className="text-center py-3 space-y-2">
+                                        <div className="flex items-center justify-center gap-2 text-emerald-700 font-mono text-xs uppercase tracking-wider font-bold">
+                                            <Loader2 size={16} className="animate-spin" />
+                                            <span>Prompt Dispatched To Your Phone</span>
+                                        </div>
+                                        <p className="text-xs text-neutral-600 leading-relaxed font-mono">
+                                            Please check your phone, enter your 4-digit M-Pesa PIN on the SIM prompt to complete authorization.
+                                        </p>
+                                        <p className="text-[11px] text-neutral-400 font-mono">
+                                            Listening for network confirmation...
+                                        </p>
+                                    </div>
+                                )}
 
-                                <div className="text-center font-mono text-xs text-neutral-400">
-                                    Auto-confirming in {stkCountdown}s...
-                                </div>
+                                {stkStatus === 'SUCCESS' && (
+                                    <div className="text-center py-3 space-y-2">
+                                        <div className="w-12 h-12 mx-auto rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center">
+                                            <CheckCircle2 size={28} />
+                                        </div>
+                                        <p className="text-sm font-bold text-black uppercase tracking-wider font-mono">
+                                            Payment Authorized
+                                        </p>
+                                        <p className="text-xs text-neutral-500 font-mono">
+                                            Redirecting to real-time order tracking terminal...
+                                        </p>
+                                    </div>
+                                )}
+
+                                {stkStatus === 'FAILED' && (
+                                    <div className="text-center py-3 space-y-2">
+                                        <div className="w-10 h-10 mx-auto rounded-full bg-red-50 text-red-600 flex items-center justify-center">
+                                            <AlertCircle size={22} />
+                                        </div>
+                                        <p className="text-xs font-bold text-red-600 uppercase tracking-wider font-mono">
+                                            Payment Not Completed
+                                        </p>
+                                        <p className="text-xs text-neutral-600 font-mono">
+                                            {stkErrorMessage || 'Transaction cancelled or timed out on your device.'}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Modal Actions */}
                             <div className="border-t border-neutral-200 p-4 sm:p-6 flex flex-col gap-2.5 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={handleConfirmStkSuccess}
-                                    className="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-mono uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-colors min-h-[44px]"
-                                >
-                                    <CheckCircle2 size={15} />
-                                    <span>Simulate PIN Entered (Confirm)</span>
-                                </button>
+                                {stkStatus === 'FAILED' && (
+                                    <button
+                                        type="button"
+                                        onClick={handleRetryStkPush}
+                                        disabled={isRetryingStk}
+                                        className="w-full py-3.5 bg-black hover:bg-neutral-800 text-white font-mono uppercase tracking-widest text-xs flex items-center justify-center gap-2 transition-colors min-h-[44px]"
+                                    >
+                                        {isRetryingStk ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                                        <span>Resend M-Pesa Prompt</span>
+                                    </button>
+                                )}
+
                                 <button
                                     type="button"
                                     onClick={() => {
@@ -862,7 +994,7 @@ export default function CheckoutView() {
                                     }}
                                     className="w-full py-2.5 border border-neutral-200 hover:border-black text-neutral-600 hover:text-black font-mono uppercase tracking-widest text-[11px] transition-colors min-h-[40px]"
                                 >
-                                    View Order Status Now
+                                    {stkStatus === 'SUCCESS' ? 'Track Order Now' : 'Check Order Status Later'}
                                 </button>
                             </div>
                         </motion.div>

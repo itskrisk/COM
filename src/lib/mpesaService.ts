@@ -92,84 +92,65 @@ export const mpesaService = {
     },
 
     /**
-     * Trigger Lipa Na M-Pesa Online STK Push
+     * Trigger Lipa Na M-Pesa Online STK Push via backend bridge
      */
     async initiateSTKPush(params: STKPushParams): Promise<STKPushResponse> {
-        const client = adminSupabase || supabase;
         const formattedPhone = formatPhoneNumber(params.phoneNumber);
-        const timestamp = getTimestamp();
-        const password = btoa(`${MPESA_CONFIG.shortcode}${MPESA_CONFIG.passkey}${timestamp}`);
         const roundAmount = Math.max(1, Math.round(params.amount));
         const ref = params.accountReference || `MUNCHEEZ-${params.orderId.slice(0, 6).toUpperCase()}`;
 
-        let checkoutRequestId = `ws_CO_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
-        let merchantRequestId = `MR_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
-        let isRealApiSuccess = false;
-
         try {
-            const token = await this.getOAuthToken();
-            if (token) {
-                const payload = {
-                    BusinessShortCode: MPESA_CONFIG.shortcode,
-                    Password: password,
-                    Timestamp: timestamp,
-                    TransactionType: 'CustomerPayBillOnline',
-                    Amount: roundAmount,
-                    PartyA: formattedPhone,
-                    PartyB: MPESA_CONFIG.shortcode,
-                    PhoneNumber: formattedPhone,
-                    CallBackURL: MPESA_CONFIG.callbackUrl,
-                    AccountReference: ref,
-                    TransactionDesc: params.transactionDesc || 'Muncheez Order Payment'
-                };
-
-                const res = await fetch(`${getBaseUrl()}/mpesa/stkpush/v1/processrequest`, {
-                    method: 'POST',
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await res.json();
-                if (data.ResponseCode === '0') {
-                    checkoutRequestId = data.CheckoutRequestID || checkoutRequestId;
-                    merchantRequestId = data.MerchantRequestID || merchantRequestId;
-                    isRealApiSuccess = true;
-                }
-            }
-        } catch (err) {
-            console.log('Daraja network execution: browser environment using safe sandbox fallback');
-        }
-
-        // Record initiation in mpesa_transactions table
-        const receiptNumber = 'QKH' + Math.floor(10000000 + Math.random() * 90000000);
-        try {
-            await client.from('mpesa_transactions').insert({
-                order_id: params.orderId,
-                phone_number: formattedPhone,
-                amount: roundAmount,
-                merchant_request_id: merchantRequestId,
-                checkout_request_id: checkoutRequestId,
-                mpesa_receipt_number: receiptNumber,
-                status: 'INITIATED',
-                result_code: 0,
-                result_desc: 'STK prompt sent to subscriber'
+            // Call serverless proxy (bypasses browser CORS and executes real Safaricom Daraja STK Push)
+            const res = await fetch('/api/mpesa/stkpush', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    phoneNumber: formattedPhone,
+                    amount: roundAmount,
+                    orderId: params.orderId,
+                    accountReference: ref,
+                    transactionDesc: params.transactionDesc || 'Muncheez Order Payment',
+                    merchantId: params.merchantId
+                })
             });
-        } catch (e) {
-            console.error('Failed to record M-Pesa transaction log:', e);
-        }
 
-        return {
-            success: true,
-            checkoutRequestId,
-            merchantRequestId,
-            responseCode: '0',
-            responseDescription: 'Success. Request accepted for processing',
-            customerMessage: `Success. An STK push prompt has been dispatched to ${formattedPhone}. Please check your phone and enter your M-Pesa PIN.`,
-            receiptNumber
-        };
+            const data = await res.json();
+            if (res.ok && data.success) {
+                return {
+                    success: true,
+                    checkoutRequestId: data.checkoutRequestId,
+                    merchantRequestId: data.merchantRequestId,
+                    responseCode: '0',
+                    responseDescription: 'Success. Request accepted for processing',
+                    customerMessage: data.customerMessage || `Prompt sent to ${formattedPhone}. Please check your phone and enter your M-Pesa PIN.`
+                };
+            } else {
+                return {
+                    success: false,
+                    error: data.error || 'Failed to dispatch STK push prompt.'
+                };
+            }
+        } catch (err: any) {
+            console.error('STK push network error:', err);
+            return {
+                success: false,
+                error: err?.message || 'Network error communicating with payment service.'
+            };
+        }
+    },
+
+    /**
+     * Query real STK Push transaction status
+     */
+    async queryStatus(checkoutRequestId: string, orderId?: string): Promise<{ status: string; isComplete: boolean; receiptNumber?: string; resultDesc?: string }> {
+        try {
+            const url = `/api/mpesa/query?checkoutRequestId=${encodeURIComponent(checkoutRequestId || '')}${orderId ? `&orderId=${encodeURIComponent(orderId)}` : ''}`;
+            const res = await fetch(url);
+            const data = await res.json();
+            return data;
+        } catch (err) {
+            return { status: 'INITIATED', isComplete: false };
+        }
     },
 
     /**

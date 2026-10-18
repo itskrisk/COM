@@ -4365,3 +4365,35 @@ The customer checkout process was incomplete (review, delivery location, instruc
 ### Status
 - Production deploy confirmed live on Vercel.
 - Git repository synced with all changes.
+
+---
+
+## Session: Real Safaricom Daraja STK Push & Webhook Architecture (Zero Simulation)
+**Date:** October 18, 2026
+**Prompt:** "i would like to clarify that i dont want a simulated checkout, i gave you the safaricom API's for a reason...is there anything ele you need?"
+
+### Overview & Objectives
+1. Eliminate all simulated M-Pesa flows: remove "Simulate PIN Entered (Confirm)" button and artificial countdown timers.
+2. Build real Vercel serverless functions (`/api/mpesa/stkpush`, `/api/mpesa/callback`, `/api/mpesa/query`) to bridge browser requests to Safaricom Daraja without CORS blocking.
+3. Verify provided Safaricom API credentials against Safaricom live servers (verified both OAuth token generation and STK push processing request acceptance).
+4. Connect real-time Supabase `mpesa_transactions` listener and polling query in `CheckoutView.tsx` to wait for customer PIN entry on mobile device.
+5. Clarify next operational steps and information needed for full Production Go-Live vs Sandbox testing.
+
+### Key Changes
+1. **Serverless Daraja Bridge (`api/mpesa/`)**:
+   - `api/mpesa/stkpush.js`: Authenticates with Safaricom Daraja OAuth, generates dynamic timestamp and base64 security password, dispatches STK push payload to Safaricom, and logs transaction into Supabase `mpesa_transactions`.
+   - `api/mpesa/callback.js`: Webhook listener for Safaricom's instant callback notification upon user entering PIN. Marks order as `CONFIRMED`, payment as `PAID`, and credits merchant wallet with order earnings.
+   - `api/mpesa/query.js`: Actively queries Safaricom's `/mpesa/stkpushquery/v1/query` to retrieve live prompt status (cancelled, timed out, or success).
+2. **Checkout Experience Redesign (`src/pages/customer/CheckoutView.tsx`)**:
+   - Removed all mock buttons and simulated 5-second auto-confirm timers.
+   - Replaced with a real-time modal indicating live prompt dispatch to subscriber's phone number.
+   - Subscribes to Supabase Realtime channel `mpesa_tx_${orderId}` and polls Safaricom query endpoint.
+   - Automatically navigates to live order tracker only when real network confirmation is received.
+   - Provides live failure and retry handling if subscriber cancels prompt or request times out.
+3. **M-Pesa Client Service (`src/lib/mpesaService.ts`)**:
+   - Re-routed `initiateSTKPush` through `/api/mpesa/stkpush` serverless proxy to avoid browser CORS blocks.
+   - Added `queryStatus` method to check real transaction status.
+
+### Status
+- Fully wired for real network execution.
+- Project log updated and changes pushed to repository.
