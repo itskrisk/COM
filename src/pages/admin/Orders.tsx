@@ -5,15 +5,13 @@ import {
     Filter,
     Eye,
     Clock,
-    ShoppingBag,
     MapPin,
     Calendar,
     Package,
-    ArrowRight,
     X,
-    CreditCard
+    CreditCard,
+    ShoppingBag
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
 import { adminSupabase } from '../../lib/adminSupabase';
 
 export default function Orders() {
@@ -25,22 +23,12 @@ export default function Orders() {
 
     useEffect(() => {
         const fetchOrders = async () => {
+            setIsLoading(true);
             try {
-                let { data, error } = await supabase
+                const { data, error } = await adminSupabase
                     .from('orders')
                     .select('*, customer:profiles!customer_id(full_name, phone), merchant:merchants!merchant_id(business_name, address), rider:riders!rider_id(name, phone, vehicle_type)')
                     .order('created_at', { ascending: false });
-
-                if (error && adminSupabase) {
-                    const adminRes = await adminSupabase
-                        .from('orders')
-                        .select('*, customer:profiles!customer_id(full_name, phone), merchant:merchants!merchant_id(business_name, address), rider:riders!rider_id(name, phone, vehicle_type)')
-                        .order('created_at', { ascending: false });
-                    if (!adminRes.error) {
-                        data = adminRes.data;
-                        error = null;
-                    }
-                }
 
                 if (error) throw error;
                 if (data) setOrders(data);
@@ -53,17 +41,63 @@ export default function Orders() {
 
         fetchOrders();
 
-        // Optional: Realtime subscription
-        const channel = supabase.channel('admin_orders_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
+        const channel = adminSupabase.channel('admin_orders_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
                 fetchOrders();
             })
             .subscribe();
 
         return () => {
-            supabase.removeChannel(channel);
+            adminSupabase.removeChannel(channel);
         };
     }, []);
+
+    const handleStatusChange = async (orderId: string, newStatus: string) => {
+        try {
+            const { error } = await adminSupabase
+                .from('orders')
+                .update({ status: newStatus, updated_at: new Date().toISOString() })
+                .eq('id', orderId);
+            if (error) throw error;
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+        } catch (err) {
+            console.error("Error updating order status:", err);
+        }
+    };
+
+    const handleCancelOrder = async (orderId: string) => {
+        if (!confirm('Cancel this order?')) return;
+        try {
+            const { error } = await adminSupabase
+                .from('orders')
+                .update({ status: 'CANCELLED', cancelled_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+                .eq('id', orderId);
+            if (error) throw error;
+            setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: 'CANCELLED', cancelled_at: new Date().toISOString() } : o));
+        } catch (err) {
+            console.error("Error cancelling order:", err);
+        }
+    };
+
+    const exportOrdersCSV = () => {
+        const headers = ['Order ID', 'Customer', 'Merchant', 'Status', 'Total (KES)', 'Payment Method', 'Delivery Address', 'Created At'];
+        const rows = filteredOrders.map(o => [
+            o.id,
+            o.customer?.full_name || '',
+            o.merchant?.business_name || o.merchant_id || '',
+            o.status,
+            o.total || 0,
+            o.payment_method || '',
+            o.delivery_address || '',
+            o.created_at
+        ]);
+        const csv = [headers.join(','), ...rows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `orders_${new Date().toISOString().slice(0, 10)}.csv`;
+        link.click();
+    };
 
     const filteredOrders = orders.filter(order => {
         const searchLower = searchQuery.toLowerCase();
@@ -96,11 +130,11 @@ export default function Orders() {
                     <p className="text-sm text-gray-400 font-medium">Real-time order orchestration • Muncheez Operations</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="px-5 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
-                        <Filter size={18} /> Export Data
-                    </button>
-                    <button className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 shadow-lg shadow-black/10 transition-all flex items-center gap-2">
-                        <ShoppingBag size={18} /> New Order
+                    <button
+                        onClick={exportOrdersCSV}
+                        className="px-5 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2"
+                    >
+                        <Filter size={18} /> Export CSV ({filteredOrders.length})
                     </button>
                 </div>
             </div>
@@ -199,9 +233,41 @@ export default function Orders() {
                                             <p className="text-[10px] font-bold text-gray-400 uppercase mt-0.5 tracking-widest">{order.payment_method || 'CASH'}</p>
                                         </td>
                                         <td className="px-8 py-6 text-center">
-                                            <button className="p-2.5 bg-gray-50 text-gray-300 hover:text-black hover:bg-white border border-transparent hover:border-gray-100 rounded-xl transition-all shadow-sm">
-                                                <Eye size={18} />
-                                            </button>
+                                            <div className="flex items-center justify-center gap-2">
+                                                <select
+                                                    value={order.status}
+                                                    onChange={(e) => { e.stopPropagation(); handleStatusChange(order.id, e.target.value); }}
+                                                    className="text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-md border cursor-pointer bg-white"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <option value="CREATED">CREATED</option>
+                                                    <option value="PAYMENT_PENDING">PAYMENT_PENDING</option>
+                                                    <option value="PAYMENT_CONFIRMED">PAYMENT_CONFIRMED</option>
+                                                    <option value="ACCEPTED">ACCEPTED</option>
+                                                    <option value="PREPARING">PREPARING</option>
+                                                    <option value="READY_FOR_PICKUP">READY_FOR_PICKUP</option>
+                                                    <option value="RIDER_ASSIGNED">RIDER_ASSIGNED</option>
+                                                    <option value="PICKED_UP">PICKED_UP</option>
+                                                    <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                                                    <option value="DELIVERED">DELIVERED</option>
+                                                    <option value="CANCELLED">CANCELLED</option>
+                                                </select>
+                                                {order.status !== 'DELIVERED' && order.status !== 'CANCELLED' && (
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleCancelOrder(order.id); }}
+                                                        className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                                        title="Cancel order"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                )}
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedOrder(order); }}
+                                                    className="p-2.5 bg-gray-50 text-gray-300 hover:text-black hover:bg-white border border-transparent hover:border-gray-100 rounded-xl transition-all shadow-sm"
+                                                >
+                                                    <Eye size={18} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))
@@ -364,12 +430,36 @@ export default function Orders() {
 
                             {/* Modal Footer */}
                             <div className="p-8 border-t border-gray-50 bg-gray-50/50 flex gap-4">
-                                <button className="flex-1 py-4 bg-white border border-gray-100 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors shadow-sm">
-                                    Contact Client
-                                </button>
-                                <button className="flex-1 py-4 bg-black text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-800 transition-colors shadow-lg shadow-black/10 flex items-center justify-center gap-2">
-                                    Manage Support <ArrowRight size={16} />
-                                </button>
+                                <div className="flex-1 flex flex-col gap-2">
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Update Status</span>
+                                    <select
+                                        value={selectedOrder.status}
+                                        onChange={(e) => { handleStatusChange(selectedOrder.id, e.target.value); }}
+                                        className="w-full px-3 py-2 bg-white border border-gray-200 rounded-xl text-xs font-bold cursor-pointer"
+                                    >
+                                        <option value="CREATED">CREATED</option>
+                                        <option value="PAYMENT_PENDING">PAYMENT_PENDING</option>
+                                        <option value="PAYMENT_CONFIRMED">PAYMENT_CONFIRMED</option>
+                                        <option value="ACCEPTED">ACCEPTED</option>
+                                        <option value="PREPARING">PREPARING</option>
+                                        <option value="READY_FOR_PICKUP">READY_FOR_PICKUP</option>
+                                        <option value="RIDER_ASSIGNED">RIDER_ASSIGNED</option>
+                                        <option value="PICKED_UP">PICKED_UP</option>
+                                        <option value="OUT_FOR_DELIVERY">OUT_FOR_DELIVERY</option>
+                                        <option value="DELIVERED">DELIVERED</option>
+                                        <option value="CANCELLED">CANCELLED</option>
+                                    </select>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                    {selectedOrder.status !== 'DELIVERED' && selectedOrder.status !== 'CANCELLED' && (
+                                        <button
+                                            onClick={() => { handleCancelOrder(selectedOrder.id); }}
+                                            className="flex-1 py-4 bg-red-50 text-red-600 border border-red-100 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-red-100 transition-colors"
+                                        >
+                                            Cancel Order
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         </motion.div>
                     </>

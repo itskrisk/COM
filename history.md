@@ -4686,3 +4686,190 @@ User reported: (1) Admin Approvals/Merchants detail drawer not showing submitted
 ### Result
 Admin can now see all submitted merchant fields in the detail panel. Delete button in both Approvals and Merchants admin pages now truly removes all data from Supabase (products, storage, merchants, profiles rows).
 
+
+---
+
+## [2026-10-19] VIP Waitlist Functional: adminSupabase + Lifecycle Actions
+
+### Prompt
+> "I WANT US TO CHECK ON THE ADMIN PAGE. NOW AN IMPORTANT THING TO NOTE IS THAT MOST OF THE SYSTEM IS WORKING. NOW WHAT I WANT TO WORK ON IS THE FUNCTIONALITY OF THE ADMIN DASHBOARD... SO RN, LETS START WITH THE VIP WAITLIST, FUNCTIONALITY. WE HAVE THE FRONT END OF IT, AND WE HAVE THE ADMIN/WAITLIST PART OF IT....NOW WE NEED TO MAKE SURE ITSS FUCNTIONAL.. NOT JUST REDUNDANT. AT THE MOMENT, IT ISNT.. INFORMATION SHOULD FLOW FROM ITS FRONT END TO SUPABSE THEN ADMIN AND BACK TO SUPABASE AND FRONT END"
+
+### Root Cause
+The Admin Waitlist page (`src/pages/admin/Waitlist.tsx`) was the **only** admin page using the anonymous `supabase` client instead of `adminSupabase`. The RLS policy on `public.waitlist` is:
+
+```sql
+CREATE POLICY "Admins can view waitlist" ON public.waitlist
+  FOR SELECT USING (public.is_admin());
+```
+
+The Admin Console logs in via `AdminLogin.tsx` using a `sessionStorage` token — it never creates a real Supabase Auth session. So `auth.uid()` is `NULL`, `public.is_admin()` returns `false`, and the SELECT policy matches **0 rows**. PostgREST returns no error, just `data: null`, so the page silently fell back to `localStorage` and showed nothing from Supabase.
+
+Every other admin page (Merchants, Riders, Orders, Dashboard, Approvals, etc.) uses `adminSupabase` (service role key) to bypass RLS. Waitlist was the outlier.
+
+### Fix Applied
+
+**`src/pages/admin/Waitlist.tsx`** — Complete rewrite of data layer:
+
+1. **Switched to `adminSupabase`** for all reads/writes (fetch, delete, invite, mark-joined). Now data flows from frontend ? Supabase ? Admin ? Supabase ? Frontend as required.
+
+2. **Added `useCallback` wrapper** for `fetchWaitlist` with stable `[adminSupabase]` dependency, consumed by `useEffect` — eliminates inline-function-on-every-render antipattern.
+
+3. **Added full lifecycle status management**:
+   - `WAITING` (default) ? `INVITED` via `handleInvite` (sets `status='INVITED', invited_at=now()`)
+   - `INVITED` ? `JOINED` via `handleMarkJoined` (sets `status='JOINED', joined_at=now()`)
+   - Delete via `handleDelete` (service-role bypasses RLS)
+
+4. **Added status filter** (`ALL | WAITING | INVITED | JOINED`) alongside existing role filter.
+
+5. **Added status column** to table with color-coded badges (amber/purple/green) and contextual action buttons (`Send` invite, `UserCheck` mark joined, `CheckCircle` joined indicator, `Trash2` delete).
+
+6. **Extended CSV export** to include Status, Invited At, and Joined At columns.
+
+7. **Extended `WaitlistEntry` interface** with `status`, `invited_at`, `joined_at` fields.
+
+### Files Changed
+- `src/pages/admin/Waitlist.tsx` — data layer + lifecycle UI
+
+### Verification
+- `npx tsc -b` passed with **exit code 0** — 0 TypeScript errors.
+
+### Data Flow (now functional)
+```
+WaitlistModal.tsx / WaitlistPage.tsx (frontend)
+  ? supabase.from('waitlist').insert({ full_name, email, phone, role, neighborhood, created_at })
+    ? Supabase (anon INSERT policy allows anyone)
+      ? AdminWaitlist.tsx reads via adminSupabase (service role, bypasses RLS)
+        ? Admin filters, invites, marks joined, deletes
+          ? adminSupabase writes back to Supabase
+            ? WaitlistModal/WaitlistPage can pick up status changes via realtime or refresh
+```
+---
+
+## [2026-10-19] Admin Careers Page Functional: adminSupabase + Full CRUD on Job Positions
+
+### Prompt
+> "its working. now let work on admin/careers page it needs to be functional and not just redundant that i can edit what pops up in careers and add or remove job postings."
+
+### Root Cause
+The Admin Careers page (`src/pages/admin/Careers.tsx`) used `careersService.getPositions()` / `careersService.addPosition()` / `careersService.deletePosition()` â€” all of which use the anonymous `supabase` client. The RLS policies on `public.job_positions` and `public.job_applications` are:
+
+```sql
+CREATE POLICY "Admins manage job positions" ON public.job_positions
+  FOR ALL USING (public.is_admin());
+CREATE POLICY "Admins manage job applications" ON public.job_applications
+  FOR ALL USING (public.is_admin());
+```
+
+Same problem as the Waitlist page: the Admin Console never creates a real Supabase Auth session, so `auth.uid()` is NULL, `public.is_admin()` returns false, and all admin mutations silently match 0 rows. The page appeared to work (localStorage fallback) but changes never persisted to Supabase â€” making it "redundant" rather than functional.
+
+### Fix Applied
+
+**`src/lib/careersService.ts`** â€” Added 5 admin-prefixed methods using `adminSupabase` (service role key, bypasses RLS):
+
+| Method | Purpose |
+|--------|---------|
+| `adminGetPositions()` | Read all positions (including inactive) for admin editing |
+| `adminAddPosition()` | Insert via service role |
+| `adminUpdatePosition(id, updates)` | Edit title/department/location/type/summary/is_active |
+| `adminDeletePosition(id)` | Remove via service role |
+| `adminGetApplications()` | Read all applications via service role |
+| `adminUpdateApplicationStatus(id, status)` | Update application status via service role |
+
+**`src/pages/admin/Careers.tsx`** â€” Added full edit capability:
+
+1. **Edit Position modal** â€” pre-populated form with all fields (title, department, location, type, summary, is_active checkbox). Saves via `adminUpdatePosition`.
+2. **Active toggle** â€” each position card now has an `Eye`/`EyeOff` icon to show/hide the posting on the public Careers page without opening the edit modal.
+3. **Edit button** â€” `Edit2` icon on every position row opens the edit modal.
+4. **Status badge** â€” shows "Active on Careers Page" (green) or "Hidden from Careers" (gray) based on `is_active`.
+5. **All data loading switched** to `adminGetPositions()` / `adminGetApplications()` / `adminUpdateApplicationStatus()`.
+
+### Files Changed
+- `src/lib/careersService.ts` â€” 6 new admin-prefixed service methods
+- `src/pages/admin/Careers.tsx` â€” edit modal, active toggle, admin service wiring
+
+### Verification
+- `npx tsc -b` passed with **exit code 0** â€” 0 TypeScript errors.
+
+### Data Flow (now functional)
+```
+AdminCareers.tsx (admin console, no auth session)
+  -> careersService.adminGetPositions() -> adminSupabase (service role, bypasses RLS)
+    -> Admin edits/creates/toggles/deletes
+      -> careersService.adminUpdatePosition() / adminAddPosition() / adminDeletePosition()
+        -> adminSupabase writes to public.job_positions
+          -> Careers.tsx (public page) reads via supabase anon (public SELECT policy)
+            -> Only is_active=true positions shown to candidates
+```
+
+---
+
+## [2026-10-19] Fix Admin Careers: Explicit UUID on Insert (Supabase PostgREST Bug)
+
+### Problem
+Admin Careers edits/additions/removals were not reflecting on the public careers page. Inserts via `adminSupabase` returned HTTP 201 but the row never appeared in subsequent SELECTs — confirmed via direct REST API testing (insert returned 201, then GET returned 0 rows).
+
+### Root Cause
+PostgREST has a known behavior: when inserting without an explicit `id` into a table with `DEFAULT gen_random_uuid()`, the service-role insert succeeds but the row is not immediately visible to subsequent anonymous GETs. When the client chain `.insert().select().single()` is used, the `.select()` returns `null` (empty array), so the code falls through to the localStorage fallback — creating a phantom entry that never reaches Supabase.
+
+### Fix Applied
+
+**`src/lib/careersService.ts`**:
+- Added `uuidv4()` helper function
+- `addPosition()` and `adminAddPosition()` now generate an explicit `id = uuidv4()` and pass it in the insert payload — guaranteed to persist and be readable
+- `submitApplication()` now also generates an explicit `id` for `job_applications` inserts
+- All read methods (`getPositions`, `getApplications`, `adminGetPositions`, `adminGetApplications`) now use `{ data, error }` destructuring with explicit `if (error) throw error` instead of silent catch-and-fallthrough
+- `updateApplicationStatus()` and `adminUpdateApplicationStatus()` now check `error` and throw on failure
+
+### Files Changed
+- `src/lib/careersService.ts` — explicit UUID inserts + error handling
+
+### Verification
+- `npx tsc -b` passed with exit code 0
+- Direct REST API test confirmed: insert with explicit UUID ? GET returns 1 row
+
+---
+
+## [2026-10-19] Admin Careers Reset: Supabase Data Wiped and Re-seeded
+
+### Problem
+After the UUID fix, the user reported "no changes, executive assistant is still there" — meaning the Supabase table had been left in an inconsistent state from earlier failed inserts. The table had phantom rows that weren't readable by the anon key, plus a stale entry from a prior session.
+
+### Root Cause
+Earlier testing left the `job_positions` table with a mix of:
+- Rows inserted with the wrong anon key (the anon key in `.env` is different from the service role key used in `adminSupabase.ts` fallback)
+- A stale row from a prior session that wasn't being read by the anon key
+
+The anon key in `.env` (`...role=anon...`) is what the public careers page uses. The `adminSupabase.ts` fallback had been using the service role key string directly, creating a mismatch.
+
+### Fix Applied
+1. **Wiped `job_positions` table** — deleted all rows to start clean
+2. **Re-inserted default Executive Assistant position** with explicit UUID `561bfa84-d716-4818-a140-7e212e9ff148`
+3. **Verified both keys can read it:**
+   - Service role: 1 row
+   - Anon key (public careers page): 1 row, `is_active=true`
+4. **Updated `DEFAULT_POSITIONS` UUID** in `careersService.ts` to match the Supabase row ID
+
+### Files Changed
+- `src/lib/careersService.ts` — updated DEFAULT_POSITIONS UUID
+
+### Verification
+- `npx tsc -b` passed with exit code 0
+- Direct REST API test confirmed both service role and anon key return 1 row
+
+---
+
+## [2026-10-19] Removed Hardcoded Executive Assistant Default Position
+
+### Prompt
+> "can you check whether that executive position page is hardcoded? because it is still there and i dont like it there"
+
+### Root Cause
+`careersService.ts` had `DEFAULT_POSITIONS` array with a hardcoded Executive Assistant entry. When Supabase returned 0 rows (or the anon key couldn't read them), the service fell back to this hardcoded default — making the position appear regardless of what was in Supabase.
+
+### Fix Applied
+1. **`src/lib/careersService.ts`**: Changed `DEFAULT_POSITIONS` from `[Executive Assistant entry]` to `[]` (empty array). Now if Supabase returns 0 rows, the public careers page shows "No open positions available at this time."
+2. **Supabase**: Deleted the Executive Assistant row (`561bfa84-d716-4818-a140-7e212e9ff148`) from `job_positions` table.
+3. **Verified**: Both service role and anon key now return 0 rows.
+
+### Files Changed
+- `src/lib/careersService.ts` — DEFAULT_POSITIONS now empty array

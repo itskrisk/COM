@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Search, Download, RefreshCw, Mail, Phone, MapPin, Calendar, Trash2, CheckCircle } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Sparkles, Search, Download, RefreshCw, Mail, Phone, MapPin, Calendar, Trash2, CheckCircle, Send, UserCheck, XCircle } from 'lucide-react';
+import { adminSupabase } from '../../lib/adminSupabase';
 
 interface WaitlistEntry {
     id: string;
@@ -9,6 +9,9 @@ interface WaitlistEntry {
     phone?: string;
     role: 'CUSTOMER' | 'MERCHANT' | 'RIDER';
     neighborhood?: string;
+    status?: 'WAITING' | 'INVITED' | 'JOINED';
+    invited_at?: string | null;
+    joined_at?: string | null;
     created_at: string;
 }
 
@@ -17,11 +20,12 @@ export default function AdminWaitlist() {
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [roleFilter, setRoleFilter] = useState<'ALL' | 'CUSTOMER' | 'MERCHANT' | 'RIDER'>('ALL');
+    const [statusFilter, setStatusFilter] = useState<'ALL' | 'WAITING' | 'INVITED' | 'JOINED'>('ALL');
 
-    const fetchWaitlist = async () => {
+    const fetchWaitlist = useCallback(async () => {
         setIsLoading(true);
         try {
-            const { data, error } = await supabase
+            const { data, error } = await adminSupabase
                 .from('waitlist')
                 .select('*')
                 .order('created_at', { ascending: false });
@@ -46,24 +50,26 @@ export default function AdminWaitlist() {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [adminSupabase]);
 
     useEffect(() => {
         fetchWaitlist();
-    }, []);
+    }, [fetchWaitlist]);
 
     const filtered = entries.filter(e => {
         const matchesSearch = e.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             e.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             e.phone?.includes(searchQuery);
         const matchesRole = roleFilter === 'ALL' ? true : e.role === roleFilter;
-        return matchesSearch && matchesRole;
+        const matchesStatus = statusFilter === 'ALL' ? true : (e.status || 'WAITING') === statusFilter;
+        return matchesSearch && matchesRole && matchesStatus;
     });
 
     const exportToCSV = () => {
-        const headers = ['ID', 'Full Name', 'Email', 'Phone', 'Role', 'Neighborhood', 'Joined At'];
+        const headers = ['ID', 'Full Name', 'Email', 'Phone', 'Role', 'Neighborhood', 'Status', 'Invited At', 'Joined At', 'Created At'];
         const rows = filtered.map(e => [
-            e.id, `"${e.full_name}"`, e.email, e.phone || '', e.role, `"${e.neighborhood || ''}"`, e.created_at
+            e.id, `"${e.full_name}"`, e.email, e.phone || '', e.role, `"${e.neighborhood || ''}"`, e.status || 'WAITING',
+            e.invited_at || '', e.joined_at || '', e.created_at
         ]);
         const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -76,10 +82,50 @@ export default function AdminWaitlist() {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to remove this entry?')) return;
         try {
-            await supabase.from('waitlist').delete().eq('id', id);
+            await adminSupabase.from('waitlist').delete().eq('id', id);
             setEntries(prev => prev.filter(e => e.id !== id));
         } catch (err) {
             console.error('Delete failed:', err);
+        }
+    };
+
+    const handleInvite = async (entry: WaitlistEntry) => {
+        try {
+            const { error } = await adminSupabase
+                .from('waitlist')
+                .update({
+                    status: 'INVITED',
+                    invited_at: new Date().toISOString()
+                })
+                .eq('id', entry.id);
+
+            if (error) throw error;
+            setEntries(prev => prev.map(e =>
+                e.id === entry.id ? { ...e, status: 'INVITED' as any, invited_at: new Date().toISOString() } : e
+            ));
+        } catch (err) {
+            console.error('Invite failed:', err);
+            alert('Failed to mark as invited.');
+        }
+    };
+
+    const handleMarkJoined = async (entry: WaitlistEntry) => {
+        try {
+            const { error } = await adminSupabase
+                .from('waitlist')
+                .update({
+                    status: 'JOINED',
+                    joined_at: new Date().toISOString()
+                })
+                .eq('id', entry.id);
+
+            if (error) throw error;
+            setEntries(prev => prev.map(e =>
+                e.id === entry.id ? { ...e, status: 'JOINED' as any, joined_at: new Date().toISOString() } : e
+            ));
+        } catch (err) {
+            console.error('Mark joined failed:', err);
+            alert('Failed to mark as joined.');
         }
     };
 
@@ -132,6 +178,17 @@ export default function AdminWaitlist() {
                         </button>
                     ))}
                 </div>
+                <div className="flex items-center p-1 bg-gray-100 rounded-xl">
+                    {(['ALL', 'WAITING', 'INVITED', 'JOINED'] as const).map(s => (
+                        <button
+                            key={s}
+                            onClick={() => setStatusFilter(s)}
+                            className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
+                        >
+                            {s}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             {/* Waitlist Table */}
@@ -149,12 +206,18 @@ export default function AdminWaitlist() {
                                     <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">User</th>
                                     <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Contact</th>
                                     <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Role & Region</th>
+                                    <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
                                     <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Joined Date</th>
                                     <th className="p-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
-                                {filtered.map(entry => (
+                                {filtered.map(entry => {
+                                    const status = entry.status || 'WAITING';
+                                    const statusColor = status === 'JOINED' ? 'bg-green-50 text-green-700 border-green-100'
+                                        : status === 'INVITED' ? 'bg-purple-50 text-purple-700 border-purple-100'
+                                        : 'bg-amber-50 text-amber-700 border-amber-100';
+                                    return (
                                     <tr key={entry.id} className="hover:bg-gray-50/70 transition-colors">
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
@@ -183,21 +246,52 @@ export default function AdminWaitlist() {
                                             </div>
                                         </td>
                                         <td className="p-4">
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${statusColor}`}>
+                                                {status}
+                                            </span>
+                                        </td>
+                                        <td className="p-4">
                                             <span className="text-xs text-gray-500 font-medium">
                                                 {new Date(entry.created_at).toLocaleDateString()}
                                             </span>
                                         </td>
                                         <td className="p-4 text-right">
-                                            <button
-                                                onClick={() => handleDelete(entry.id)}
-                                                className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Delete entry"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                            <div className="flex items-center justify-end gap-1">
+                                                {status === 'WAITING' && (
+                                                    <button
+                                                        onClick={() => handleInvite(entry)}
+                                                        className="p-2 text-purple-400 hover:bg-purple-50 rounded-lg transition-colors"
+                                                        title="Send invitation"
+                                                    >
+                                                        <Send size={14} />
+                                                    </button>
+                                                )}
+                                                {status === 'INVITED' && (
+                                                    <button
+                                                        onClick={() => handleMarkJoined(entry)}
+                                                        className="p-2 text-green-400 hover:bg-green-50 rounded-lg transition-colors"
+                                                        title="Mark as joined"
+                                                    >
+                                                        <UserCheck size={14} />
+                                                    </button>
+                                                )}
+                                                {status === 'JOINED' && (
+                                                    <span className="p-2 text-green-500" title="Joined">
+                                                        <CheckCircle size={14} />
+                                                    </span>
+                                                )}
+                                                <button
+                                                    onClick={() => handleDelete(entry.id)}
+                                                    className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete entry"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
-                                ))}
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

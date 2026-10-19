@@ -12,7 +12,11 @@ import {
     Clock,
     X,
     Building2,
-    MapPin
+    MapPin,
+    Edit2,
+    Eye,
+    EyeOff,
+    Save
 } from 'lucide-react';
 import { careersService, JobPosition, JobApplication } from '../../lib/careersService';
 
@@ -32,14 +36,28 @@ export default function AdminCareers() {
     const [newLocation, setNewLocation] = useState('Nairobi, Kenya');
     const [newType, setNewType] = useState('Full-time');
     const [newSummary, setNewSummary] = useState('');
+    const [newResponsibilities, setNewResponsibilities] = useState('');
+    const [newRequirements, setNewRequirements] = useState('');
     const [isSavingPosition, setIsSavingPosition] = useState(false);
+
+    // Edit Position Modal
+    const [editingPosition, setEditingPosition] = useState<JobPosition | null>(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editDepartment, setEditDepartment] = useState('');
+    const [editLocation, setEditLocation] = useState('');
+    const [editType, setEditType] = useState('Full-time');
+    const [editSummary, setEditSummary] = useState('');
+    const [editResponsibilities, setEditResponsibilities] = useState('');
+    const [editRequirements, setEditRequirements] = useState('');
+    const [editIsActive, setEditIsActive] = useState(true);
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
 
     const loadData = async () => {
         setIsLoading(true);
         try {
             const [apps, pos] = await Promise.all([
-                careersService.getApplications(),
-                careersService.getPositions()
+                careersService.adminGetApplications(),
+                careersService.adminGetPositions()
             ]);
             setApplications(apps);
             setPositions(pos);
@@ -64,7 +82,7 @@ export default function AdminCareers() {
     }, []);
 
     const handleStatusChange = async (id: string, status: JobApplication['status']) => {
-        await careersService.updateApplicationStatus(id, status);
+        await careersService.adminUpdateApplicationStatus(id, status);
         setApplications(prev => prev.map(a => a.id === id ? { ...a, status } : a));
     };
 
@@ -72,19 +90,32 @@ export default function AdminCareers() {
         e.preventDefault();
         if (!newTitle.trim() || !newSummary.trim()) return;
 
+        const responsibilities = newResponsibilities
+            .split('\n')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+        const requirements = newRequirements
+            .split('\n')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+
         setIsSavingPosition(true);
         try {
-            await careersService.addPosition({
+            await careersService.adminAddPosition({
                 title: newTitle.trim(),
                 department: newDepartment.trim(),
                 location: newLocation.trim(),
                 type: newType.trim(),
                 summary: newSummary.trim(),
+                responsibilities: responsibilities.length > 0 ? responsibilities : undefined,
+                requirements: requirements.length > 0 ? requirements : undefined,
                 is_active: true
             });
 
             setNewTitle('');
             setNewSummary('');
+            setNewResponsibilities('');
+            setNewRequirements('');
             setIsAddPositionOpen(false);
             await loadData();
         } catch (e) {
@@ -96,7 +127,70 @@ export default function AdminCareers() {
 
     const handleDeletePosition = async (id: string) => {
         if (!confirm('Are you sure you want to remove this position from the careers page?')) return;
-        await careersService.deletePosition(id);
+        await careersService.adminDeletePosition(id);
+        await loadData();
+    };
+
+    const openEditModal = (pos: JobPosition) => {
+        setEditingPosition(pos);
+        setEditTitle(pos.title);
+        setEditDepartment(pos.department);
+        setEditLocation(pos.location);
+        setEditType(pos.type);
+        setEditSummary(pos.summary);
+        setEditResponsibilities((pos.responsibilities || []).join('\n'));
+        setEditRequirements((pos.requirements || []).join('\n'));
+        setEditIsActive(pos.is_active);
+    };
+
+    const closeEditModal = () => {
+        setEditingPosition(null);
+        setEditTitle('');
+        setEditDepartment('');
+        setEditLocation('');
+        setEditType('Full-time');
+        setEditSummary('');
+        setEditResponsibilities('');
+        setEditRequirements('');
+        setEditIsActive(true);
+    };
+
+    const handleSaveEdit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingPosition || !editTitle.trim() || !editSummary.trim()) return;
+
+        const responsibilities = editResponsibilities
+            .split('\n')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+        const requirements = editRequirements
+            .split('\n')
+            .map(s => s.trim())
+            .filter(s => s.length > 0);
+
+        setIsSavingEdit(true);
+        try {
+            await careersService.adminUpdatePosition(editingPosition.id, {
+                title: editTitle.trim(),
+                department: editDepartment.trim(),
+                location: editLocation.trim(),
+                type: editType.trim(),
+                summary: editSummary.trim(),
+                responsibilities: responsibilities.length > 0 ? responsibilities : undefined,
+                requirements: requirements.length > 0 ? requirements : undefined,
+                is_active: editIsActive
+            });
+            closeEditModal();
+            await loadData();
+        } catch (e) {
+            console.error('Failed to update position:', e);
+        } finally {
+            setIsSavingEdit(false);
+        }
+    };
+
+    const handleToggleActive = async (pos: JobPosition) => {
+        await careersService.adminUpdatePosition(pos.id, { is_active: !pos.is_active });
         await loadData();
     };
 
@@ -144,53 +238,53 @@ export default function AdminCareers() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-2 sm:pb-0">
                     <button
                         onClick={loadData}
-                        className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer"
+                        className="px-3 py-2 sm:px-4 sm:py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm cursor-pointer whitespace-nowrap"
                     >
-                        <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} /> Refresh
+                        <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} /> <span className="hidden sm:inline">Refresh</span>
                     </button>
                     {activeTab === 'APPLICATIONS' && (
                         <button
                             onClick={exportApplicationsCSV}
-                            className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all flex items-center gap-2 shadow-lg shadow-black/10 cursor-pointer"
+                            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all flex items-center gap-2 shadow-lg shadow-black/10 cursor-pointer whitespace-nowrap"
                         >
-                            <Download size={16} /> Export CSV ({filteredApplications.length})
+                            <Download size={16} /> <span className="hidden sm:inline">Export CSV</span> ({filteredApplications.length})
                         </button>
                     )}
                     {activeTab === 'POSITIONS' && (
                         <button
                             onClick={() => setIsAddPositionOpen(true)}
-                            className="px-4 py-2.5 bg-[#4A90E2] text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20 cursor-pointer"
+                            className="px-3 py-2 sm:px-4 sm:py-2.5 bg-[#4A90E2] text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20 cursor-pointer whitespace-nowrap"
                         >
-                            <Plus size={16} /> Add Position
+                            <Plus size={16} /> <span className="hidden sm:inline">Add Position</span>
                         </button>
                     )}
                 </div>
             </div>
 
             {/* View Tabs */}
-            <div className="flex border-b border-gray-200 gap-8">
+            <div className="flex border-b border-gray-200 gap-4 sm:gap-8 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 <button
                     onClick={() => setActiveTab('APPLICATIONS')}
-                    className={`pb-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+                    className={`pb-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                         activeTab === 'APPLICATIONS'
                             ? 'border-black text-black'
                             : 'border-transparent text-gray-400 hover:text-black'
                     }`}
                 >
-                    <Users size={16} /> Received Applications ({applications.length})
+                    <Users size={16} /> <span className="hidden sm:inline">Received Applications</span> ({applications.length})
                 </button>
                 <button
                     onClick={() => setActiveTab('POSITIONS')}
-                    className={`pb-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+                    className={`pb-4 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap ${
                         activeTab === 'POSITIONS'
                             ? 'border-black text-black'
                             : 'border-transparent text-gray-400 hover:text-black'
                     }`}
                 >
-                    <Building2 size={16} /> Active Job Postings ({positions.length})
+                    <Building2 size={16} /> <span className="hidden sm:inline">Active Job Postings</span> ({positions.length})
                 </button>
             </div>
 
@@ -198,7 +292,7 @@ export default function AdminCareers() {
             {activeTab === 'APPLICATIONS' && (
                 <div className="space-y-6">
                     {/* Filters */}
-                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3 items-center">
+                    <div className="bg-white p-3 sm:p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3 items-center">
                         <div className="relative w-full md:flex-1">
                             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                             <input
@@ -329,9 +423,9 @@ export default function AdminCareers() {
                             </div>
                         ) : (
                             positions.map((pos) => (
-                                <div key={pos.id} className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6 hover:bg-gray-50/50 transition-colors">
-                                    <div className="max-w-2xl space-y-2">
-                                        <div className="flex items-center gap-3">
+                                <div key={pos.id} className="p-4 sm:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 hover:bg-gray-50/50 transition-colors">
+                                    <div className="max-w-2xl space-y-2 min-w-0">
+                                        <div className="flex items-center gap-3 flex-wrap">
                                             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
                                                 {pos.department}
                                             </span>
@@ -344,14 +438,29 @@ export default function AdminCareers() {
                                                 {pos.type}
                                             </span>
                                         </div>
-                                        <h3 className="text-xl font-bold text-gray-900">{pos.title}</h3>
-                                        <p className="text-sm text-gray-600 leading-relaxed">{pos.summary}</p>
+                                        <h3 className="text-xl font-bold text-gray-900 break-words">{pos.title}</h3>
+                                        <p className="text-sm text-gray-600 leading-relaxed break-words">{pos.summary}</p>
                                     </div>
 
-                                    <div className="flex items-center gap-3 shrink-0">
-                                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full flex items-center gap-1">
-                                            <CheckCircle2 size={12} /> Active on Careers Page
+                                    <div className="flex items-center gap-2 shrink-0">
+                                        <span className={`text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1 ${pos.is_active ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-100'}`}>
+                                            {pos.is_active ? <CheckCircle2 size={12} /> : <EyeOff size={12} />}
+                                            {pos.is_active ? 'Active' : 'Hidden'}
                                         </span>
+                                        <button
+                                            onClick={() => handleToggleActive(pos)}
+                                            className={`p-2 rounded-lg transition-colors ${pos.is_active ? 'text-amber-500 hover:bg-amber-50' : 'text-green-500 hover:bg-green-50'}`}
+                                            title={pos.is_active ? 'Hide from careers page' : 'Show on careers page'}
+                                        >
+                                            {pos.is_active ? <EyeOff size={16} /> : <Eye size={16} />}
+                                        </button>
+                                        <button
+                                            onClick={() => openEditModal(pos)}
+                                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors cursor-pointer"
+                                            title="Edit Position"
+                                        >
+                                            <Edit2 size={16} />
+                                        </button>
                                         <button
                                             onClick={() => handleDeletePosition(pos.id)}
                                             className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
@@ -370,7 +479,7 @@ export default function AdminCareers() {
             {/* ADD POSITION MODAL */}
             {isAddPositionOpen && (
                 <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl w-full max-w-xl p-8 shadow-2xl space-y-6">
+                    <div className="bg-white rounded-2xl w-full max-w-xl p-5 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-bold text-gray-900">Add New Career Position</h2>
                             <button
@@ -394,7 +503,7 @@ export default function AdminCareers() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs font-bold text-gray-700 block mb-1">Department</label>
                                     <input
@@ -434,9 +543,31 @@ export default function AdminCareers() {
                                 <textarea
                                     required
                                     rows={3}
-                                    placeholder="Describe responsibilities and requirements..."
+                                    placeholder="Describe the role overview..."
                                     value={newSummary}
                                     onChange={(e) => setNewSummary(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1">Responsibilities (one per line)</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder={"Coordinate executive schedule, meetings, and agendas\nManage executive communications and follow-ups\nSupport day-to-day administrative operations"}
+                                    value={newResponsibilities}
+                                    onChange={(e) => setNewResponsibilities(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1">Requirements (one per line)</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder={"Experience in executive administrative support\nStrong communication in English & Swahili\nBased full-time in Nairobi"}
+                                    value={newRequirements}
+                                    onChange={(e) => setNewRequirements(e.target.value)}
                                     className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black resize-none"
                                 />
                             </div>
@@ -456,6 +587,134 @@ export default function AdminCareers() {
                                 >
                                     {isSavingPosition ? 'Publishing...' : 'Publish to Careers Page'}
                                 </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* EDIT POSITION MODAL */}
+            {editingPosition && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-2xl w-full max-w-xl p-5 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-bold text-gray-900">Edit Career Position</h2>
+                            <button
+                                onClick={closeEditModal}
+                                className="text-gray-400 hover:text-black cursor-pointer"
+                            >
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleSaveEdit} className="space-y-4">
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1">Job Title *</label>
+                                <input
+                                    type="text"
+                                    required
+                                    placeholder="e.g. Executive Assistant"
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-xs font-bold text-gray-700 block mb-1">Department</label>
+                                    <input
+                                        type="text"
+                                        value={editDepartment}
+                                        onChange={(e) => setEditDepartment(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-gray-700 block mb-1">Location</label>
+                                    <input
+                                        type="text"
+                                        value={editLocation}
+                                        onChange={(e) => setEditLocation(e.target.value)}
+                                        className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black"
+                                    />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1">Employment Type</label>
+                                <select
+                                    value={editType}
+                                    onChange={(e) => setEditType(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black cursor-pointer"
+                                >
+                                    <option value="Full-time">Full-time</option>
+                                    <option value="Part-time">Part-time</option>
+                                    <option value="Contract">Contract</option>
+                                    <option value="Internship">Internship</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1">Role Summary *</label>
+                                <textarea
+                                    required
+                                    rows={3}
+                                    placeholder="Describe the role overview..."
+                                    value={editSummary}
+                                    onChange={(e) => setEditSummary(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1">Responsibilities (one per line)</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder={"Coordinate executive schedule, meetings, and agendas\nManage executive communications and follow-ups\nSupport day-to-day administrative operations"}
+                                    value={editResponsibilities}
+                                    onChange={(e) => setEditResponsibilities(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black resize-none"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-bold text-gray-700 block mb-1">Requirements (one per line)</label>
+                                <textarea
+                                    rows={3}
+                                    placeholder={"Experience in executive administrative support\nStrong communication in English & Swahili\nBased full-time in Nairobi"}
+                                    value={editRequirements}
+                                    onChange={(e) => setEditRequirements(e.target.value)}
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-black resize-none"
+                                />
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        checked={editIsActive}
+                                        onChange={(e) => setEditIsActive(e.target.checked)}
+                                        className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                    />
+                                    <span className="text-xs font-bold text-gray-700">Visible on public Careers page</span>
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={closeEditModal}
+                                        className="px-4 py-2 text-sm font-bold text-gray-500 hover:text-black cursor-pointer"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingEdit}
+                                        className="px-5 py-2.5 bg-black text-white text-sm font-bold rounded-xl hover:bg-gray-800 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                                    >
+                                        <Save size={14} /> {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>

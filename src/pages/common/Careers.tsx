@@ -6,6 +6,17 @@ import Footer from "../../components/layout/Footer";
 import PageSEO from "../../components/SEO";
 import { careersService, JobPosition } from '../../lib/careersService';
 
+const DEFAULT_RESPONSIBILITIES = [
+    'Coordinate executive schedule, meetings, and agendas',
+    'Manage executive communications and follow-ups',
+    'Support day-to-day administrative operations'
+];
+const DEFAULT_REQUIREMENTS = [
+    'Experience in executive administrative support',
+    'Strong communication in English & Swahili',
+    'Based full-time in Nairobi'
+];
+
 export default function Careers() {
     const navigate = useNavigate();
     const [positions, setPositions] = useState<JobPosition[]>([]);
@@ -117,9 +128,12 @@ export default function Careers() {
                                                             Responsibilities
                                                         </span>
                                                         <ul className="space-y-1 text-xs text-white/80">
-                                                            <li>&bull; Coordinate executive schedule, meetings, and agendas</li>
-                                                            <li>&bull; Manage executive communications and follow-ups</li>
-                                                            <li>&bull; Support day-to-day administrative operations</li>
+                                                            {(pos.responsibilities && pos.responsibilities.length > 0
+                                                                ? pos.responsibilities
+                                                                : DEFAULT_RESPONSIBILITIES
+                                                            ).map((r, i) => (
+                                                                <li key={i}>&bull; {r}</li>
+                                                            ))}
                                                         </ul>
                                                     </div>
                                                     <div>
@@ -127,9 +141,12 @@ export default function Careers() {
                                                             Requirements
                                                         </span>
                                                         <ul className="space-y-1 text-xs text-white/80">
-                                                            <li>&bull; Experience in executive administrative support</li>
-                                                            <li>&bull; Strong communication in English & Swahili</li>
-                                                            <li>&bull; Based full-time in Nairobi</li>
+                                                            {(pos.requirements && pos.requirements.length > 0
+                                                                ? pos.requirements
+                                                                : DEFAULT_REQUIREMENTS
+                                                            ).map((r, i) => (
+                                                                <li key={i}>&bull; {r}</li>
+                                                            ))}
                                                         </ul>
                                                     </div>
                                                 </div>
