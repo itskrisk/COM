@@ -18,7 +18,7 @@ import {
     MessageSquare,
     Package
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 
 interface CustomerSummary {
     id: string;
@@ -32,20 +32,28 @@ interface CustomerSummary {
 
 export default function Customers() {
     const [orders, setOrders] = useState<any[]>([]);
+    const [profiles, setProfiles] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(null);
 
     useEffect(() => {
-        const fetchOrders = async () => {
+        const fetchData = async () => {
             try {
-                const { data, error } = await supabase
-                    .from('orders')
-                    .select('*, customer:profiles!customer_id(full_name, phone)')
-                    .order('created_at', { ascending: false });
+                const [ordersRes, profilesRes] = await Promise.all([
+                    adminSupabase
+                        .from('orders')
+                        .select('*, customer:profiles!customer_id(full_name, phone)')
+                        .order('created_at', { ascending: false }),
+                    adminSupabase
+                        .from('profiles')
+                        .select('id, full_name, phone, email, account_status, created_at')
+                        .or("roles.cs.{customer},account_status.eq.active")
+                        .order('created_at', { ascending: false })
+                ]);
 
-                if (error) throw error;
-                if (data) setOrders(data);
+                if (ordersRes.data) setOrders(ordersRes.data);
+                if (profilesRes.data) setProfiles(profilesRes.data);
             } catch (err) {
                 console.error("Customers error:", err);
             } finally {
@@ -53,30 +61,52 @@ export default function Customers() {
             }
         };
 
-        fetchOrders();
+        fetchData();
 
-        const channel = supabase.channel('admin_customers_changes')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
-                fetchOrders();
+        const channel = adminSupabase.channel('admin_customers_changes')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+                fetchData();
             })
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); }
+        return () => { adminSupabase.removeChannel(channel); }
     }, []);
 
-    // Derive customers from orders
+    // Derive customers from profiles + orders (merged)
     const customerDirectory = useMemo(() => {
         const directory: Record<string, CustomerSummary> = {};
 
+        // 1. Seed directory from all registered customer profiles
+        profiles.forEach(p => {
+            const key = p.id;
+            if (!directory[key]) {
+                directory[key] = {
+                    id: key,
+                    name: p.full_name || p.email?.split('@')[0] || 'Customer',
+                    phone: p.phone || 'N/A',
+                    orderCount: 0,
+                    totalSpent: 0,
+                    lastOrder: undefined,
+                    status: 'NEW'
+                };
+            }
+        });
+
+        // 2. Enrich with order data
         orders.forEach(order => {
+            // Try to find profile by customer_id
+            const profileKey = order.customer_id || '';
             const phone = order.customer?.phone || 'Unknown';
             const name = order.customer?.full_name || 'Walk-in Customer';
-            const customerId = phone; // Use phone as ID for now
-            if (!directory[customerId]) {
-                directory[customerId] = {
-                    id: customerId,
-                    name: name,
-                    phone: phone,
+
+            // Use profile id as key if found, else phone
+            const key = profileKey && directory[profileKey] ? profileKey : phone;
+
+            if (!directory[key]) {
+                directory[key] = {
+                    id: key,
+                    name,
+                    phone,
                     orderCount: 0,
                     totalSpent: 0,
                     lastOrder: order,
@@ -84,24 +114,29 @@ export default function Customers() {
                 };
             }
 
-            directory[customerId].orderCount += 1;
-            directory[customerId].totalSpent += order.total;
+            directory[key].orderCount += 1;
+            directory[key].totalSpent += order.total || 0;
+
+            // Enrich name/phone from order if profile had defaults
+            if (name !== 'Walk-in Customer' && directory[key].name === 'Customer') directory[key].name = name;
+            if (phone !== 'Unknown' && directory[key].phone === 'N/A') directory[key].phone = phone;
 
             // Track most recent order
-            if (new Date(order.created_at || 0) > new Date(directory[customerId].lastOrder?.created_at || 0)) {
-                directory[customerId].lastOrder = order;
+            if (!directory[key].lastOrder || new Date(order.created_at || 0) > new Date(directory[key].lastOrder?.created_at || 0)) {
+                directory[key].lastOrder = order;
             }
         });
 
-        // Assign statuses
+        // 3. Assign statuses
         Object.values(directory).forEach(customer => {
             if (customer.orderCount >= 10) customer.status = 'FREQUENT';
             else if (customer.orderCount >= 3) customer.status = 'ACTIVE';
             else customer.status = 'NEW';
         });
 
-        return Object.values(directory);
-    }, [orders]);
+        return Object.values(directory).sort((a, b) => b.orderCount - a.orderCount);
+    }, [orders, profiles]);
+
 
     const filteredCustomers = customerDirectory.filter(c =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||

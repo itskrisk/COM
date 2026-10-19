@@ -16,7 +16,7 @@ import {
     Layers,
     TrendingUp
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import { Product } from '../../types/schema';
 
 export default function Inventory() {
@@ -29,8 +29,8 @@ export default function Inventory() {
             setIsLoading(true);
             try {
                 const [{ data: merchantData }, { data: productData }] = await Promise.all([
-                    supabase.from('merchants').select('id, business_name, store_type, is_approved').order('created_at', { ascending: false }),
-                    supabase.from('products').select('*, merchants!merchant_id(business_name)').order('created_at', { ascending: false })
+                    adminSupabase.from('merchants').select('id, business_name, store_type, is_approved').order('created_at', { ascending: false }),
+                    adminSupabase.from('products').select('*, merchants!merchant_id(business_name)').order('created_at', { ascending: false })
                 ]);
                 if (merchantData) {
                     setMerchants(merchantData.map((m: any) => ({
@@ -54,10 +54,10 @@ export default function Inventory() {
         };
         fetchData();
 
-        const channel = supabase.channel('admin_inventory_changes')
+        const channel = adminSupabase.channel('admin_inventory_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => fetchData())
             .subscribe();
-        return () => { supabase.removeChannel(channel); };
+        return () => { adminSupabase.removeChannel(channel); };
     }, []);
     const [searchQuery, setSearchQuery] = useState('');
     const [merchantFilter, setMerchantFilter] = useState<string>('ALL');

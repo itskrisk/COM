@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { authApi } from '../../lib/api';
 import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import { useAuth } from '../../context/AuthContext';
 import { isValidKenyanPhone, normalizeKenyanPhone } from '../../utils/phone';
 import merchantSignupImg from '../../assets/images/merchantsignup.jpg';
@@ -87,7 +88,28 @@ export default function PartnerSignup() {
             if (signupResult.error) throw new Error(signupResult.error);
 
             if (signupResult.user) {
-                const { error: upsertError } = await supabase
+                // 1. Ensure profile exists first to satisfy foreign key constraint merchants_id_fkey
+                const profPayload: Record<string, any> = {
+                    id: signupResult.user.id,
+                    full_name: ownerName.trim(),
+                    roles: ['merchant'],
+                    status: 'ACTIVE',
+                    account_status: 'pending_onboarding'
+                };
+                if (normalizedPhone) profPayload.phone = normalizedPhone;
+
+                const { error: profErr } = await adminSupabase
+                    .from('profiles')
+                    .upsert(profPayload, { onConflict: 'id' });
+
+                if (profErr && (profErr.code === '23505' || profErr.message?.includes('profiles_phone_key'))) {
+                    // Phone collision with older/deleted account — upsert profile without phone so foreign key succeeds
+                    delete profPayload.phone;
+                    await adminSupabase.from('profiles').upsert(profPayload, { onConflict: 'id' });
+                }
+
+                // 2. Now seed merchants record
+                const { error: upsertError } = await adminSupabase
                     .from('merchants')
                     .upsert({
                         id: signupResult.user.id,

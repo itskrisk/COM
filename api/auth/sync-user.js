@@ -152,7 +152,7 @@ export default async function handler(req, res) {
       profilePayload.phone = normalizedPhone;
     }
 
-    const { data: profileData, error: profileErr } = await supabase
+    let { data: profileData, error: profileErr } = await supabase
       .from('profiles')
       .upsert(profilePayload, { onConflict: 'id' })
       .select()
@@ -160,6 +160,15 @@ export default async function handler(req, res) {
 
     if (profileErr) {
       console.warn('[Sync-User] Profile upsert warning:', profileErr.message);
+      if (profileErr.code === '23505' || profileErr.message?.includes('profiles_phone_key')) {
+        delete profilePayload.phone;
+        const retryRes = await supabase
+          .from('profiles')
+          .upsert(profilePayload, { onConflict: 'id' })
+          .select()
+          .maybeSingle();
+        profileData = retryRes.data;
+      }
     }
 
     return res.status(200).json({

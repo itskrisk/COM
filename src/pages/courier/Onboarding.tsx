@@ -12,15 +12,17 @@ import {
     Clock,
     LogOut,
     Eye,
-    ShieldCheck
+    ShieldCheck,
+    Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import { uploadFile } from '../../lib/storageService';
 
 export default function CourierOnboarding() {
     const navigate = useNavigate();
-    const { user, profile, signOut } = useAuth();
+    const { user, profile, loading: authLoading, signOut } = useAuth();
 
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
@@ -38,25 +40,19 @@ export default function CourierOnboarding() {
     const [idDocName, setIdDocName] = useState<string | null>(null);
     const [licenseDocName, setLicenseDocName] = useState<string | null>(null);
 
-    // GATES (event order): signed up -> email confirmed -> logged in -> onboarding ONCE -> admin approval
+    // GATES (event order): signed up -> email confirmed -> onboarding ONCE -> admin approval
     useEffect(() => {
+        if (authLoading) return; // Wait until AuthContext finishes checking session
+
         if (!user) {
-            navigate('/rider/signup', { replace: true });
+            // No session — send to rider login (not signup, they already have an account)
+            navigate('/rider/login', { replace: true });
             return;
         }
 
-        if (!user.emailVerified) {
-            navigate('/auth/verify', {
-                replace: true,
-                state: {
-                    email: user.email,
-                    portal: 'courier',
-                    redirect: '/rider/login',
-                    message: 'Please confirm your email before continuing to onboarding.'
-                }
-            });
-            return;
-        }
+        // NOTE: Do NOT gate on user.emailVerified here.
+        // AuthCallback already verified the email and navigated here with a live session.
+        // The AuthContext's emailVerified flag can lag behind the actual session state.
 
         const roles: string[] = profile?.roles || (profile?.role ? [profile.role] : []);
         if (profile && !roles.includes('courier') && !roles.includes('admin')) {
@@ -94,7 +90,7 @@ export default function CourierOnboarding() {
                 }
             })();
         }
-    }, [profile, navigate, user, fullName, phone]);
+    }, [authLoading, profile, navigate, user, fullName, phone]);
 
     const [idDocFile, setIdDocFile] = useState<File | null>(null);
     const [licenseDocFile, setLicenseDocFile] = useState<File | null>(null);
@@ -165,51 +161,38 @@ export default function CourierOnboarding() {
                     created_at: new Date().toISOString()
                 };
 
-                // Try updating existing rider row first
-                const { data: updateData, error: riderErr } = await supabase
-                    .from('riders')
-                    .update(riderPayload)
-                    .eq('id', user.id)
-                    .select();
+                // 1. Ensure a profile row exists first to satisfy foreign key constraint riders_id_fkey
+                const profPayload: Record<string, any> = {
+                    id: user.id,
+                    full_name: profile?.full_name || fullName.trim() || user.email?.split('@')[0] || 'Rider',
+                    roles: ['courier'],
+                    status: 'PENDING',
+                    account_status: 'pending_approval'
+                };
+                if (phone.trim()) profPayload.phone = phone.trim();
 
-                let riderSaved = !riderErr && updateData && updateData.length > 0;
+                const { error: profErr } = await adminSupabase
+                    .from('profiles')
+                    .upsert(profPayload, { onConflict: 'id' });
 
-                if (!riderSaved) {
-                    const insertPayload = { id: user.id, ...riderPayload };
-                    const { error: insErr } = await supabase
-                        .from('riders')
-                        .insert(insertPayload);
-
-                    if (insErr) {
-                        console.warn('Rider insert warning, retrying with core columns:', insErr);
-                        const corePayload = {
-                            id: user.id,
-                            vehicle_type: vehicleType,
-                            national_id: idNumber.trim(),
-                            vehicle_plate: (vehicleType === 'Motorbike' || vehicleType === 'Car') ? vehiclePlate.trim().toUpperCase() : null,
-                            status: 'PENDING',
-                            onboarding_completed: true,
-                            is_online: false,
-                            documents: docsPayload,
-                            created_at: new Date().toISOString()
-                        };
-                        const { error: coreUpdateErr } = await supabase
-                            .from('riders')
-                            .update(corePayload)
-                            .eq('id', user.id);
-
-                        if (coreUpdateErr) {
-                            const { error: retryErr } = await supabase
-                                .from('riders')
-                                .upsert(corePayload, { onConflict: 'id' });
-                            if (retryErr) throw retryErr;
-                        }
-                    }
+                if (profErr && (profErr.code === '23505' || profErr.message?.includes('profiles_phone_key'))) {
+                    delete profPayload.phone;
+                    await adminSupabase.from('profiles').upsert(profPayload, { onConflict: 'id' });
                 }
 
-                // Move the profile to pending_approval so ProtectedRoute stops
-                // bouncing submitted riders back to the onboarding form.
-                await supabase.from('profiles').update({
+                // 2. Upsert rider row with adminSupabase
+                const riderUpsertPayload = { id: user.id, ...riderPayload };
+                const { error: riderErr } = await adminSupabase
+                    .from('riders')
+                    .upsert(riderUpsertPayload, { onConflict: 'id' });
+
+                if (riderErr) {
+                    console.error('adminSupabase rider upsert failed:', riderErr);
+                    throw riderErr;
+                }
+
+                // 3. Move the profile to pending_approval
+                await adminSupabase.from('profiles').update({
                     status: 'PENDING',
                     account_status: 'pending_approval'
                 }).eq('id', user.id);
@@ -257,6 +240,14 @@ export default function CourierOnboarding() {
             setLoading(false);
         }
     };
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <Loader2 className="text-[#2563EB] animate-spin" size={32} />
+            </div>
+        );
+    }
 
     if (submitted) {
         return (

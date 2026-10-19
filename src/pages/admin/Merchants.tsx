@@ -62,14 +62,14 @@ export default function Merchants() {
     const fetchMerchants = async () => {
         setIsLoading(true);
         try {
-            let { data, error } = await supabase
+            let { data, error } = await adminSupabase
                 .from('merchants')
                 .select('*, owner:profiles!id(full_name, phone)')
                 .order('created_at', { ascending: false });
 
             if (error || !data) {
                 console.warn('Merchants fetch notice, falling back to direct table select:', error);
-                const directRes = await supabase
+                const directRes = await adminSupabase
                     .from('merchants')
                     .select('*')
                     .order('created_at', { ascending: false });
@@ -91,7 +91,7 @@ export default function Merchants() {
                         status: m.status || 'PENDING',
                         ownerName: m.owner_name || m.owner?.full_name || 'Unknown',
                         ownerPhone: m.phone || m.owner?.phone || '',
-                        email: m.email || '',
+                        email: m.email || m.owner?.email || '',
                         address: m.address || 'Pending Address',
                         isActive: m.is_active || false,
                         rating: m.rating || 0,
@@ -193,7 +193,37 @@ export default function Merchants() {
 
         try {
             if (type === 'delete') {
-                await adminSupabase.from('merchants').update({ status: 'DELETED', is_active: false }).eq('id', merchant.id);
+                // Step 1: Delete all products belonging to this merchant
+                await adminSupabase.from('products').delete().eq('merchant_id', merchant.id);
+
+                // Step 2: Try to remove uploaded documents from storage bucket
+                try {
+                    const { data: storageFiles } = await adminSupabase.storage
+                        .from('documents')
+                        .list(`merchants/${merchant.id}`);
+                    if (storageFiles && storageFiles.length > 0) {
+                        const filePaths = storageFiles.map((f: any) => `merchants/${merchant.id}/${f.name}`);
+                        await adminSupabase.storage.from('documents').remove(filePaths);
+                    }
+                } catch (storageErr) {
+                    console.warn('Storage cleanup partial failure (non-fatal):', storageErr);
+                }
+
+                // Step 3: Delete the merchant row
+                const { error: merchantDeleteErr } = await adminSupabase
+                    .from('merchants')
+                    .delete()
+                    .eq('id', merchant.id);
+                if (merchantDeleteErr) throw merchantDeleteErr;
+
+                // Step 4: Delete the profile row (this also invalidates their auth access)
+                await adminSupabase.from('profiles').delete().eq('id', merchant.id);
+
+                // Step 5: Remove merchant from local state immediately
+                setMerchants(prev => prev.filter(m => m.id !== merchant.id));
+                setPendingAction(null);
+                setSelectedMerchant(null);
+                return; // skip fetchMerchants below since we already updated state
             } else if (type === 'suspend') {
                 // Suspending a merchant revokes operational access and deactivates storefront
                 await adminSupabase.from('merchants').update({ status: 'SUSPENDED', is_active: false }).eq('id', merchant.id);

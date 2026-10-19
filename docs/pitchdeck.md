@@ -36,7 +36,9 @@
     {\fontsize{42}{48}\sffamily\bfseries\color{CorporateNavy} Muncheez\color{LinkBlue}{\textbf{.}}} &
     \textsf{\small\bfseries\color{CorporateNavy} INVESTOR PRESENTATION} \\
     {\textsf{\scriptsize\bfseries\color{DeepCharcoal} THE NEIGHBORHOOD OPERATING SYSTEM}} &
-    \textsf{\scriptsize\color{LinkBlue}\bfseries PRE-SEED ROUND // 2026} \\
+    \textsf{\scriptsize\color{LinkBlue}\bfseries PRE-SEED ROUND // 2026} \\[0.15cm]
+    {} &
+    \textsf{\tiny\color{DeepCharcoal} Muncheez Technologies Ltd.}
 \end{tabularx}
 
 \vspace{0.4cm}
@@ -405,7 +407,7 @@ Our strategy: build density first, then expand.}
 
 
 % ==========================================
-% SLIDE 12: DATA FLYWHEEL
+% SLIDE 13: DATA FLYWHEEL
 % ==========================================
 \begin{frame}
 \textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{12 / The Data Flywheel}}
@@ -414,31 +416,26 @@ Our strategy: build density first, then expand.}
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
 Every Order Makes Us Smarter}
 
-\vspace{1.0cm}
-\centering
-
-{\fontsize{18}{24}\sffamily\bfseries\color{LinkBlue}
-\textperiodcentered\ Order \textrightarrow\ Merchant Data \textrightarrow\ Rider Data \textrightarrow\ Customer Data}
-
 \vspace{0.8cm}
+\begin{tabularx}{\textwidth}{@{} X @{}}
+    \textsf{\small
+    \textbf{Order data} \textrightarrow\ Merchant preparation \textrightarrow\ Rider movement \textrightarrow\ Customer behaviour.} \\[0.25cm]
 
-{\fontsize{16}{22}\sffamily\color{CorporateNavy}
-\textperiodcentered\ Better Ranking $\cdot$ Smarter Dispatch $\cdot$ Accurate ETA}
+    \textsf{\small
+    \textbf{Better ranking, smarter dispatch, and accurate ETAs.}} \\[0.25cm]
 
-\vspace{0.8cm}
+    \textsf{\small
+    \textbf{More repeat orders $\rightarrow$ greater density $\rightarrow$ faster flywheel.}}
+\end{tabularx}
 
-{\fontsize{20}{26}\sffamily\bfseries\color{LinkBlue}
-\textperiodcentered\ More Repeat Orders $\rightarrow$ Greater Density $\rightarrow$ Faster Flywheel}
-
-\vspace{1.0cm}
-
-{\fontsize{14}{20}\sffamily\color{DeepCharcoal}
-\textperiodcentered\ The more orders we process, the better every subsequent order becomes.}
+\vspace{0.5cm}
+\textsf{\small
+Each order feeds the system, making every subsequent order smarter.}
 \end{frame}
 
 
 % ==========================================
-% SLIDE 14: TECHNOLOGY ROADMAP
+% SLIDE 13: TECHNOLOGY ROADMAP
 % SIMPLIFIED, RESTRUCTURED
 % ==========================================
 \begin{frame}
@@ -478,10 +475,49 @@ The pre-seed round supports platform readiness, operational validation, and earl
 
 
 % ==========================================
+% SLIDE 14: PRODUCT STATUS
+% ==========================================
+\begin{frame}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{14 / Product Status}}
+\vspace{0.2cm}
+
+{\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
+Where We Are Now}
+
+\vspace{0.8cm}
+\begin{tabularx}{\textwidth}{@{} p{2.2cm} X @{}}
+    \textsf{\small\bfseries\color{LinkBlue} Customer} &
+    \textsf{\small
+    \textbf{Live:} Store browsing, product catalogue, cart, checkout, M-PESA payment, order tracking.} \\[0.4cm]
+
+    \textsf{\small\bfseries\color{LinkBlue} Merchant} &
+    \textsf{\small
+    \textbf{Live:} Dashboard, product management, order acceptance, order status workflow, M-PESA settlement.} \\[0.4cm]
+
+    \textsf{\small\bfseries\color{LinkBlue} Rider} &
+    \textsf{\small
+    \textbf{Live:} Online/offline toggle, dispatch offers, active delivery mission stepper, earnings ledger, M-PESA cashout.} \\[0.4cm]
+
+    \textsf{\small\bfseries\color{LinkBlue} Admin} &
+    \textsf{\small
+    \textbf{Live:} Approvals, merchant management, rider management, orders, inventory, financials, waitlist, careers, support.} \\[0.4cm]
+
+    \textsf{\small\bfseries\color{LinkBlue} In Build} &
+    \textsf{\small
+    \textbf{Phase 1 (pre-seed):} Real-time dispatch intelligence, order batching, demand forecasting, neighbourhood growth tools, personalised discovery.}
+\end{tabularx}
+
+\vspace{0.5cm}
+\textsf{\small
+The core transaction engine is live. The pre-seed round funds the intelligence layer that turns transactions into a defensible platform.}
+\end{frame}
+
+
+% ==========================================
 % SLIDE 15: BEYOND FOOD
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{14 / Beyond Food}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{15 / Beyond Food}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -523,7 +559,7 @@ The same platform can support additional categories as demand grows.}
 % SLIDE 16: BUSINESS MODEL
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{15 / Revenue Streams}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{16 / Revenue Streams}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -554,7 +590,7 @@ Revenue grows with transactions, merchant value, and customer retention.}
 % SLIDE 17: UNIT ECONOMICS
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{16 / Unit Economics}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{17 / Unit Economics}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -593,7 +629,7 @@ Illustrative assumptions. Actual margins will depend on operating costs, order m
 % SLIDE 18: ACQUISITION CHANNELS
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{17 / Growth Channels}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{18 / Growth Channels}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -630,151 +666,154 @@ Local merchants and communities can become our strongest acquisition channels.}
 % SLIDE 19: GROWTH MILESTONES
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{18 / Growth Milestones}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{19 / Growth Milestones}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
-18-Month Execution Plan}
+9-Month Pilot, Then Scale}
 
 \vspace{0.8cm}
 \begin{tabularx}{\textwidth}{@{} p{2.2cm} X @{}}
 
-    \textsf{\small\bfseries\color{LinkBlue} Months 0--6} &
+    \textsf{\small\bfseries\color{LinkBlue} Months 0--3} &
     \textsf{\small
-    Launch the pilot, onboard 50+ merchants, reach 1,000+ customers, and target 4,000 monthly orders.} \\[0.4cm]
+    Launch in Thika Greens, Ngoingwa and Juja. Onboard a focused set of merchants, validate order flow and complete the first real deliveries. Target: 2,000 monthly orders.} \\[0.4cm]
 
-    \textsf{\small\bfseries\color{LinkBlue} Months 6--12} &
+    \textsf{\small\bfseries\color{LinkBlue} Months 3--6} &
     \textsf{\small
-    Grow to 150+ merchants, 10,000+ customers, and target 15,000 monthly orders.} \\[0.4cm]
+    Expand merchant selection within the three launch neighbourhoods. Refine dispatch economics and contribution margin per order. Target: 5,000 monthly orders.} \\[0.4cm]
 
-    \textsf{\small\bfseries\color{LinkBlue} Months 12--18} &
+    \textsf{\small\bfseries\color{LinkBlue} Months 6--9} &
     \textsf{\small
-    Expand into adjacent hubs and target 30,000 monthly orders and KES 27M in monthly GMV.}
-
+    Prove repeat customer behaviour and neighbourhood-level density. Generate the data and cash-flow case for the next raise. Target: 8,000 monthly orders.}
 \end{tabularx}
 
 \vspace{0.5cm}
 \textsf{\small
-These milestones are operating targets for the first 18 months.}
+These milestones are operating targets for the pilot phase. Success at month 9 determines the size and timing of the next raise.}
 \end{frame}
 
 
 % ==========================================
 % SLIDE 20: GROWTH TRAJECTORY
-% CLEAN MILESTONE LAYOUT
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{19 / Growth Trajectory}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{20 / Growth Trajectory}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
-18 Months to Local Scale}
+Pilot to Scale}
 
 \vspace{0.8cm}
-
 \begin{tabularx}{\textwidth}{@{} p{2.2cm} X X X @{}}
     &
+    \textsf{\small\bfseries\color{LinkBlue} MONTH 3} &
     \textsf{\small\bfseries\color{LinkBlue} MONTH 6} &
-    \textsf{\small\bfseries\color{LinkBlue} MONTH 12} &
-    \textsf{\small\bfseries\color{LinkBlue} MONTH 18} \\[0.4cm]
+    \textsf{\small\bfseries\color{LinkBlue} MONTH 9} \\[0.35cm]
 
     \textsf{\small\bfseries\color{CorporateNavy} Orders / month} &
-    \textsf{\small 4,000} &
-    \textsf{\small 15,000} &
-    \textsf{\small\bfseries 30,000} \\[0.35cm]
+    \textsf{\small 2,000} &
+    \textsf{\small 5,000} &
+    \textsf{\small\bfseries 8,000} \\[0.35cm]
 
     \textsf{\small\bfseries\color{CorporateNavy} Merchants} &
-    \textsf{\small 50+} &
-    \textsf{\small 110+} &
-    \textsf{\small\bfseries 175+} \\[0.35cm]
+    \textsf{\small 20+} &
+    \textsf{\small 40+} &
+    \textsf{\small\bfseries 60+} \\[0.35cm]
 
     \textsf{\small\bfseries\color{CorporateNavy} Riders} &
+    \textsf{\small 12} &
     \textsf{\small 25} &
-    \textsf{\small 50} &
-    \textsf{\small\bfseries 75} \\[0.35cm]
+    \textsf{\small\bfseries 40} \\[0.35cm]
 
     \textsf{\small\bfseries\color{CorporateNavy} Monthly GMV} &
-    \textsf{\small KES 3.6M} &
-    \textsf{\small KES 13.5M} &
-    \textsf{\small\bfseries KES 27M}
+    \textsf{\small KES 1.8M} &
+    \textsf{\small KES 4.5M} &
+    \textsf{\small\bfseries KES 7.2M}
 \end{tabularx}
-
-\vspace{0.8cm}
-
-\begin{tikzpicture}
-    \draw[line width=2pt,color=CorporateNavy] (0,0) -- (0.72\textwidth,0);
-    \draw[line width=2pt,color=LinkBlue] (0.72\textwidth,0) -- (\textwidth,0);
-\end{tikzpicture}
 
 \vspace{0.5cm}
-
-\begin{tabularx}{\textwidth}{@{} X X @{}}
-    \textsf{\small\color{DeepCharcoal} Average order value: KES 900} &
-    \textsf{\small\bfseries\color{CorporateNavy} Target: 30,000 monthly orders}
-\end{tabularx}
-
+\textsf{\small
+Average order value: KES 900. Pilot targets 8,000 monthly orders by month 9. Expansion beyond the pilot is funded by the next raise.}
 \end{frame}
 
 
 % ==========================================
-% SLIDE 20: USE OF FUNDS
+% SLIDE 21: USE OF FUNDS
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{20 / Use of Funds}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{21 / Use of Funds}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
-KES 3,000,000 Allocation}
+KES 1,000,000 Allocation}
 
-\vspace{0.6cm}
-\centering
+\vspace{0.5cm}
+\begin{tabularx}{\textwidth}{@{} X @{}}
+    \textsf{\small
+    \textbf{Engineering \& Infrastructure} \textrightarrow\ 20\% \textrightarrow\ KES 200,000} \\[0.12cm]
 
-{\fontsize{20}{26}\sffamily\bfseries\color{LinkBlue}
-Engineering \& Infrastructure}
-\vspace{0.1cm}
-{\fontsize{16}{22}\sffamily\color{CorporateNavy}
-30\% \quad -- \quad KES 900,000}
+    \textsf{\small
+    \textbf{Pilot Operations \& Delivery} \textrightarrow\ 20\% \textrightarrow\ KES 200,000} \\[0.12cm]
 
-\vspace{0.4cm}
+    \textsf{\small
+    \textbf{Customer Acquisition \& Marketing} \textrightarrow\ 15\% \textrightarrow\ KES 150,000} \\[0.12cm]
 
-{\fontsize{20}{26}\sffamily\bfseries\color{LinkBlue}
-Operations \& Logistics}
-\vspace{0.1cm}
-{\fontsize{16}{22}\sffamily\color{CorporateNavy}
-20\% \quad -- \quad KES 600,000}
+    \textsf{\small
+    \textbf{Merchant Onboarding} \textrightarrow\ 10\% \textrightarrow\ KES 100,000} \\[0.12cm]
 
-\vspace{0.4cm}
+    \textsf{\small
+    \textbf{Legal, Accounting \& Admin} \textrightarrow\ 10\% \textrightarrow\ KES 100,000} \\[0.12cm]
 
-{\fontsize{20}{26}\sffamily\bfseries\color{LinkBlue}
-Growth \quad + \quad Working Capital}
-\vspace{0.1cm}
-{\fontsize{16}{22}\sffamily\color{CorporateNavy}
-30\% \quad -- \quad KES 900,000}
+    \textsf{\small
+    \textbf{Contingency} \textrightarrow\ 10\% \textrightarrow\ KES 100,000} \\[0.12cm]
 
-\vspace{0.4cm}
+    \textsf{\small
+    \textbf{Founder Payments (one-time)} \textrightarrow\ 15\% \textrightarrow\ KES 150,000}
+\end{tabularx}
 
-{\fontsize{20}{26}\sffamily\bfseries\color{LinkBlue}
-Merchant Onboarding}
-\vspace{0.1cm}
-{\fontsize{16}{22}\sffamily\color{CorporateNavy}
-10\% \quad -- \quad KES 300,000}
-
-\vspace{0.4cm}
-
-{\fontsize{20}{26}\sffamily\bfseries\color{LinkBlue}
-Legal \& Admin \quad + \quad Contingency}
-\vspace{0.1cm}
-{\fontsize{16}{22}\sffamily\color{CorporateNavy}
-10\% \quad -- \quad KES 300,000}
-
+\vspace{0.3cm}
+\textsf{\small
+The pre-seed round funds a focused pilot: validate demand, prove unit economics, and generate the commercial evidence needed for a larger raise. Founder payments are optional and can be redirected into the pilot.}
 \end{frame}
 
 
 % ==========================================
-% SLIDE 22: ENGINEERING MOAT
+% SLIDE 22: FUNDING RUNWAY
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{21 / Engineering is the Moat}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{22 / Funding Runway}}
+\vspace{0.2cm}
+
+{\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
+KES 1M Funds a Focused Pilot}
+
+\vspace{0.8cm}
+\begin{tabularx}{\textwidth}{@{} p{2.4cm} X @{}}
+    \textsf{\small\bfseries\color{LinkBlue} Months 0--3} &
+    \textsf{\small
+    Pilot launch in Thika Greens, Ngoingwa and Juja. Onboard a limited set of merchants, validate order flow and complete the first real deliveries. Target: 2,000 monthly orders.} \\[0.4cm]
+
+    \textsf{\small\bfseries\color{LinkBlue} Months 3--6} &
+    \textsf{\small
+    Expand merchant selection within the three launch neighbourhoods. Refine dispatch economics and contribution margin per order. Target: 5,000 monthly orders.} \\[0.4cm]
+
+    \textsf{\small\bfseries\color{LinkBlue} Months 6--9} &
+    \textsf{\small
+    Prove repeat customer behaviour and neighbourhood-level density. Prepare the data and cash-flow case for the next raise. Target: 8,000 monthly orders.}
+\end{tabularx}
+
+\vspace{0.5cm}
+\textsf{\small
+Runway is indicative, not guaranteed. Actual duration depends on monthly operating costs, order volume and contribution margin. The pilot is sized to prove the five commercial milestones before committing to a larger raise.}
+\end{frame}
+
+
+% ==========================================
+% SLIDE 23: ENGINEERING MOAT
+% ==========================================
+\begin{frame}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{23 / Engineering is the Moat}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -804,14 +843,14 @@ Build the Infrastructure}
 
 
 % ==========================================
-% SLIDE 23: CAPITAL EFFICIENCY
+% SLIDE 24: CAPITAL EFFICIENCY
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{22 / Capital Efficiency}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{24 / Capital Efficiency}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
-KES 3M Buys Evidence}
+KES 1M Buys Evidence}
 
 \vspace{0.8cm}
 \begin{tabularx}{\textwidth}{@{} X @{}}
@@ -840,10 +879,10 @@ KES 3M Buys Evidence}
 
 
 % ==========================================
-% SLIDE 24: OUR MOAT
+% SLIDE 25: OUR MOAT
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{23 / Defensibility}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{25 / Defensibility}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -868,10 +907,10 @@ Our long-term advantage is built neighborhood by neighborhood.}
 
 
 % ==========================================
-% SLIDE 25: THE VISION
+% SLIDE 26: THE VISION
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{24 / The Vision}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{26 / The Vision}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -895,48 +934,41 @@ The Neighborhood Operating System}
 
 
 % ==========================================
-% SLIDE 25: LEADERSHIP
+% SLIDE 27: LEADERSHIP
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{25 / Leadership}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{27 / Leadership}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
-The Founder}
-
-\vspace{1.2cm}
-\centering
-
-{\fontsize{32}{38}\sffamily\bfseries\color{LinkBlue}
-Dean Ndere}
-
-\vspace{0.6cm}
-
-{\fontsize{20}{26}\sffamily\bfseries\color{CorporateNavy}
-CEO \& Founder}
-
-\vspace{1.0cm}
-
-{\fontsize{16}{22}\sffamily\color{DeepCharcoal}
-\textperiodcentered\ Building better access to neighborhood commerce.}
+The Founders}
 
 \vspace{0.8cm}
+\begin{tabularx}{\textwidth}{@{} X @{}}
+    \textsf{\small
+    \textbf{Dean Ndere} \textrightarrow\ CEO \& Founder} \\[0.25cm]
 
-{\fontsize{14}{20}\sffamily\color{LinkBlue}
-\textperiodcentered\ Leading product, technology, and operations for Muncheez.}
+    \textsf{\small
+    \textbf{Kris Kamau} \textrightarrow\ CTO \& Co-Founder} \\[0.25cm]
 
-\vspace{1.2cm}
+    \textsf{\small
+    Leading product, technology, and operations for Muncheez.} \\[0.25cm]
 
-\textsf{\small\color{DeepCharcoal}
-\textperiodcentered\ Core leadership spans technology, product, logistics, and growth.}
+    \textsf{\small
+    \textit{"Building better access to neighborhood commerce."}}
+\end{tabularx}
+
+\vspace{0.5cm}
+\textsf{\small
+Core leadership spans technology, product, logistics, and growth.}
 \end{frame}
 
 
 % ==========================================
-% SLIDE 27: WHY NOW
+% SLIDE 28: WHY NOW
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{26 / Market Timing}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{28 / Market Timing}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
@@ -964,26 +996,36 @@ The opportunity is to connect existing customers, businesses, payments, and deli
 
 
 % ==========================================
-% SLIDE 28: THE ASK
+% SLIDE 29: THE ASK
 % ==========================================
 \begin{frame}
-\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{27 / The Investment Opportunity}}
+\textsf{\scriptsize\bfseries\color{LinkBlue}\uppercase{29 / The Investment Opportunity}}
 \vspace{0.2cm}
 
 {\fontsize{22}{28}\sffamily\bfseries\color{CorporateNavy}
-KES 3,000,000 Pre-Seed}
+KES 1,000,000 Pre-Seed}
 
 \vspace{0.8cm}
 \begin{tabularx}{\textwidth}{@{} X @{}}
     \textsf{\small
-    We are raising KES 3 million to strengthen the platform, launch our pilot, build neighborhood density, and validate unit economics.} \\[0.4cm]
+    We are raising KES 1 million to fund a focused 90-day pilot in Thika Greens, Ngoingwa and Juja: onboard merchants, validate real order volume, and prove contribution per order.} \\[0.4cm]
 
     \textsf{\small
-    The objective is clear: demonstrate reliable operations, repeat demand, and a model that can scale neighborhood by neighborhood.} \\[0.4cm]
+    The software is built. This money buys commercial evidence: active merchants, repeat customers, reliable delivery and a unit economics model that can be demonstrated, not assumed.} \\[0.4cm]
 
     \textsf{\small\bfseries\color{CorporateNavy}
-    Let's build the neighborhood operating system together.}
+    Let's prove the model, then scale it together.}
 \end{tabularx}
+
+\vspace{0.8cm}
+\begin{tikzpicture}
+    \draw[line width=2pt,color=CorporateNavy] (0,0) -- (0.72\textwidth,0);
+    \draw[line width=2pt,color=LinkBlue] (0.72\textwidth,0) -- (\textwidth,0);
+\end{tikzpicture}
+
+\vspace{0.4cm}
+\textsf{\tiny\bfseries\color{DeepCharcoal}
+Muncheez Technologies Ltd. \textperiodcentered\ Nairobi, Kenya \textperiodcentered\ Urban Commerce Infrastructure}
 \end{frame}
 
 \end{document}

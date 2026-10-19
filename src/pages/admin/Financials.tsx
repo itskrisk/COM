@@ -5,7 +5,7 @@ import {
     AlertCircle, CheckCircle, Clock, PieChart, RefreshCw,
     Users, BarChart3, ArrowRight
 } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import {
     calculateOrderFinancials, buildWalletLedger, formatKES,
     MUNCHEEZ_COMMISSION_RATE, VAT_RATE, MPESA_FEE_PER_TXN, RIDER_BASE_FEE,
@@ -39,8 +39,8 @@ export default function Financials() {
             try {
                 // Focus on delivered orders for core financials, but grab pending so we can calculate pendingValue.
                 const [{ data: orderData, error: orderError }, { data: merchantData, error: merchantError }] = await Promise.all([
-                    supabase.from('orders').select('*').order('created_at', { ascending: false }),
-                    supabase.from('profiles').select('*').eq('role', 'merchant')
+                    adminSupabase.from('orders').select('*').order('created_at', { ascending: false }),
+                    adminSupabase.from('profiles').select('*').eq('role', 'merchant')
                 ]);
 
                 if (orderError) throw orderError;
@@ -63,13 +63,13 @@ export default function Financials() {
 
         fetchFinancialData();
 
-        const channel = supabase.channel('admin_financials_changes')
+        const channel = adminSupabase.channel('admin_financials_changes')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, payload => {
                 fetchFinancialData();
             })
             .subscribe();
 
-        return () => { supabase.removeChannel(channel); };
+        return () => { adminSupabase.removeChannel(channel); };
     }, []);
 
     // ─── Platform Financials ─────────────────────────────────

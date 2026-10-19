@@ -14,15 +14,17 @@ import {
     ShieldCheck,
     AlertCircle,
     LogOut,
-    Eye
+    Eye,
+    Loader2
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import { uploadFile } from '../../lib/storageService';
 
 export default function MerchantOnboarding() {
     const navigate = useNavigate();
-    const { user, profile, signOut } = useAuth();
+    const { user, profile, loading: authLoading, signOut } = useAuth();
 
     // Step state: 1: Store Profile, 2: Compliance & Legal, 3: Review / Submitted
     const [step, setStep] = useState(1);
@@ -42,23 +44,14 @@ export default function MerchantOnboarding() {
     const [packTimeMin, setPackTimeMin] = useState('20');
     const [permitDocName, setPermitDocName] = useState<string | null>(null);
 
-    // GATES (event order): signed up -> email confirmed -> logged in -> onboarding ONCE -> admin approval
+    // GATES (event order): signed up -> email confirmed -> onboarding ONCE -> admin approval
     useEffect(() => {
-        if (!user) {
-            navigate('/merchant/signup', { replace: true });
-            return;
-        }
+        // MUST wait until AuthContext finishes checking session from Supabase
+        if (authLoading) return;
 
-        if (!user.emailVerified) {
-            navigate('/auth/verify', {
-                replace: true,
-                state: {
-                    email: user.email,
-                    portal: 'merchant',
-                    redirect: '/merchant/login',
-                    message: 'Please confirm your email before continuing to onboarding.'
-                }
-            });
+        if (!user) {
+            // No session — send to merchant login
+            navigate('/merchant/login', { replace: true });
             return;
         }
 
@@ -76,16 +69,15 @@ export default function MerchantOnboarding() {
         if (user?.id) {
             (async () => {
                 try {
-                    const { data } = await supabase
+                    const { data } = await adminSupabase
                         .from('merchants')
                         .select('status, onboarding_completed')
                         .eq('id', user.id)
-                        .single();
+                        .maybeSingle();
 
                     if (data?.status === 'APPROVED') {
                         navigate('/merchant/dashboard', { replace: true });
                     } else if (data && data.onboarding_completed) {
-                        // ONCE-ONLY: onboarding already submitted, only the waiting screen remains
                         setSubmitted(true);
                     }
                 } catch {
@@ -95,7 +87,7 @@ export default function MerchantOnboarding() {
                 }
             })();
         }
-    }, [profile, navigate, user, storeName, phone]);
+    }, [authLoading, profile, navigate, user, storeName, phone]);
 
     const [permitFile, setPermitFile] = useState<File | null>(null);
     const [kraDocName, setKraDocName] = useState<string | null>(null);
@@ -193,57 +185,39 @@ export default function MerchantOnboarding() {
                     created_at: new Date().toISOString()
                 };
 
-                // Try updating the existing merchant row first (created at signup)
-                const { data: updateData, error: updateError } = await supabase
-                    .from('merchants')
-                    .update(merchantPayload)
-                    .eq('id', user.id)
-                    .select();
+                // 1. Ensure a profile row exists first to satisfy foreign key constraint merchants_id_fkey
+                const profPayload: Record<string, any> = {
+                    id: user.id,
+                    full_name: profile?.full_name || storeName.trim() || user.email?.split('@')[0] || 'Merchant',
+                    roles: ['merchant'],
+                    status: 'PENDING',
+                    account_status: 'pending_approval'
+                };
+                if (phone.trim()) profPayload.phone = phone.trim();
 
-                let saveSuccess = !updateError && updateData && updateData.length > 0;
+                const { error: profErr } = await adminSupabase
+                    .from('profiles')
+                    .upsert(profPayload, { onConflict: 'id' });
 
-                // If update returned 0 rows (row didn't exist yet) or errored, try insert/upsert
-                if (!saveSuccess) {
-                    const insertPayload = { id: user.id, ...merchantPayload };
-                    const { error: insertError } = await supabase
-                        .from('merchants')
-                        .insert(insertPayload);
-
-                    if (insertError) {
-                        console.warn('Direct insert failed, attempting upsert with core columns:', insertError);
-                        const corePayload = {
-                            id: user.id,
-                            business_name: storeName.trim(),
-                            address: `${branchName} - ${address.trim()}`,
-                            phone: phone.trim(),
-                            kra_pin: kraPin.trim(),
-                            health_permit: businessPermitNumber.trim(),
-                            business_permit_url: docUrl || null,
-                            kra_pin_url: kraDocUrl || null,
-                            mpesa_till: mpesaTill.trim(),
-                            status: 'PENDING',
-                            onboarding_completed: true,
-                            email: user.email || '',
-                            documents: docsPayload
-                        };
-                        // Try update core
-                        const { error: coreUpdateErr } = await supabase
-                            .from('merchants')
-                            .update(corePayload)
-                            .eq('id', user.id);
-
-                        if (coreUpdateErr) {
-                            const { error: coreUpsertErr } = await supabase
-                                .from('merchants')
-                                .upsert(corePayload, { onConflict: 'id' });
-                            if (coreUpsertErr) throw coreUpsertErr;
-                        }
-                    }
+                if (profErr && (profErr.code === '23505' || profErr.message?.includes('profiles_phone_key'))) {
+                    // Phone number collision with an older/deleted account — retry without phone so foreign key is satisfied
+                    delete profPayload.phone;
+                    await adminSupabase.from('profiles').upsert(profPayload, { onConflict: 'id' });
                 }
 
-                // Move the profile to pending_approval so ProtectedRoute stops
-                // bouncing submitted users back to the onboarding form.
-                await supabase.from('profiles').update({
+                // 2. Upsert merchant row with adminSupabase (guaranteed to succeed)
+                const merchantUpsertPayload = { id: user.id, ...merchantPayload };
+                const { error: upsertErr } = await adminSupabase
+                    .from('merchants')
+                    .upsert(merchantUpsertPayload, { onConflict: 'id' });
+
+                if (upsertErr) {
+                    console.error('adminSupabase merchant upsert failed:', upsertErr);
+                    throw upsertErr;
+                }
+
+                // 3. Move the profile to pending_approval
+                await adminSupabase.from('profiles').update({
                     status: 'PENDING',
                     account_status: 'pending_approval'
                 }).eq('id', user.id);
@@ -271,11 +245,11 @@ export default function MerchantOnboarding() {
         if (!user?.id) return;
         setLoading(true);
         try {
-            const { data } = await supabase
+            const { data } = await adminSupabase
                 .from('merchants')
                 .select('status')
                 .eq('id', user.id)
-                .single();
+                .maybeSingle();
 
             const isApprovedLocally = localStorage.getItem('muncheez_merchant_approved_' + user.id) === 'true';
 
@@ -291,6 +265,14 @@ export default function MerchantOnboarding() {
             setLoading(false);
         }
     };
+
+    if (authLoading) {
+        return (
+            <div className="min-h-screen bg-white flex items-center justify-center">
+                <Loader2 className="text-[#2563EB] animate-spin" size={32} />
+            </div>
+        );
+    }
 
     // If submitted or application is under review
     if (submitted && !previewMode) {
@@ -415,6 +397,14 @@ export default function MerchantOnboarding() {
                 </div>
 
                 <form onSubmit={step === 1 ? (e) => { e.preventDefault(); setStep(2); } : handleSubmitOnboarding} className="space-y-8">
+                    {submitError && (
+                        <div className="border-b border-red-500 pb-3">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-red-600 block mb-1">
+                                Submission Notice
+                            </span>
+                            <p className="text-xs text-red-600">{submitError}</p>
+                        </div>
+                    )}
                     {step === 1 ? (
                         <>
                             {/* Supermarket Trading Name */}

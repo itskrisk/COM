@@ -2,14 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import { useAuth } from '../../context/AuthContext';
-
-const ROLE_DESTINATIONS: Record<string, string> = {
-    customer: '/login',
-    merchant: '/merchant/login',
-    courier: '/rider/login',
-    admin: '/admin/login',
-};
 
 type Status = 'loading' | 'success' | 'error';
 
@@ -24,22 +18,24 @@ export default function AuthCallback() {
 
         async function handleCallback() {
             try {
-                // 1. Check for PKCE exchange code in search query params
-                const code = new URLSearchParams(window.location.search).get('code');
-                if (code) {
-                    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-                    if (exchangeError) throw exchangeError;
-                }
+                const searchParams = new URLSearchParams(window.location.search);
+                const code = searchParams.get('code');
+                const tokenHash = searchParams.get('token_hash');
+                const typeParam = searchParams.get('type');
 
-                // 2. Check for token in URL hash
+                // ── Step 1: Try to establish a session from URL params or hash ───────
+
+                // Legacy/Implicit flow: Supabase sends access_token & refresh_token in URL hash
                 const hash = window.location.hash;
-                const params = new URLSearchParams(hash.substring(1));
-                const accessToken = params.get('access_token');
-                const type = params.get('type');
+                const hashParams = new URLSearchParams(hash.substring(1));
+                const accessToken = hashParams.get('access_token');
+                const refreshToken = hashParams.get('refresh_token');
+                const hashType = hashParams.get('type');
 
                 if (cancelled) return;
 
-                if (accessToken && type === 'recovery') {
+                // Password reset is a special case — redirect to reset page
+                if (accessToken && hashType === 'recovery') {
                     setStatus('success');
                     setMessage('Password reset link confirmed. Redirecting...');
                     setTimeout(() => {
@@ -48,28 +44,99 @@ export default function AuthCallback() {
                     return;
                 }
 
-                // Refresh user state in AuthContext
-                await refreshUser();
+                // If tokens are present in the hash, set session explicitly immediately
+                if (accessToken && refreshToken) {
+                    try {
+                        const { error: setErr } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken
+                        });
+                        if (setErr) {
+                            console.warn('[AuthCallback] setSession notice:', setErr.message);
+                        }
+                    } catch (err: any) {
+                        console.warn('[AuthCallback] setSession exception:', err.message);
+                    }
+                }
 
-                const { data: { user: verifiedUser } } = await supabase.auth.getUser();
+                // PKCE code flow (Supabase sends ?code= when PKCE is used)
+                if (code) {
+                    try {
+                        const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+                        if (exchangeError) {
+                            console.warn('[AuthCallback] PKCE exchange notice:', exchangeError.message);
+                        }
+                    } catch (err: any) {
+                        console.warn('[AuthCallback] PKCE exception:', err.message);
+                    }
+                }
+
+                // OTP / token_hash flow (Supabase sends ?token_hash=&type=signup or type=email)
+                if (tokenHash) {
+                    const otpType = (typeParam === 'email' || typeParam === 'signup' || typeParam === 'magiclink') 
+                        ? typeParam 
+                        : 'signup';
+                    try {
+                        const { error: otpError } = await supabase.auth.verifyOtp({
+                            token_hash: tokenHash,
+                            type: otpType as any
+                        });
+                        if (otpError) {
+                            console.warn('[AuthCallback] OTP verify notice:', otpError.message);
+                        }
+                    } catch (err: any) {
+                        console.warn('[AuthCallback] OTP verify exception:', err.message);
+                    }
+                }
+
+                // ── Step 2: Get the current session (most reliable post-exchange) ──
+
+                // Give Supabase client a brief moment to finish setting session
+                await new Promise(res => setTimeout(res, 250));
+
+                const { data: { session } } = await supabase.auth.getSession();
+                let verifiedUser = session?.user ?? null;
+
+                // If session is still null, try getUser() as a fallback (handles edge-cases)
+                if (!verifiedUser) {
+                    const { data: { user: directUser } } = await supabase.auth.getUser();
+                    verifiedUser = directUser ?? null;
+                }
+
+                if (cancelled) return;
+
                 if (!verifiedUser) {
                     setStatus('error');
-                    setMessage('Session not found. Please sign in with your credentials.');
+                    setMessage('Session not found or link has expired. Please sign in with your credentials to access your portal.');
                     return;
                 }
 
-                const emailConfirmed = Boolean(verifiedUser.email_confirmed_at);
-                if (!emailConfirmed) {
-                    setStatus('error');
-                    setMessage('Email not confirmed yet. Please click the link in your email again.');
-                    return;
-                }
+                // ── Step 3: Refresh AuthContext state ────────────────────────────
+                await refreshUser();
 
-                // Deep check: resolve role from metadata, profiles, merchants, or riders tables
-                let detectedRole = verifiedUser.user_metadata?.role;
+                // ── Step 4: Resolve the user's role ──────────────────────────────
+                let detectedRole = verifiedUser.user_metadata?.role as string | undefined;
 
-                // 1. Check profiles
-                const { data: profileRow } = await supabase
+                // 1. Check merchants table
+                const { data: merchantRow } = await adminSupabase
+                    .from('merchants')
+                    .select('status, onboarding_completed')
+                    .eq('id', verifiedUser.id)
+                    .maybeSingle();
+
+                if (merchantRow) detectedRole = 'merchant';
+
+                // 2. Check riders table
+                const { data: riderRow } = await adminSupabase
+                    .from('riders')
+                    .select('status, onboarding_completed')
+                    .eq('id', verifiedUser.id)
+                    .maybeSingle();
+
+                if (riderRow) detectedRole = 'courier';
+
+                // 3. Check profiles table for role
+                const { data: profileRow } = await adminSupabase
                     .from('profiles')
                     .select('account_status, roles, role')
                     .eq('id', verifiedUser.id)
@@ -83,58 +150,17 @@ export default function AuthCallback() {
                     }
                 }
 
-                // 2. Check merchants table
-                const { data: merchantRow } = await supabase
-                    .from('merchants')
-                    .select('status, onboarding_completed')
-                    .eq('id', verifiedUser.id)
-                    .maybeSingle();
-
-                if (merchantRow) {
-                    detectedRole = 'merchant';
-                }
-
-                // 3. Check riders table
-                const { data: riderRow } = await supabase
-                    .from('riders')
-                    .select('status, onboarding_completed')
-                    .eq('id', verifiedUser.id)
-                    .maybeSingle();
-
-                if (riderRow) {
-                    detectedRole = 'courier';
-                }
-
-                // Default fallback
                 const role = detectedRole || 'customer';
-                const accountStatus = profileRow?.account_status || 'pending_onboarding';
 
-                // Sync phone, full name, and role to guarantee Supabase persistence
+                // ── Step 5: Sync profile data (non-blocking) ─────────────────────
                 const verifiedPhone = verifiedUser.user_metadata?.phone;
                 const verifiedFullName = verifiedUser.user_metadata?.full_name || verifiedUser.email?.split('@')[0];
 
-                if (verifiedPhone) {
-                    const { error: profileUpdateError } = await supabase.from('profiles').update({
-                        phone: verifiedPhone,
-                        full_name: verifiedFullName,
-                        status: 'ACTIVE'
-                    }).eq('id', verifiedUser.id);
-                    if (profileUpdateError) {
-                        setStatus('error');
-                        setMessage('Email verified, but saving your profile failed. Please sign in and update your profile.');
-                        return;
-                    }
-                } else if (verifiedFullName) {
-                    const { error: profileUpdateError } = await supabase.from('profiles').update({
-                        full_name: verifiedFullName,
-                        status: 'ACTIVE'
-                    }).eq('id', verifiedUser.id);
-                    if (profileUpdateError) {
-                        setStatus('error');
-                        setMessage('Email verified, but saving your profile failed. Please sign in and update your profile.');
-                        return;
-                    }
-                }
+                const profileUpdate: Record<string, any> = { status: 'ACTIVE' };
+                if (verifiedFullName) profileUpdate.full_name = verifiedFullName;
+                if (verifiedPhone) profileUpdate.phone = verifiedPhone;
+
+                await Promise.resolve(adminSupabase.from('profiles').update(profileUpdate).eq('id', verifiedUser.id)).catch(() => {});
 
                 fetch('/api/auth/sync-user', {
                     method: 'POST',
@@ -148,40 +174,36 @@ export default function AuthCallback() {
                     })
                 }).catch(() => {});
 
+                // ── Step 6: Route to the proper portal ────────────────────────────
                 setStatus('success');
-                setMessage('Email verified successfully! Directing you to your portal...');
+                setMessage('Email verified! Taking you to your portal...');
 
                 setTimeout(() => {
                     if (cancelled) return;
 
-                    // Route by detected role and portal status
                     if (role === 'merchant') {
                         const isApproved = merchantRow?.status === 'APPROVED';
-                        // Only show pending-approval AFTER onboarding has been submitted
                         const onboardingDone = Boolean(merchantRow?.onboarding_completed);
-                        const isPending = onboardingDone && !isApproved;
-                        
+
                         if (isApproved) {
                             navigate('/merchant/dashboard', { replace: true });
-                        } else if (isPending) {
+                        } else if (onboardingDone) {
                             navigate('/pending-approval', { replace: true });
                         } else {
-                            // First time after email verify — go to onboarding
-                            navigate('/merchant/login', { replace: true });
+                            // First time after email verify — go straight to onboarding
+                            navigate('/merchant/onboarding', { replace: true });
                         }
                     } else if (role === 'courier' || role === 'rider') {
                         const isApproved = riderRow?.status === 'APPROVED';
-                        // Only show pending-approval AFTER onboarding has been submitted
                         const onboardingDone = Boolean(riderRow?.onboarding_completed);
-                        const isPending = onboardingDone && !isApproved;
-                        
+
                         if (isApproved) {
                             navigate('/rider/dashboard', { replace: true });
-                        } else if (isPending) {
+                        } else if (onboardingDone) {
                             navigate('/pending-approval', { replace: true });
                         } else {
-                            // First time after email verify — go to rider login
-                            navigate('/rider/login', { replace: true });
+                            // First time after email verify — go straight to onboarding
+                            navigate('/rider/onboarding', { replace: true });
                         }
                     } else if (role === 'admin') {
                         navigate('/admin/dashboard', { replace: true });
@@ -189,7 +211,7 @@ export default function AuthCallback() {
                         // Customer
                         navigate('/login', { replace: true, state: { verified: true } });
                     }
-                }, 1600);
+                }, 1200);
 
             } catch (err: any) {
                 if (!cancelled) {
@@ -202,7 +224,7 @@ export default function AuthCallback() {
         handleCallback();
         return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Run once on mount only — user in deps causes infinite re-render loop
+    }, []);
 
     return (
         <div className="min-h-screen bg-white flex items-center justify-center px-6">
@@ -234,7 +256,7 @@ export default function AuthCallback() {
                 <h1 className="text-3xl font-heading font-light text-gray-900 tracking-tight mb-4">
                     {status === 'loading' && 'Verifying your email...'}
                     {status === 'success' && 'Email Confirmed.'}
-                    {status === 'error' && 'Verification Check'}
+                    {status === 'error' && 'Verification Issue'}
                 </h1>
 
                 <p className="text-sm text-gray-500 leading-relaxed mb-8">{message}</p>
@@ -243,7 +265,7 @@ export default function AuthCallback() {
                     <div className="w-full bg-gray-100 h-0.5 overflow-hidden">
                         <div
                             className="h-full bg-[#2563EB] transition-all"
-                            style={{ animation: 'progress-fill 1.6s linear forwards' }}
+                            style={{ animation: 'progress-fill 1.8s linear forwards' }}
                         />
                     </div>
                 )}
@@ -251,17 +273,17 @@ export default function AuthCallback() {
                 {status === 'error' && (
                     <div className="flex flex-col gap-3 mt-6">
                         <a
-                            href="/login"
+                            href="/merchant/login"
                             className="w-full py-3.5 px-6 text-xs font-mono uppercase tracking-widest text-white bg-black hover:bg-[#2563EB] transition-colors text-center block"
                         >
-                            Customer Login
+                            Merchant Login
                         </a>
                         <div className="grid grid-cols-2 gap-2">
                             <a
-                                href="/merchant/login"
+                                href="/login"
                                 className="py-3 px-3 text-[11px] font-mono uppercase tracking-wider text-gray-700 border border-gray-200 hover:border-black transition-colors text-center block"
                             >
-                                Merchant Login
+                                Customer Login
                             </a>
                             <a
                                 href="/rider/login"

@@ -12,7 +12,7 @@ import {
     LogOut
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabaseClient';
+import { adminSupabase } from '../../lib/adminSupabase';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
@@ -35,9 +35,9 @@ export default function AdminDashboard() {
         const fetchDashboardData = async () => {
             try {
                 const [ordersData, merchantsData, ridersData] = await Promise.all([
-                    supabase.from('orders').select('*, customer:profiles!customer_id(full_name, phone)').order('created_at', { ascending: false }).limit(50),
-                    supabase.from('merchants').select('id, business_name, type, status, logo_url').order('created_at', { ascending: false }),
-                    supabase.from('riders').select('id, name, is_online, status, rating, total_deliveries, performance, earnings, wallet').order('created_at', { ascending: false })
+                    adminSupabase.from('orders').select('*, customer:profiles!customer_id(full_name, phone)').order('created_at', { ascending: false }).limit(50),
+                    adminSupabase.from('merchants').select('id, business_name, type, status, logo_url').order('created_at', { ascending: false }),
+                    adminSupabase.from('riders').select('id, name, is_online, status, rating, total_deliveries, performance, earnings, wallet').order('created_at', { ascending: false })
                 ]);
 
                 if (ordersData.data) setOrders(ordersData.data);

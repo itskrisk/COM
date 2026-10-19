@@ -15,7 +15,8 @@ import {
     FileText,
     ExternalLink,
     AlertTriangle,
-    Pause
+    Pause,
+    Trash2
 } from 'lucide-react';
 
 type Tab = 'merchants' | 'riders';
@@ -97,78 +98,144 @@ export default function Approvals() {
         setLoading(true);
         try {
             if (activeTab === 'merchants') {
-                let { data, error } = await supabase
+                // Fetch merchants using adminSupabase (elevated privileges to see all applications)
+                const { data: merchantsData, error: mErr } = await adminSupabase
                     .from('merchants')
-                    .select('*, profile:profiles!id(full_name, phone)')
+                    .select('*')
                     .order('created_at', { ascending: false });
 
-                if (error || !data) {
-                    console.warn('Approvals: merchants relation query notice, falling back to direct select:', error);
-                    const directRes = await supabase
-                        .from('merchants')
-                        .select('*')
-                        .order('created_at', { ascending: false });
-                    data = directRes.data;
+                if (mErr) {
+                    console.error('Approvals: error loading merchants:', mErr);
                 }
 
-                if (data) {
-                    let filtered = data;
-                    if (statusFilter !== 'ALL') {
-                        filtered = data.filter((m: any) => m.status === statusFilter);
-                    }
-                    if (searchQuery) {
-                        filtered = filtered.filter((m: any) =>
-                            m.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            m.owner_name?.toLowerCase().includes(searchQuery.toLowerCase())
-                        );
-                    }
-                    setMerchants(filtered as Merchant[]);
+                let combinedMerchants = merchantsData || [];
+
+                // Fetch owner profiles for these merchants
+                const userIds = combinedMerchants.map((m: any) => m.id).filter(Boolean);
+                if (userIds.length > 0) {
+                    const { data: profilesData } = await adminSupabase
+                        .from('profiles')
+                        .select('id, full_name, phone')
+                        .in('id', userIds);
+
+                    const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+                    combinedMerchants = combinedMerchants.map((m: any) => ({
+                        ...m,
+                        owner_name: m.owner_name || profileMap.get(m.id)?.full_name || 'Owner',
+                        phone: m.phone || profileMap.get(m.id)?.phone || '',
+                        // email is saved directly to merchants table by onboarding — use it directly
+                        email: m.email || '',
+                        profile: profileMap.get(m.id)
+                    }));
                 }
+
+                let filtered = combinedMerchants;
+                if (statusFilter !== 'ALL') {
+                    filtered = combinedMerchants.filter((m: any) => {
+                        const s = (m.status || '').toUpperCase();
+                        if (statusFilter === 'PENDING') {
+                            return s === 'PENDING' || s === 'UNDER_REVIEW' || s === 'PENDING_APPROVAL' || !m.status;
+                        }
+                        if (statusFilter === 'SUSPENDED') {
+                            return s === 'SUSPENDED' || m.is_suspended === true;
+                        }
+                        return s === statusFilter;
+                    });
+                }
+
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    filtered = filtered.filter((m: any) =>
+                        m.business_name?.toLowerCase().includes(q) ||
+                        m.owner_name?.toLowerCase().includes(q) ||
+                        m.phone?.includes(q) ||
+                        m.email?.toLowerCase().includes(q)
+                    );
+                }
+
+                setMerchants(filtered as Merchant[]);
             } else {
-                let { data, error } = await supabase
+                // Fetch riders using adminSupabase
+                const { data: ridersData, error: rErr } = await adminSupabase
                     .from('riders')
-                    .select('*, profile:profiles!id(full_name, phone)')
+                    .select('*')
                     .order('created_at', { ascending: false });
 
-                if (error || !data) {
-                    console.warn('Approvals: riders relation query notice, falling back to direct select:', error);
-                    const directRes = await supabase
-                        .from('riders')
-                        .select('*')
-                        .order('created_at', { ascending: false });
-                    data = directRes.data;
+                if (rErr) {
+                    console.error('Approvals: error loading riders:', rErr);
                 }
 
-                if (data) {
-                    let filtered = data;
-                    if (statusFilter !== 'ALL') {
-                        filtered = data.filter((r: any) => r.status === statusFilter);
-                    }
-                    if (searchQuery) {
-                        filtered = filtered.filter((r: any) =>
-                            r.vehicle_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            r.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            r.national_id?.toLowerCase().includes(searchQuery.toLowerCase())
-                        );
-                    }
-                    setRiders(filtered as Rider[]);
+                let combinedRiders = ridersData || [];
+
+                const riderIds = combinedRiders.map((r: any) => r.id).filter(Boolean);
+                if (riderIds.length > 0) {
+                    const { data: profilesData } = await adminSupabase
+                        .from('profiles')
+                        .select('id, full_name, phone')
+                        .in('id', riderIds);
+
+                    const profileMap = new Map((profilesData || []).map((p: any) => [p.id, p]));
+                    combinedRiders = combinedRiders.map((r: any) => ({
+                        ...r,
+                        name: r.name || profileMap.get(r.id)?.full_name || 'Rider',
+                        phone: r.phone || profileMap.get(r.id)?.phone || '',
+                        email: r.email || profileMap.get(r.id)?.email || '',
+                        profile: profileMap.get(r.id)
+                    }));
                 }
+
+                let filtered = combinedRiders;
+                if (statusFilter !== 'ALL') {
+                    filtered = combinedRiders.filter((r: any) => {
+                        const s = (r.status || '').toUpperCase();
+                        if (statusFilter === 'PENDING') {
+                            return s === 'PENDING' || s === 'UNDER_REVIEW' || s === 'PENDING_APPROVAL' || !r.status;
+                        }
+                        if (statusFilter === 'SUSPENDED') {
+                            return s === 'SUSPENDED' || r.is_suspended === true;
+                        }
+                        return s === statusFilter;
+                    });
+                }
+
+                if (searchQuery) {
+                    const q = searchQuery.toLowerCase();
+                    filtered = filtered.filter((r: any) =>
+                        r.vehicle_type?.toLowerCase().includes(q) ||
+                        r.name?.toLowerCase().includes(q) ||
+                        r.national_id?.toLowerCase().includes(q) ||
+                        r.phone?.includes(q)
+                    );
+                }
+
+                setRiders(filtered as Rider[]);
             }
         } catch (err) {
-            console.error('Error loading data:', err);
+            console.error('Error loading approvals data:', err);
         } finally {
             setLoading(false);
         }
     };
 
     const handleApprove = async (id: string) => {
+        if (processing) return;
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            // Approval grants authorization to operate; it NEVER automatically publishes the store
+            // Approval grants authorization to operate/access dashboard.
+            // It NEVER automatically publishes the store (is_active is left unchanged).
             const updatePayload = activeTab === 'merchants'
-                ? { status: 'APPROVED' }
-                : { status: 'APPROVED' };
+                ? {
+                    status: 'APPROVED',
+                    is_suspended: false,
+                    approved_at: new Date().toISOString(),
+                    rejection_reason: null
+                  }
+                : {
+                    status: 'APPROVED',
+                    is_suspended: false,
+                    approved_at: new Date().toISOString()
+                  };
 
             const { error } = await adminSupabase
                 .from(table)
@@ -177,39 +244,37 @@ export default function Approvals() {
 
             if (error) throw error;
 
-            // Sync profile status AND account_status so user can access dashboard
-            try {
-                await adminSupabase.from('profiles').update({
-                    status: 'APPROVED',
-                    account_status: 'active'
-                }).eq('id', id);
-            } catch (pErr) {
-                console.warn('Profile sync notice:', pErr);
-            }
-
-            // Sync local storage flag for immediate client response
-            if (activeTab === 'merchants') {
-                localStorage.setItem('muncheez_merchant_approved_' + id, 'true');
-            } else {
-                localStorage.setItem('muncheez_rider_approved_' + id, 'true');
-            }
+            // Sync profile status AND account_status so user is authorized for dashboard
+            await adminSupabase.from('profiles').update({
+                status: 'APPROVED',
+                account_status: 'active'
+            }).eq('id', id);
 
             await loadData();
         } catch (err) {
             console.error('Error approving:', err);
-            alert('Failed to approve. Please try again.');
+            alert('Failed to approve application. Please try again.');
         } finally {
             setProcessing(null);
         }
     };
 
     const handleReject = async (id: string) => {
+        if (processing) return;
+        const reason = window.prompt('Enter rejection reason (optional):', 'Application does not meet onboarding compliance requirements.') || 'Application rejected.';
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
             const updatePayload = activeTab === 'merchants'
-                ? { status: 'REJECTED', is_active: false }
-                : { status: 'REJECTED', is_online: false };
+                ? {
+                    status: 'REJECTED',
+                    is_active: false,
+                    rejection_reason: reason
+                  }
+                : {
+                    status: 'REJECTED',
+                    is_online: false
+                  };
 
             const { error } = await adminSupabase
                 .from(table)
@@ -218,37 +283,39 @@ export default function Approvals() {
 
             if (error) throw error;
 
-            try {
-                await adminSupabase.from('profiles').update({
-                    status: 'REJECTED',
-                    account_status: 'rejected'
-                }).eq('id', id);
-            } catch (pErr) {
-                console.warn('Profile sync notice:', pErr);
-            }
-
-            if (activeTab === 'merchants') {
-                localStorage.removeItem('muncheez_merchant_approved_' + id);
-            } else {
-                localStorage.removeItem('muncheez_rider_approved_' + id);
-            }
+            await adminSupabase.from('profiles').update({
+                status: 'REJECTED',
+                account_status: 'rejected'
+            }).eq('id', id);
 
             await loadData();
         } catch (err) {
             console.error('Error rejecting:', err);
-            alert('Failed to reject. Please try again.');
+            alert('Failed to reject application. Please try again.');
         } finally {
             setProcessing(null);
         }
     };
 
     const handleSuspend = async (id: string) => {
+        if (processing) return;
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
+            // Suspending takes store offline immediately and revokes operational status
             const updatePayload = activeTab === 'merchants'
-                ? { status: 'SUSPENDED', is_active: false }
-                : { status: 'SUSPENDED', is_online: false };
+                ? {
+                    status: 'SUSPENDED',
+                    is_suspended: true,
+                    is_active: false,
+                    suspended_at: new Date().toISOString()
+                  }
+                : {
+                    status: 'SUSPENDED',
+                    is_suspended: true,
+                    is_online: false,
+                    suspended_at: new Date().toISOString()
+                  };
 
             const { error } = await adminSupabase
                 .from(table)
@@ -257,19 +324,100 @@ export default function Approvals() {
 
             if (error) throw error;
 
-            try {
-                await adminSupabase.from('profiles').update({
-                    status: 'SUSPENDED',
-                    account_status: 'suspended'
-                }).eq('id', id);
-            } catch (pErr) {
-                console.warn('Profile sync notice:', pErr);
-            }
+            await adminSupabase.from('profiles').update({
+                status: 'SUSPENDED',
+                account_status: 'suspended'
+            }).eq('id', id);
 
             await loadData();
         } catch (err) {
             console.error('Error suspending:', err);
-            alert('Failed to suspend. Please try again.');
+            alert('Failed to suspend account. Please try again.');
+        } finally {
+            setProcessing(null);
+        }
+    };
+
+    const handleUnsuspend = async (id: string) => {
+        if (processing) return;
+        setProcessing(id);
+        try {
+            const table = activeTab === 'merchants' ? 'merchants' : 'riders';
+            // Unsuspending restores eligibility for publication (status: APPROVED).
+            // It NEVER automatically forces an Offline store online (is_active is left unchanged).
+            const updatePayload = activeTab === 'merchants'
+                ? {
+                    status: 'APPROVED',
+                    is_suspended: false,
+                    suspended_at: null
+                  }
+                : {
+                    status: 'APPROVED',
+                    is_suspended: false,
+                    suspended_at: null
+                  };
+
+            const { error } = await adminSupabase
+                .from(table)
+                .update(updatePayload)
+                .eq('id', id);
+
+            if (error) throw error;
+
+            await adminSupabase.from('profiles').update({
+                status: 'APPROVED',
+                account_status: 'active'
+            }).eq('id', id);
+
+            await loadData();
+        } catch (err) {
+            console.error('Error unsuspending:', err);
+            alert('Failed to unsuspend account. Please try again.');
+        } finally {
+            setProcessing(null);
+        }
+    };
+
+    const handleDelete = async (id: string, type: 'merchant' | 'rider') => {
+        if (processing) return;
+        const confirmed = window.confirm(
+            'PERMANENT DELETE: This will remove all data for this application including documents. This cannot be undone. Continue?'
+        );
+        if (!confirmed) return;
+
+        setProcessing(id);
+        try {
+            const table = type === 'merchant' ? 'merchants' : 'riders';
+
+            // Delete products if merchant
+            if (type === 'merchant') {
+                await adminSupabase.from('products').delete().eq('merchant_id', id);
+            }
+
+            // Clean up storage documents
+            try {
+                const { data: storageFiles } = await adminSupabase.storage
+                    .from('documents')
+                    .list(`${table}/${id}`);
+                if (storageFiles && storageFiles.length > 0) {
+                    const filePaths = storageFiles.map((f: any) => `${table}/${id}/${f.name}`);
+                    await adminSupabase.storage.from('documents').remove(filePaths);
+                }
+            } catch (storageErr) {
+                console.warn('Storage cleanup partial failure (non-fatal):', storageErr);
+            }
+
+            // Delete main record
+            const { error: deleteErr } = await adminSupabase.from(table).delete().eq('id', id);
+            if (deleteErr) throw deleteErr;
+
+            // Delete profile
+            await adminSupabase.from('profiles').delete().eq('id', id);
+
+            await loadData();
+        } catch (err) {
+            console.error('Error deleting:', err);
+            alert('Failed to delete. Please try again.');
         } finally {
             setProcessing(null);
         }
@@ -542,6 +690,7 @@ export default function Approvals() {
                                                         disabled={processing === merchant.id}
                                                         className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                                                         aria-label="Approve merchant"
+                                                        title="Approve Merchant"
                                                     >
                                                         <CheckCircle2 size={20} />
                                                     </button>
@@ -550,6 +699,7 @@ export default function Approvals() {
                                                         disabled={processing === merchant.id}
                                                         className="p-2.5 sm:p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                                                         aria-label="Reject merchant"
+                                                        title="Reject Merchant"
                                                     >
                                                         <XCircle size={20} />
                                                     </button>
@@ -561,10 +711,32 @@ export default function Approvals() {
                                                     disabled={processing === merchant.id}
                                                     className="p-2.5 sm:p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                                                     aria-label="Suspend merchant"
+                                                    title="Suspend Store"
                                                 >
                                                     <Pause size={20} />
                                                 </button>
                                             )}
+                                            {merchant.status === 'SUSPENDED' && (
+                                                <button
+                                                    onClick={() => handleUnsuspend(merchant.id)}
+                                                    disabled={processing === merchant.id}
+                                                    className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    aria-label="Unsuspend merchant"
+                                                    title="Unsuspend Store"
+                                                >
+                                                    <CheckCircle2 size={20} />
+                                                </button>
+                                            )}
+                                            {/* Delete — always visible */}
+                                            <button
+                                                onClick={() => handleDelete(merchant.id, 'merchant')}
+                                                disabled={processing === merchant.id}
+                                                className="p-2.5 sm:p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                aria-label="Delete merchant"
+                                                title="Delete Permanently"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </div>
 
@@ -669,10 +841,32 @@ export default function Approvals() {
                                                     disabled={processing === rider.id}
                                                     className="p-2.5 sm:p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
                                                     aria-label="Suspend rider"
+                                                    title="Suspend Rider"
                                                 >
                                                     <Pause size={20} />
                                                 </button>
                                             )}
+                                            {rider.status === 'SUSPENDED' && (
+                                                <button
+                                                    onClick={() => handleUnsuspend(rider.id)}
+                                                    disabled={processing === rider.id}
+                                                    className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    aria-label="Unsuspend rider"
+                                                    title="Unsuspend Rider"
+                                                >
+                                                    <CheckCircle2 size={20} />
+                                                </button>
+                                            )}
+                                            {/* Delete — always visible */}
+                                            <button
+                                                onClick={() => handleDelete(rider.id, 'rider')}
+                                                disabled={processing === rider.id}
+                                                className="p-2.5 sm:p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                aria-label="Delete rider"
+                                                title="Delete Permanently"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
                                         </div>
                                     </div>
 
