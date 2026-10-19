@@ -22,7 +22,7 @@ const collections = [
         id: "02",
         name: "Street Kings",
         tagline: "The Hustle",
-        description: "The absolute best of local food carts—unfiltered flavors that define the city.",
+        description: "The absolute best of local food carts, unfiltered flavors that define the city.",
         image: streetKingsImg,
         icon: Utensils,
         span: "lg:col-span-4",

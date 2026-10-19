@@ -1,4 +1,4 @@
-/* Premium Modern Typography: Outfit (Headings) & Plus Jakarta Sans (Body) */
+/* Muncheez Admin — Apple-inspired design foundation */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300..900&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
 
 @tailwind base;
@@ -6,128 +6,96 @@
 @tailwind utilities;
 
 :root {
-  /* Premium Typography */
   --font-heading: 'Outfit', sans-serif;
   --font-body: 'Plus Jakarta Sans', sans-serif;
-  --color-cyan: #00BCD4;
-  --color-blue: #0277BD;
-  --color-dark: #111827;
-  /* gray-900 */
+  --font-mono: 'SF Mono', 'Menlo', monospace;
 
-  /* THIKA Branding */
-  --primary: var(--color-blue);
-  --accent: var(--color-orange);
+  /* Ink scale */
+  --ink-50: #F6F6F7;
+  --ink-100: #ECECEE;
+  --ink-200: #D1D1D6;
+  --ink-300: #B0B0B5;
+  --ink-400: #8E8E93;
+  --ink-500: #6E6E73;
+  --ink-600: #48484A;
+  --ink-700: #2C2C2E;
+  --ink-800: #1C1C1E;
+  --ink-900: #000000;
 
-  /* Backgrounds */
-  --bg-page: #F9FAFB;
-  --bg-glass: rgba(255, 255, 255, 0.8);
+  /* Surfaces */
+  --surface-page: #F5F5F7;
+  --surface-card: #FFFFFF;
+  --surface-elevated: #FFFFFF;
 
-  /* Text */
-  --text-main: #1F2937;
-  --text-muted: #4B5563;
+  /* Accent */
+  --accent: #0066CC;
+  --accent-hover: #0055A3;
+  --accent-soft: #E8F0FE;
 
-  /* Marquee/Demo Vars */
-  --sky-400: #38bdf8;
-  --sky-500: #0ea5e9;
+  /* Semantic */
+  --success: #30D158;
+  --success-soft: #E5F9EC;
+  --success-ink: #0A8A3A;
+  --warning: #FF9F0A;
+  --warning-soft: #FFF3DC;
+  --warning-ink: #A96400;
+  --danger: #FF453A;
+  --danger-soft: #FDEAEA;
+  --danger-ink: #B00020;
 }
 
 @layer base {
   html {
     scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   body {
-    @apply bg-gray-50 text-gray-800 antialiased;
+    @apply bg-surface-page text-ink-800 antialiased;
     font-family: var(--font-body);
     letter-spacing: -0.005em;
     font-weight: 400;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    @apply font-heading text-gray-900;
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading text-ink-900;
     letter-spacing: -0.03em;
     line-height: 1.1;
     font-weight: 700;
   }
-
-  h1 {
-    @apply text-5xl md:text-7xl;
-    font-weight: 800;
-  }
-
-  h2 {
-    @apply text-4xl md:text-6xl;
-    font-weight: 700;
-  }
-
-  h3 {
-    @apply text-3xl md:text-4xl;
-    font-weight: 600;
-  }
 }
 
 @layer components {
-  .section {
-    @apply py-20 lg:py-32;
+  /* Page title */
+  .admin-page-title {
+    @apply text-[28px] font-bold tracking-tight text-ink-900 leading-tight;
+  }
+  .admin-page-subtitle {
+    @apply text-sm text-ink-400 font-medium mt-1;
   }
 
-  .container {
-    @apply max-w-7xl mx-auto px-6;
+  /* Apple-style focus ring */
+  .admin-focus {
+    @apply focus:outline-none focus:ring-2 focus:ring-accent/25 focus:border-accent;
   }
 
-  .btn {
-    @apply inline-flex items-center justify-center px-8 py-3 rounded-full font-medium transition-all duration-300 transform active:scale-95;
+  /* Thin bottom-line input (editorial) */
+  .admin-input-line {
+    @apply w-full px-0 py-2.5 bg-transparent border-0 border-b border-ink-200 text-sm text-ink-800 placeholder-ink-300 focus:outline-none focus:border-accent transition-colors;
   }
 
-  .btn-primary {
-    @apply bg-[var(--primary)] text-white shadow-lg shadow-blue-500/30 hover:shadow-xl hover:-translate-y-1 hover:bg-[#026aa7];
-  }
-
-  .btn-secondary {
-    @apply bg-white text-gray-900 border border-gray-200 shadow-sm hover:border-[var(--primary)] hover:text-[var(--primary)];
-  }
-
-  .glass {
-    @apply bg-white/80 backdrop-blur-md border-b border-white/20;
-  }
-
-  .bg-dot-pattern {
-    background-image: radial-gradient(#9ca3af 1.5px, transparent 1.5px);
-    background-size: 24px 24px;
+  /* Section divider */
+  .admin-section-divider {
+    @apply border-t border-ink-100;
   }
 }
 
 /* Hide scrollbar utility */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-.no-scrollbar {
-  -ms-overflow-style: none;
-  /* IE and Edge */
-  scrollbar-width: none;
-  /* Firefox */
-}
-
-/* Custom Scrollbar Utilities */
-.scrollbar-thin::-webkit-scrollbar {
-  width: 4px;
-}
-
-.scrollbar-track-transparent::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.scrollbar-thumb-black\/20::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
-  border-radius: 20px;
-}
-
-.scrollbar-thumb-black\/20:hover::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-}
+/* Custom Scrollbar */
+.scrollbar-thin::-webkit-scrollbar { width: 5px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 20px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }

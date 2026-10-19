@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { authApi } from '../../lib/api';
@@ -23,6 +23,8 @@ export default function PartnerSignup() {
     const [error, setError] = useState<string | null>(null);
     const [portalHint, setPortalHint] = useState<{ message: string; link: string; label: string } | null>(null);
     const [loggingOut, setLoggingOut] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const currentRole = profile?.roles?.[0] || user?.profile?.roles?.[0] || 'merchant';
     const isOtherRoleActive = Boolean(user && currentRole !== 'merchant');
@@ -379,31 +381,41 @@ export default function PartnerSignup() {
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
                                     Password
                                 </label>
-                                <input
-                                    id="merchant-signup-pass"
-                                    type="password"
-                                    required
-                                    disabled={Boolean(user)}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                    placeholder="••••••••"
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="merchant-signup-pass"
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        disabled={Boolean(user)}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="block w-full px-0 pr-8 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                        placeholder="••••••••"
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-0 top-3 text-gray-400 hover:text-gray-700 transition-colors" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
                                     Confirm Password
                                 </label>
-                                <input
-                                    id="merchant-signup-confirmpass"
-                                    type="password"
-                                    required
-                                    disabled={Boolean(user)}
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                    placeholder="••••••••"
-                                />
+                                <div className="relative">
+                                    <input
+                                        id="merchant-signup-confirmpass"
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        required
+                                        disabled={Boolean(user)}
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="block w-full px-0 pr-8 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                        placeholder="••••••••"
+                                    />
+                                    <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="absolute right-0 top-3 text-gray-400 hover:text-gray-700 transition-colors" aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
+                                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

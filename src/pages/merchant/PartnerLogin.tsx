@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth, RoleMismatchInfo } from '../../context/AuthContext';
 import merchantImg from '../../assets/images/merchantloginpic.jpg';
@@ -15,6 +15,7 @@ export default function PartnerLogin() {
     const [error, setError] = useState<string | null>(null);
     const [roleMismatch, setRoleMismatch] = useState<RoleMismatchInfo | null>(null);
     const [loggingOut, setLoggingOut] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     // Auto-redirect ONLY if already authenticated as merchant or admin
     useEffect(() => {
@@ -260,16 +261,21 @@ export default function PartnerLogin() {
                                     Forgot?
                                 </Link>
                             </div>
-                            <input
-                                id="merchant-password"
-                                type="password"
-                                required
-                                disabled={Boolean(user)}
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="block w-full px-0 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <input
+                                    id="merchant-password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    required
+                                    disabled={Boolean(user)}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="block w-full px-0 pr-8 py-3 border-b border-gray-200 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#2563EB] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                                    placeholder="••••••••"
+                                />
+                                <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-0 top-3 text-gray-400 hover:text-gray-700 transition-colors" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                </button>
+                            </div>
                         </div>
 
                         <button

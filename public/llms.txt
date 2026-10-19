@@ -1,0 +1,65 @@
+# Muncheez - llms.txt
+# AI & LLM Discovery File - https://muncheez.co.ke/llms.txt
+
+## What is Muncheez?
+
+Muncheez is a premium on-demand delivery platform based in Nairobi, Kenya. It connects customers with local restaurants, supermarkets, pharmacies, and specialty stores for fast, reliable delivery across the city.
+
+## Core Value Proposition
+
+- **Fast delivery** of food, groceries, pharmacy items, water, and flowers across Nairobi.
+- **Multi-portal platform**: Customers order via web app; Merchants manage stores and menus; Riders manage deliveries; Admins oversee operations.
+- **Merchant onboarding**: Restaurants and supermarkets apply online, submit compliance documents (KRA PIN, Business Permit), and are approved by the Muncheez Admin team before going live.
+- **M-Pesa integrated payments**: Settlements to merchants via M-Pesa Buy Goods Till or Paybill.
+
+## Key URLs
+
+- Homepage: https://muncheez.co.ke/
+- Browse Stores: https://muncheez.co.ke/stores
+- Merchant Partner Portal: https://muncheez.co.ke/merchant/signup
+- Rider/Courier Signup: https://muncheez.co.ke/rider/signup
+- Contact: https://muncheez.co.ke/contact
+- Help & FAQ: https://muncheez.co.ke/help/faq
+- Sitemap: https://muncheez.co.ke/sitemap.xml
+
+## Site Architecture
+
+```
+/ (Landing Page)
+├── /stores          - Customer store listing & browsing
+├── /company/        - About, team, careers, investors, press
+├── /merchant/       - Partner signup, login, onboarding, dashboard (authenticated)
+├── /rider/          - Courier signup, login, onboarding, dashboard (authenticated)
+├── /admin/          - Admin console (restricted, approval-gated)
+├── /terms           - Terms of Service
+├── /privacy         - Privacy Policy
+├── /cookies         - Cookie Policy
+├── /contact         - Contact page
+├── /help            - Help centre
+└── /waitlist        - Waitlist signup
+```
+
+## Delivery Coverage
+
+Nairobi, Kenya: Westlands, Kilimani, Lavington, CBD, Karen, Thika Road, Garden Estate, and surrounding areas.
+
+## Technology Stack
+
+- **Frontend**: React (Vite), TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL + Auth + Storage)
+- **Payments**: M-Pesa (Safaricom) via B2C/Buy Goods/Paybill integration
+- **Hosting**: Vercel / custom domain muncheez.co.ke
+
+## Merchant Onboarding Process
+
+1. Merchant applies at /merchant/signup
+2. Email verification required
+3. Onboarding form: store name, address, KRA PIN, business permit, M-Pesa till
+4. Admin reviews documents and approves/rejects
+5. Approved merchants access full store management dashboard
+
+## Contact
+
+- Website: https://muncheez.co.ke
+- WhatsApp: +254 700 000000
+- Location: Nairobi, Kenya

@@ -2,37 +2,139 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/logos/newbrowserimage.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    
+    <!-- Primary Meta Tags -->
     <title>Muncheez | Food, Grocery &amp; Pharmacy Delivery in Nairobi</title>
-    <meta name="description" content="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast." />
-    <meta property="og:title" content="Muncheez | Food, Grocery &amp; Pharmacy Delivery in Nairobi" />
-    <meta property="og:description" content="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast." />
+    <meta name="title" content="Muncheez | Food, Grocery &amp; Pharmacy Delivery in Nairobi" />
+    <meta name="description" content="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast with M-Pesa." />
+    <meta name="keywords" content="Muncheez, Muncheez Kenya, Muncheez Delivery, food delivery Nairobi, grocery delivery Nairobi, order food Nairobi, online supermarket Kenya, pharmacy delivery Nairobi" />
+    <meta name="author" content="Muncheez Technologies" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+    <link rel="canonical" href="https://muncheez.co.ke/" />
+
+    <!-- Brand & Theme Color -->
+    <meta name="theme-color" content="#000000" />
+    <meta name="msapplication-TileColor" content="#000000" />
+    <meta name="application-name" content="Muncheez" />
+    <meta name="apple-mobile-web-app-title" content="Muncheez" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- Favicons & App Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:site_name" content="Muncheez" />
+    <meta property="og:locale" content="en_KE" />
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://muncheez.co.ke/" />
+    <meta property="og:title" content="Muncheez | Food, Grocery &amp; Pharmacy Delivery in Nairobi" />
+    <meta property="og:description" content="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast." />
     <meta property="og:image" content="https://muncheez.co.ke/logos/urlimage.jpg" />
+    <meta property="og:image:secure_url" content="https://muncheez.co.ke/logos/urlimage.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Muncheez - Nairobi's Premium Food, Grocery &amp; Pharmacy Delivery Platform" />
+
+    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@muncheezke" />
+    <meta name="twitter:creator" content="@muncheezke" />
+    <meta name="twitter:url" content="https://muncheez.co.ke/" />
+    <meta name="twitter:title" content="Muncheez | Food, Grocery &amp; Pharmacy Delivery in Nairobi" />
+    <meta name="twitter:description" content="Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi. Browse local businesses, order simply, and get it delivered fast." />
     <meta name="twitter:image" content="https://muncheez.co.ke/logos/urlimage.jpg" />
-    <link rel="canonical" href="https://muncheez.co.ke/" />
+    <meta name="twitter:image:alt" content="Muncheez - Nairobi's Premium Food, Grocery &amp; Pharmacy Delivery Platform" />
+
+    <!-- Schema.org Entity Disambiguation (Crucial for ranking 'Muncheez' vs 'munchies') -->
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
-        "@type": ["Organization", "LocalBusiness"],
-        "name": "Muncheez",
-        "url": "https://muncheez.co.ke",
-        "logo": "https://muncheez.co.ke/logos/newbrowserimage.png",
-        "description": "Premium delivery from restaurants, supermarkets, and pharmacies across Nairobi.",
-        "areaServed": "Nairobi, Kenya",
-        "address": {
-          "@type": "PostalAddress",
-          "addressLocality": "Nairobi",
-          "addressCountry": "KE"
-        }
+        "@graph": [
+          {
+            "@type": ["Organization", "LocalBusiness", "DeliveryService"],
+            "@id": "https://muncheez.co.ke/#organization",
+            "name": "Muncheez",
+            "legalName": "Muncheez Technologies Ltd",
+            "alternateName": [
+              "Muncheez Kenya",
+              "Muncheez Delivery",
+              "Muncheez KE",
+              "muncheez.co.ke"
+            ],
+            "url": "https://muncheez.co.ke",
+            "logo": {
+              "@type": "ImageObject",
+              "url": "https://muncheez.co.ke/logos/newbrowserimage.png",
+              "width": "512",
+              "height": "512"
+            },
+            "image": "https://muncheez.co.ke/logos/urlimage.jpg",
+            "description": "Muncheez is Kenya's premier on-demand delivery platform connecting customers with restaurants, supermarkets, and pharmacies across Nairobi.",
+            "priceRange": "$$",
+            "currenciesAccepted": "KES",
+            "paymentAccepted": "M-Pesa, Card, Cash",
+            "areaServed": {
+              "@type": "City",
+              "name": "Nairobi",
+              "addressCountry": "KE"
+            },
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Nairobi",
+              "addressRegion": "Nairobi County",
+              "addressCountry": "KE"
+            },
+            "sameAs": [
+              "https://twitter.com/muncheezke",
+              "https://www.instagram.com/muncheezke",
+              "https://www.facebook.com/muncheezke",
+              "https://www.linkedin.com/company/muncheez"
+            ]
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://muncheez.co.ke/#website",
+            "name": "Muncheez",
+            "alternateName": "Muncheez Kenya",
+            "url": "https://muncheez.co.ke",
+            "publisher": {
+              "@id": "https://muncheez.co.ke/#organization"
+            },
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": {
+                "@type": "EntryPoint",
+                "urlTemplate": "https://muncheez.co.ke/stores?q={search_term_string}"
+              },
+              "query-input": "required name=search_term_string"
+            }
+          }
+        ]
       }
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Crawlable H1 & Semantic Fallback for Headless Crawlers & SEO Scrapers before React Hydration -->
+    <div id="root">
+      <div style="opacity:0;position:absolute;pointer-events:none;height:0;overflow:hidden;" aria-hidden="true">
+        <h1>Muncheez - On-Demand Food, Grocery &amp; Pharmacy Delivery in Nairobi</h1>
+        <p>Order food from top restaurants, fresh groceries, and pharmacy essentials delivered across Nairobi, Kenya with Muncheez.</p>
+      </div>
+    </div>
+    <noscript>
+      <div style="padding:24px;text-align:center;font-family:sans-serif;">
+        <h1>Muncheez - On-Demand Delivery in Nairobi</h1>
+        <p>Muncheez delivers food, groceries, and pharmacy essentials across Nairobi with M-Pesa checkout. Please enable JavaScript to use the app.</p>
+        <p><a href="/stores">Browse Stores</a> · <a href="/merchant/signup">Become a Merchant</a> · <a href="/rider/signup">Deliver with Muncheez</a></p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

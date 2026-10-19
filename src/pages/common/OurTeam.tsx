@@ -11,7 +11,7 @@ const team = [
     name: 'Dean Ndere',
     title: 'Founder & CEO',
     note: 'Nairobi, KE',
-    bio: 'Webbing the fabric of Nairobi\'s food scene into a digital tapestry. For Dean, this isn\'t just delivery — it\'s the new standard for speed, quality, and urban hospitality.',
+    bio: 'Webbing the fabric of Nairobi\'s food scene into a digital tapestry. For Dean, this isn\'t just delivery: it\'s the new standard for speed, quality, and urban hospitality.',
   },
   {
     name: 'Kris Kamau',

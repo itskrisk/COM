@@ -52,24 +52,26 @@ export default function AdminLayout() {
 
     const isActive = (path: string) => location.pathname === path || location.pathname.startsWith(path + '/');
 
+    const isCollapsed = false;
+
     return (
-        <div className="min-h-screen bg-white font-sans flex text-gray-900">
+        <div className="min-h-screen bg-[#F5F5F7] font-sans text-[#1D1D1F] flex">
             {/* Sidebar (Desktop) */}
-            <aside className="hidden lg:flex w-64 bg-white border-r border-neutral-200 h-screen sticky top-0 flex-col z-20">
-                <div className="h-16 flex items-center px-6 border-b border-neutral-200">
-                    <span className="font-heading font-bold text-xl tracking-tighter">
-                        Muncheez<span className="text-[#D4AF37]">.</span> Ops
+            <aside className="hidden lg:flex w-64 bg-white border-r border-black/5 h-screen sticky top-0 flex-col z-20">
+                <div className="h-16 flex items-center px-6 border-b border-black/5">
+                    <span className="font-heading font-bold text-xl tracking-tight">
+                        Muncheez<span className="text-[#0066CC]">.</span>
                     </span>
                 </div>
 
-                <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+                <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
                     {navItems.map((item) => (
                         <button
                             key={item.path}
                             onClick={() => navigate(item.path)}
-                            className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-l-2 ${isActive(item.path)
-                                ? 'border-[#D4AF37] bg-neutral-50 text-black'
-                                : 'border-transparent text-gray-500 hover:bg-neutral-50 hover:text-black'
+                            className={`w-full flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-colors rounded-lg ${isActive(item.path)
+                                ? 'bg-black text-white'
+                                : 'text-[#6E6E73] hover:bg-black/5 hover:text-black'
                                 }`}
                         >
                             <item.icon size={18} />
@@ -78,23 +80,23 @@ export default function AdminLayout() {
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-neutral-200">
+                <div className="p-3 border-t border-black/5">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors border-l-2 border-transparent"
+                        className="w-full flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/5 transition-colors rounded-lg"
                     >
                         <LogOut size={18} />
                         <span>Logout</span>
                     </button>
-                    <div className="mt-4 px-4 py-3 border border-neutral-200 flex items-center gap-3 text-left">
-                        <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs">
+                    <div className="mt-2 flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-black/5 transition-colors cursor-pointer">
+                        <div className="w-7 h-7 rounded-full bg-black text-white flex items-center justify-center font-bold text-[11px]">
                             AD
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-xs font-bold truncate">Admin User</p>
-                            <p className="text-[10px] text-gray-400 truncate">Super Admin</p>
+                            <p className="text-[12px] font-semibold truncate">Admin User</p>
+                            <p className="text-[10px] text-[#8E8E93] truncate">Super Admin</p>
                         </div>
-                        <ChevronDown size={14} className="text-gray-400" />
+                        <ChevronDown size={14} className="text-[#8E8E93]" />
                     </div>
                 </div>
             </aside>
@@ -102,10 +104,10 @@ export default function AdminLayout() {
             {/* Main Content */}
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Header */}
-                <header className="h-16 bg-white border-b border-neutral-200 sticky top-0 z-10 px-4 lg:px-8 flex items-center justify-between">
+                <header className="h-16 bg-white/80 backdrop-blur-xl border-b border-black/5 sticky top-0 z-10 px-4 lg:px-8 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            className="lg:hidden p-2 text-gray-500 hover:bg-neutral-100"
+                            className="lg:hidden p-2 text-[#6E6E73] hover:bg-black/5 rounded-lg"
                             onClick={() => setIsMobileMenuOpen(true)}
                         >
                             <Menu size={24} />
@@ -113,19 +115,19 @@ export default function AdminLayout() {
 
                         {/* Global Search */}
                         <div className="hidden md:flex items-center relative w-96">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8E8E93]" size={16} />
                             <input
                                 type="text"
                                 placeholder="Search orders, users, transactions... (Cmd+K)"
-                                className="w-full pl-10 pr-4 py-2 bg-transparent border-b border-neutral-200 focus:border-black text-sm transition-all focus:outline-none"
+                                className="w-full pl-10 pr-4 py-2 bg-black/5 border border-transparent rounded-lg text-sm focus:outline-none focus:bg-white focus:border-black/10 transition-all"
                             />
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <button className="relative p-2 text-gray-400 hover:text-black hover:bg-neutral-50 transition-colors">
+                        <button className="relative p-2 text-[#8E8E93] hover:text-black hover:bg-black/5 rounded-lg transition-colors">
                             <Bell size={20} />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border border-white" />
+                            <span className="absolute top-2 right-2 w-2 h-2 bg-[#FF3B30] rounded-full border-2 border-white" />
                         </button>
                     </div>
                 </header>
@@ -139,17 +141,17 @@ export default function AdminLayout() {
             {/* Mobile Menu Overlay */}
             {isMobileMenuOpen && (
                 <div className="fixed inset-0 z-50 lg:hidden">
-                    <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMobileMenuOpen(false)} />
                     <aside className="absolute top-0 left-0 w-64 bg-white h-full shadow-2xl flex flex-col">
-                        <div className="h-16 flex items-center justify-between px-6 border-b border-neutral-200">
-                            <span className="font-heading font-bold text-xl tracking-tighter">
-                                Muncheez<span className="text-[#D4AF37]">.</span>
+                        <div className="h-16 flex items-center justify-between px-6 border-b border-black/5">
+                            <span className="font-heading font-bold text-xl tracking-tight">
+                                Muncheez<span className="text-[#0066CC]">.</span>
                             </span>
                             <button onClick={() => setIsMobileMenuOpen(false)}>
-                                <X size={24} className="text-gray-400" />
+                                <X size={24} className="text-[#8E8E93]" />
                             </button>
                         </div>
-                        <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto">
+                        <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
                             {navItems.map((item) => (
                                 <button
                                     key={item.path}
@@ -157,9 +159,9 @@ export default function AdminLayout() {
                                         navigate(item.path);
                                         setIsMobileMenuOpen(false);
                                     }}
-                                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors border-l-2 ${isActive(item.path)
-                                        ? 'border-[#D4AF37] bg-neutral-50 text-black'
-                                        : 'border-transparent text-gray-500 hover:bg-neutral-50 hover:text-black'
+                                    className={`w-full flex items-center gap-3 px-3 py-2 text-[13px] font-medium transition-colors rounded-lg ${isActive(item.path)
+                                        ? 'bg-black text-white'
+                                        : 'text-[#6E6E73] hover:bg-black/5 hover:text-black'
                                         }`}
                                 >
                                     <item.icon size={18} />
@@ -168,13 +170,13 @@ export default function AdminLayout() {
                             ))}
                         </nav>
 
-                        <div className="p-4 border-t border-neutral-200">
+                        <div className="p-3 border-t border-black/5">
                             <button
                                 onClick={() => {
                                     setIsMobileMenuOpen(false);
                                     handleLogout();
                                 }}
-                                className="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors border-l-2 border-transparent"
+                                className="w-full flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-[#FF3B30] hover:bg-[#FF3B30]/5 transition-colors rounded-lg"
                             >
                                 <LogOut size={18} />
                                 <span>Log Out</span>

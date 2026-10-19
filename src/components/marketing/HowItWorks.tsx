@@ -89,7 +89,7 @@ export default function HowItWorks() {
                     </div>
                 </div>
 
-                {/* Final CTA — Unboxed Editorial Link */}
+                {/* Final CTA: Unboxed Editorial Link */}
                 <motion.div
                     initial={{ opacity: 0 }}
                     whileInView={{ opacity: 1 }}

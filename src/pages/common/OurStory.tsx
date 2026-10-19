@@ -64,10 +64,10 @@ export default function OurStory() {
                                 It started with a simple realization: <strong>Food is the ultimate stress test for last-mile logistics.</strong>
                             </p>
                             <p className="text-white/80 text-sm md:text-base leading-relaxed">
-                                The best <em>kuku choma</em> wasn't in a shiny shopping mall; it was tucked away in a backyard in Westlands. The most authentic sourdough was baking quietly in a micro-kitchen in Karen. Nairobi was bursting with merchant vitality, but legacy delivery platforms treated food like generic cargo—ignoring the soul of the city.
+                                The best <em>kuku choma</em> wasn't in a shiny shopping mall; it was tucked away in a backyard in Westlands. The most authentic sourdough was baking quietly in a micro-kitchen in Karen. Nairobi was bursting with merchant vitality, but legacy delivery platforms treated food like generic cargo, ignoring the soul of the city.
                             </p>
                             <p className="text-white/80 text-sm md:text-base leading-relaxed">
-                                Moving temperature-sensitive food through Nairobi's urban density demands sub-second dispatch algorithms, thermal preservation, and absolute respect for the merchant's craft. Mastering culinary delivery proved our logistics architecture—laying the foundation for Muncheez Technologies Ltd. as East Africa's premier hyper-local tech logistics engine.
+                                Moving temperature-sensitive food through Nairobi's urban density demands sub-second dispatch algorithms, thermal preservation, and absolute respect for the merchant's craft. Mastering culinary delivery proved our logistics architecture, laying the foundation for Muncheez Technologies Ltd. as East Africa's premier hyper-local tech logistics engine.
                             </p>
                             <p className="text-white font-medium text-base md:text-lg border-l-2 border-white/40 pl-6 py-1 italic">
                                 "If you can master moving hot meals through Nairobi traffic with sub-minute precision, you can power urban logistics for everything."
@@ -115,10 +115,10 @@ export default function OurStory() {
                                 Muncheez Technologies Ltd. is a <strong>logistics technology company.</strong> We build and operate the digital infrastructure that powers real-time urban commerce across East Africa.
                             </p>
                             <p className="text-gray-900/80 text-sm md:text-base font-light leading-relaxed">
-                                We are not a marketplace. We are the engine underneath it. Our platform connects merchants, consumers, and courier fleets through a single intelligent network — dispatching orders in real time, clearing payments automatically, and managing an entire rider fleet without a single manual call.
+                                We are not a marketplace. We are the engine underneath it. Our platform connects merchants, consumers, and courier fleets through a single intelligent network: dispatching orders in real time, clearing payments automatically, and managing an entire rider fleet without a single manual call.
                             </p>
                             <p className="text-gray-900/80 text-sm md:text-base font-light leading-relaxed">
-                                What started as a culinary delivery platform is now the foundation for something much larger. Our logistics rails stretch across every commercial vertical — food, groceries, pharmacy, retail — and we are just getting started. The future of Muncheez is the future of how East Africa's cities move.
+                                What started as a culinary delivery platform is now the foundation for something much larger. Our logistics rails stretch across every commercial vertical: food, groceries, pharmacy, retail, and we are just getting started. The future of Muncheez is the future of how East Africa's cities move.
                             </p>
                             <p className="text-gray-900 font-medium text-base md:text-lg border-l-2 border-gray-900/40 pl-6 py-1 italic">
                                 "We are building the infrastructure layer that East Africa's urban commerce will run on for the next decade."

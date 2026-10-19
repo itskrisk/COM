@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Loader2, ShieldCheck, AlertCircle } from 'lucide-react';
+import { ArrowRight, Loader2, ShieldCheck, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { authApi } from '../../lib/api';
@@ -12,6 +12,8 @@ export default function ResetPassword() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState(false);
     const [token, setToken] = useState<string | null>(null);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     useEffect(() => {
         // Get token from URL hash or query params
@@ -152,28 +154,38 @@ export default function ResetPassword() {
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
                                     New Password
                                 </label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
-                                    placeholder="Minimum 6 characters"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        required
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="block w-full px-0 pr-8 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                        placeholder="Minimum 6 characters"
+                                    />
+                                    <button type="button" onClick={() => setShowPassword(p => !p)} className="absolute right-0 top-3 text-gray-400 hover:text-gray-700 transition-colors" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                                        {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div>
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
                                     Confirm New Password
                                 </label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
-                                    className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
-                                    placeholder="Repeat new password"
-                                />
+                                <div className="relative">
+                                    <input
+                                        type={showConfirmPassword ? 'text' : 'password'}
+                                        required
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                        className="block w-full px-0 pr-8 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all"
+                                        placeholder="Repeat new password"
+                                    />
+                                    <button type="button" onClick={() => setShowConfirmPassword(p => !p)} className="absolute right-0 top-3 text-gray-400 hover:text-gray-700 transition-colors" aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
+                                        {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <button

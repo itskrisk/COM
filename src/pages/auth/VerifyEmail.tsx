@@ -44,8 +44,8 @@ export default function VerifyEmail() {
         <div className="min-h-screen bg-white flex overflow-hidden">
             <div className="hidden lg:block lg:w-1/2 relative">
                 <img
-                    src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2000"
-                    alt="Nairobi Lifestyle"
+                    src="https://images.unsplash.com/photo-1565299585323-38d6b0865b47?q=80&w=2000"
+                    alt="Fresh food ready for delivery"
                     className="absolute inset-0 w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-black/20" />
