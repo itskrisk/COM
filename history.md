@@ -5080,3 +5080,22 @@ Implement three improvements without breaking existing checkout, Supabase auth, 
 - api/mpesa/query.js (UPDATED)
 - api/auth/sync-user.js (UPDATED)
 - src/pages/customer/CheckoutView.tsx (UPDATED - STK expiry, countdown, cash fix)
+
+---
+
+## Session: 2026-10-20 - GitHub Push, Payments Flow, Wallets & PWA Architecture
+
+### Prompt Summary
+1. Push all latest changes to GitHub.
+2. Explain payment fund flows (where does M-Pesa money go, how merchant wallets work, and whether funds are tied to specific merchants).
+3. Evaluate customer wallet implementation for pre-loaded balance checkout.
+4. Clarify Cash on Delivery workflows and payment integrity.
+5. Clarify Card payment setup (Visa/Mastercard gateway integration).
+6. Comprehensive guide on how to migrate Muncheez to a Progressive Web App (PWA).
+
+### Actions Taken
+- Verified clean repository state: staged all modified files and new migrations/rate limiters.
+- Executed git commit: eat: implement payment integrity, abuse rate limiting, and mobile nav redesign.
+- Successfully pushed to remote origin/main (commit 94ba962).
+- Documented complete technical blueprints for Merchant Escrow Wallets, Customer Wallets, Cash-on-Delivery fulfillment reconciliation, Card processing gateways (Paystack/Pesapal), and Vite PWA setup.
+
