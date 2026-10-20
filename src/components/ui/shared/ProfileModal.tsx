@@ -191,6 +191,26 @@ const [topUpError, setTopUpError] = useState('');
             const res = await mpesaService.initiateSTKPush({ phoneNumber: (mpesaNumber || profile?.phone || '').trim(), amount: amt, orderId: `TOPUP-${user.id}`, topupUserId: user.id });
             if (res.success) {
                 setTopUpStatus('pending');
+                // Poll for confirmation
+                if (res.checkoutRequestId) {
+                    const poll = async () => {
+                        for (let i = 0; i < 12; i++) {
+                            await new Promise(r => setTimeout(r, 5000));
+                            const q = await mpesaService.queryStatus(res.checkoutRequestId!);
+                            if (q.isComplete) {
+                                if (q.status === 'SUCCESS') {
+                                    setTopUpStatus('success');
+                                    await refreshWallet();
+                                } else {
+                                    setTopUpStatus('failed');
+                                    setTopUpError(q.resultDesc || 'Payment failed/cancelled');
+                                }
+                                return;
+                            }
+                        }
+                    };
+                    poll();
+                }
             } else {
                 setTopUpStatus('failed');
                 setTopUpError(res.error || 'Failed to dispatch STK push prompt.');
