@@ -67,12 +67,8 @@ export default async function handler(req, res) {
     }
 
     if (isSuccess && orderId && String(orderId).startsWith('TOPUP-')) {
-      const phone = txData?.phone_number;
-      const normalized = phone ? phone.replace(/^254/, '0') : null;
-      const { data: prof } = await supabase.from('profiles').select('id').or(`phone.eq.${phone},phone.eq.${normalized},phone.eq.+${phone}`).maybeSingle();
-      const customerId = prof?.id;
+      const customerId = String(orderId).slice(7);
       if (customerId) {
-        // Idempotency: check existing transaction with this receipt
         const { data: existingTx } = await supabase.from('wallet_transactions').select('id').eq('reference', receiptNumber).maybeSingle();
         if (existingTx) {
           return res.status(200).json({ ResultCode: 0, ResultDesc: 'Already processed' });

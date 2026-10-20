@@ -1279,14 +1279,14 @@ const [topUpError, setTopUpError] = useState('');
             {topUpOpen && (
                 <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/70" onClick={() => setTopUpOpen(false)} />
-                    <div className="relative bg-white p-6 w-full max-w-sm space-y-4">
+                    <div className="relative bg-white p-6 w-full max-w-sm space-y-4 text-black">
                         <h3 className="text-lg font-bold">Top Up Wallet</h3>
-                        <input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="Amount (KES)" className="w-full border-b border-gray-200 py-2 text-sm" />
+                        <input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="Amount (KES)" className="w-full border-b border-gray-200 py-2 text-sm text-black" />
                         {topUpError && <p className="text-red-600 text-xs">{topUpError}</p>}
                         <p className="text-xs text-gray-500">Status: {topUpStatus}</p>
                         <div className="flex gap-2">
                             <button onClick={handleTopUpWallet} className="flex-1 bg-black text-white py-2 text-xs font-bold uppercase">Continue</button>
-                            <button onClick={() => setTopUpOpen(false)} className="flex-1 border border-gray-200 py-2 text-xs font-bold uppercase">Cancel</button>
+                            <button onClick={() => setTopUpOpen(false)} className="flex-1 border border-gray-200 py-2 text-xs font-bold uppercase text-black">Cancel</button>
                         </div>
                     </div>
                 </div>
