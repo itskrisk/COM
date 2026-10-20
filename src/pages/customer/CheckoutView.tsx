@@ -386,7 +386,7 @@ export default function CheckoutView() {
 
             // If wallet payment, debit customer wallet
             if (paymentMethod === 'wallet') {
-                const ok = await walletService.debitWallet(user.id, finalTotal, createdOrderId, `WLT-${Date.now()}`);
+                const ok = await walletService.debitWallet(user!.id, finalTotal, createdOrderId, `WLT-${Date.now()}`);
                 if (!ok) {
                     setErrorMessage('Insufficient wallet balance. Please top up or choose another method.');
                     setIsProcessing(false);
