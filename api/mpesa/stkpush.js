@@ -59,38 +59,41 @@ export default async function handler(req, res) {
   if (!ipLimit.allowed) return sendRateLimitResponse(res, ipLimit);
 
   try {
-    const { phoneNumber, amount, orderId, accountReference, transactionDesc } = req.body || {};
+    const { phoneNumber, amount, orderId, accountReference, transactionDesc, topupUserId } = req.body || {};
 
-    if (!phoneNumber || !amount || !orderId) {
+    if (!phoneNumber || !amount || (!orderId && !topupUserId)) {
       return res.status(400).json({ error: 'Missing required parameters: phoneNumber, amount, orderId' });
     }
+
+    const isTopup = !!topupUserId;
 
     const formattedPhone = formatPhone(phoneNumber);
     if (!formattedPhone || formattedPhone.length !== 12) {
       return res.status(400).json({ error: 'Invalid Kenyan phone number format. Must be 254XXXXXXXXX' });
     }
 
-    // --- IDEMPOTENCY: Reject if this order is already paid ---
-    const { data: existingOrder } = await supabase
-      .from('orders')
-      .select('payment_status, payment_expires_at')
-      .eq('id', orderId)
-      .single();
+    if (!isTopup) {
+      // idempotency check only for real orders
+      const { data: existingOrder } = await supabase
+        .from('orders')
+        .select('payment_status, payment_expires_at')
+        .eq('id', orderId)
+        .single();
 
-    if (existingOrder) {
-      if (existingOrder.payment_status === 'PAID') {
-        return res.status(409).json({ error: 'Order is already paid. Duplicate payment rejected.' });
-      }
-      // If a prior STK push is still pending and not yet expired, reject new push
-      if (existingOrder.payment_status === 'PENDING' && existingOrder.payment_expires_at) {
-        const expiresAt = new Date(existingOrder.payment_expires_at);
-        if (expiresAt > new Date()) {
-          const remainingMs = expiresAt - new Date();
-          const remainingSec = Math.ceil(remainingMs / 1000);
-          return res.status(409).json({
-            error: `An M-Pesa prompt is already active for this order. Check your phone. It expires in ${remainingSec}s.`,
-            retryAfter: remainingSec
-          });
+      if (existingOrder) {
+        if (existingOrder.payment_status === 'PAID') {
+          return res.status(409).json({ error: 'Order is already paid. Duplicate payment rejected.' });
+        }
+        if (existingOrder.payment_status === 'PENDING' && existingOrder.payment_expires_at) {
+          const expiresAt = new Date(existingOrder.payment_expires_at);
+          if (expiresAt > new Date()) {
+            const remainingMs = expiresAt - new Date();
+            const remainingSec = Math.ceil(remainingMs / 1000);
+            return res.status(409).json({
+              error: `An M-Pesa prompt is already active for this order. Check your phone. It expires in ${remainingSec}s.`,
+              retryAfter: remainingSec
+            });
+          }
         }
       }
     }
@@ -157,7 +160,7 @@ export default async function handler(req, res) {
     // 4. Record transaction in Supabase (with idempotency key)
     const idempotencyKey = `${orderId}-${timestamp}`;
     await supabase.from('mpesa_transactions').insert({
-      order_id: orderId,
+      order_id: isTopup ? null : orderId,
       phone_number: formattedPhone,
       amount: roundAmount,
       merchant_request_id: merchantRequestId,
@@ -165,7 +168,7 @@ export default async function handler(req, res) {
       status: isSuccess ? 'INITIATED' : 'FAILED',
       result_code: isSuccess ? 0 : Number(stkData.ResponseCode) || 1,
       result_desc: stkData.ResponseDescription || stkData.CustomerMessage || 'STK Push sent',
-      raw_payload: stkData,
+      raw_payload: { ...stkData, topupUserId: topupUserId || null },
       idempotency_key: idempotencyKey
     });
 
@@ -177,16 +180,17 @@ export default async function handler(req, res) {
       });
     }
 
-    // 5. Set payment_expires_at on the order (10 minutes from now)
-    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
-    await supabase
-      .from('orders')
-      .update({
-        payment_status: 'PENDING',
-        payment_expires_at: expiresAt,
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', orderId);
+    if (!isTopup) {
+      const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+      await supabase
+        .from('orders')
+        .update({
+          payment_status: 'PENDING',
+          payment_expires_at: expiresAt,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId);
+    }
 
     return res.status(200).json({
       success: true,

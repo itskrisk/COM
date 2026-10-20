@@ -188,7 +188,7 @@ const [topUpError, setTopUpError] = useState('');
         setTopUpError('');
         setTopUpStatus('pending');
         try {
-            const res = await mpesaService.initiateSTKPush({ phoneNumber: (mpesaNumber || profile?.phone || '').trim(), amount: amt, orderId: `TOPUP-${user.id}` });
+            const res = await mpesaService.initiateSTKPush({ phoneNumber: (mpesaNumber || profile?.phone || '').trim(), amount: amt, orderId: `TOPUP-${user.id}`, topupUserId: user.id });
             if (res.success) {
                 setTopUpStatus('pending');
             } else {

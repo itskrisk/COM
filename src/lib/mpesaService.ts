@@ -57,6 +57,7 @@ export interface STKPushParams {
     transactionDesc?: string;
     merchantId?: string;
     riderId?: string;
+    topupUserId?: string;
 }
 
 export interface STKPushResponse {
@@ -110,7 +111,8 @@ export const mpesaService = {
                     orderId: params.orderId,
                     accountReference: ref,
                     transactionDesc: params.transactionDesc || 'Muncheez Order Payment',
-                    merchantId: params.merchantId
+                    merchantId: params.merchantId,
+                    topupUserId: params.topupUserId
                 })
             });
 
