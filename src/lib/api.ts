@@ -229,8 +229,8 @@ export const customerApi = {
     if (rawPm === 'CASH') pm = 'CASH';
     else if (rawPm === 'CARD') pm = 'CARD';
 
-    const initialStatus = pm === 'CASH' ? 'CREATED' : 'PAYMENT_CONFIRMED';
-    const initialPaymentStatus = pm === 'CASH' ? 'PENDING' : 'CONFIRMED';
+    const initialStatus = pm === 'CASH' ? 'CREATED' : 'PAYMENT_PENDING';
+    const initialPaymentStatus = pm === 'CASH' ? 'PENDING' : 'PENDING';
 
     const result = await orderService.createOrder({
       customer_id: customerId,

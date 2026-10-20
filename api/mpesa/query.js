@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, sendRateLimitResponse } from '../_lib/rateLimiter.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xvnvyrddhgmxqynypboa.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bnZ5cmRkaGdteHF5bnlwYm9hIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjA3MTYyMywiZXhwIjoyMTA3NjQ3NjIzfQ.EnsCmbkRf6AMw2_62AWzqgk2hXSu1zEOTX3GguuZjQI';
@@ -36,6 +37,10 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Rate limit: 20 status queries per IP per minute
+  const limit = checkRateLimit(req, { max: 20, windowMs: 60_000, keyPrefix: 'mpesa-query' });
+  if (!limit.allowed) return sendRateLimitResponse(res, limit);
 
   try {
     const checkoutRequestId = req.query.checkoutRequestId || req.body?.checkoutRequestId;
@@ -95,7 +100,6 @@ export default async function handler(req, res) {
         console.log('Safaricom query response:', sfData);
 
         if (sfData.ResultCode === '0') {
-          // Success
           await supabase
             .from('mpesa_transactions')
             .update({ status: 'SUCCESS', result_code: 0, result_desc: sfData.ResultDesc })
@@ -108,11 +112,19 @@ export default async function handler(req, res) {
             isComplete: true
           });
         } else if (sfData.ResultCode && sfData.ResultCode !== '0') {
-          // Explicit failure/cancel from Safaricom
           await supabase
             .from('mpesa_transactions')
             .update({ status: 'FAILED', result_code: Number(sfData.ResultCode), result_desc: sfData.ResultDesc })
             .eq('checkout_request_id', checkoutRequestId);
+
+          // Also mark the order payment as FAILED so UI can show correct state
+          if (tx?.order_id) {
+            await supabase
+              .from('orders')
+              .update({ payment_status: 'FAILED', updated_at: new Date().toISOString() })
+              .eq('id', tx.order_id)
+              .neq('payment_status', 'PAID');
+          }
 
           return res.status(200).json({
             status: 'FAILED',

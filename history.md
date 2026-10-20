@@ -4986,3 +4986,97 @@ The anon key in `.env` (`...role=anon...`) is what the public careers page uses.
    - This resolves the "Image is 1408x768px" tip and speeds up crawler response time from ~551ms down to under 200ms.
 3. **Verification**:
    - `npm run build` completed with code 0.
+
+---
+
+## [2026-10-19] Updated Header Image in Confirm Email Template
+
+### Prompt
+> "change the image only in confirmemail.. find something classy for restaurant"
+
+### Actions Taken
+- Reverted `emailtemp/change_email.html` to keep its original state untouched.
+- Updated `emailtemp/confirm_signup.html` with a classy, ambient, luxury restaurant interior visual (`https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=1200`) featuring warm architectural lighting and fine dining tables.
+- Verified that zero em dashes are present in the template.
+
+---
+
+## Session: 2026-10-20 - Payment Integrity, Rate Limiting & Mobile Navigation
+
+### Prompt Summary
+Implement three improvements without breaking existing checkout, Supabase auth, M-Pesa integration, or merchant operations:
+1. Payment and order-state integrity (separate payment_status from fulfilment, 10-min expiry, idempotency, reconciliation)
+2. Server-side rate limiting on API endpoints (auth, checkout, payment)
+3. Mobile storefront navigation redesign (centered logo, balanced 3-col layout)
+
+### Audit Findings Before Changes
+- orders table had payment_status TEXT DEFAULT 'PENDING' with no expiry mechanism
+- callback.js was setting status='CONFIRMED' which is NOT a valid order_status enum value (should be PAYMENT_CONFIRMED)
+- Cash orders were calling walletService.allocateOrderRevenue() at checkout time - before payment, violating payment integrity
+- STK push timeout marked order FAILED in UI only - never wrote to DB, leaving orders permanently stuck as PENDING
+- Both callback.js (server) AND mpesaService.confirmOrderPayment() (client) ran wallet allocation - risk of double-credit
+- No idempotency key on mpesa_transactions - same order could be paid twice
+- No rate limiting on any API endpoint
+- Mobile nav was already partially updated in a prior session (centered logo with absolute-positioned icon trick)
+
+### Actions Taken
+
+#### 1. Database Migration 016 (supabase/migrations/016_payment_integrity.sql)
+- Added payment_expires_at TIMESTAMPTZ to orders table (10-min window for M-Pesa)
+- Added full payment_status CHECK constraint: PENDING, PAID, FAILED, CANCELLED, EXPIRED, REFUNDED
+- Added idempotency_key TEXT + unique index on mpesa_transactions
+- Added lifecycle timestamp columns: accepted_at, ready_at, picked_up_at, completed_at (IF NOT EXISTS)
+- Created enforce_payment_before_fulfilment() trigger: MPESA orders cannot advance to ACCEPTED/PREPARING/etc without payment_status=PAID (cash/card are exempted)
+- Created expire_stale_mpesa_orders() function: marks timed-out PENDING orders as EXPIRED+FAILED and their mpesa_transactions as FAILED
+
+#### 2. Rate Limiter Utility (api/_lib/rateLimiter.js)
+- Sliding-window in-memory rate limiter using a Map
+- Extracts client IP from x-forwarded-for (Vercel standard)
+- Returns structured { allowed, remaining, message, retryAfter }
+- sendRateLimitResponse() helper sets Retry-After header and returns 429 JSON
+
+#### 3. STK Push API (api/mpesa/stkpush.js) - REWRITTEN
+- Rate limit: 3 STK pushes per IP per 10 minutes
+- Per-order rate limit: max 2 retries per 15 minutes for same order
+- Idempotency check: rejects if order payment_status is already 'PAID'
+- Active window check: rejects new push if prior window is still valid (returns retryAfter)
+- Sets payment_expires_at on order (10 min from now) after successful STK dispatch
+- Returns expiresAt in response for client countdown
+
+#### 4. M-Pesa Callback (api/mpesa/callback.js) - REWRITTEN
+- Fixed critical bug: was setting status='CONFIRMED' (invalid enum) - now correctly sets status='PAYMENT_CONFIRMED'
+- Added idempotency guard: checks payment_status='PAID' before any wallet credit - skips if already processed
+- Sets payment_status='PAID' and status='PAYMENT_CONFIRMED' atomically
+- Correctly splits delivery fee from product subtotal before commission calculation
+- Credits both merchant wallet AND platform commission wallet in same callback
+- On payment failure: sets payment_status='FAILED' (with guard against downgrading a paid order)
+
+#### 5. Status Query API (api/mpesa/query.js) - UPDATED
+- Rate limit: 20 queries per IP per minute
+- When Safaricom confirms FAILED: now also updates order payment_status='FAILED' in DB (was only updating mpesa_transactions)
+
+#### 6. Auth Sync API (api/auth/sync-user.js) - UPDATED
+- Rate limit: 10 requests per IP per 5 minutes
+
+#### 7. CheckoutView.tsx - UPDATED
+- Added stkExpiresAt and stkCountdown state
+- On STK push success: stores server-supplied expiresAt, initializes countdown from it
+- Countdown timer useEffect: ticks every second, turns red below 60s
+- STK modal PENDING state: shows live MM:SS countdown display ("Session expires in 09:47")
+- On STK poll timeout (35 attempts): now writes payment_status='EXPIRED' to DB (with guard against downgrading PAID)
+- Cash/card orders: REMOVED premature wallet allocation at checkout - funds only allocated after merchant confirms delivery (preserves payment integrity)
+
+### Build Result
+- Exit code 0 (success)
+- Built in 34.79s
+- No TypeScript or compilation errors
+- Only pre-existing warnings: supabaseClient dynamic/static import overlap, chunk size warning
+
+### Files Modified
+- supabase/migrations/016_payment_integrity.sql (NEW)
+- api/_lib/rateLimiter.js (NEW)
+- api/mpesa/stkpush.js (REWRITTEN)
+- api/mpesa/callback.js (REWRITTEN)
+- api/mpesa/query.js (UPDATED)
+- api/auth/sync-user.js (UPDATED)
+- src/pages/customer/CheckoutView.tsx (UPDATED - STK expiry, countdown, cash fix)

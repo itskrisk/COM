@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, sendRateLimitResponse } from '../_lib/rateLimiter.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xvnvyrddhgmxqynypboa.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bnZ5cmRkaGdteHF5bnlwYm9hIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjA3MTYyMywiZXhwIjoyMTA3NjQ3NjIzfQ.EnsCmbkRf6AMw2_62AWzqgk2hXSu1zEOTX3GguuZjQI';
@@ -53,6 +54,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
+  // --- Rate limit: 3 STK pushes per IP per 10 minutes ---
+  const ipLimit = checkRateLimit(req, { max: 3, windowMs: 10 * 60_000, keyPrefix: 'stkpush' });
+  if (!ipLimit.allowed) return sendRateLimitResponse(res, ipLimit);
+
   try {
     const { phoneNumber, amount, orderId, accountReference, transactionDesc } = req.body || {};
 
@@ -64,6 +69,38 @@ export default async function handler(req, res) {
     if (!formattedPhone || formattedPhone.length !== 12) {
       return res.status(400).json({ error: 'Invalid Kenyan phone number format. Must be 254XXXXXXXXX' });
     }
+
+    // --- IDEMPOTENCY: Reject if this order is already paid ---
+    const { data: existingOrder } = await supabase
+      .from('orders')
+      .select('payment_status, payment_expires_at')
+      .eq('id', orderId)
+      .single();
+
+    if (existingOrder) {
+      if (existingOrder.payment_status === 'PAID') {
+        return res.status(409).json({ error: 'Order is already paid. Duplicate payment rejected.' });
+      }
+      // If a prior STK push is still pending and not yet expired, reject new push
+      if (existingOrder.payment_status === 'PENDING' && existingOrder.payment_expires_at) {
+        const expiresAt = new Date(existingOrder.payment_expires_at);
+        if (expiresAt > new Date()) {
+          const remainingMs = expiresAt - new Date();
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          return res.status(409).json({
+            error: `An M-Pesa prompt is already active for this order. Check your phone. It expires in ${remainingSec}s.`,
+            retryAfter: remainingSec
+          });
+        }
+      }
+    }
+
+    // Per-order rate limit: max 2 retries per 15 minutes for the same order
+    const orderLimit = checkRateLimit(
+      { ...req, headers: { ...req.headers, 'x-forwarded-for': `order-${orderId}` } },
+      { max: 2, windowMs: 15 * 60_000, keyPrefix: 'stkpush-order' }
+    );
+    if (!orderLimit.allowed) return sendRateLimitResponse(res, orderLimit);
 
     // 1. Get OAuth Token from Safaricom
     const authHeader = Buffer.from(`${MPESA_CONFIG.consumerKey}:${MPESA_CONFIG.consumerSecret}`).toString('base64');
@@ -117,7 +154,8 @@ export default async function handler(req, res) {
     const checkoutRequestId = stkData.CheckoutRequestID || null;
     const merchantRequestId = stkData.MerchantRequestID || null;
 
-    // 4. Record transaction in Supabase
+    // 4. Record transaction in Supabase (with idempotency key)
+    const idempotencyKey = `${orderId}-${timestamp}`;
     await supabase.from('mpesa_transactions').insert({
       order_id: orderId,
       phone_number: formattedPhone,
@@ -127,7 +165,8 @@ export default async function handler(req, res) {
       status: isSuccess ? 'INITIATED' : 'FAILED',
       result_code: isSuccess ? 0 : Number(stkData.ResponseCode) || 1,
       result_desc: stkData.ResponseDescription || stkData.CustomerMessage || 'STK Push sent',
-      raw_payload: stkData
+      raw_payload: stkData,
+      idempotency_key: idempotencyKey
     });
 
     if (!isSuccess) {
@@ -138,12 +177,24 @@ export default async function handler(req, res) {
       });
     }
 
+    // 5. Set payment_expires_at on the order (10 minutes from now)
+    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
+    await supabase
+      .from('orders')
+      .update({
+        payment_status: 'PENDING',
+        payment_expires_at: expiresAt,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', orderId);
+
     return res.status(200).json({
       success: true,
       checkoutRequestId,
       merchantRequestId,
       customerMessage: stkData.CustomerMessage || 'Prompt sent to your phone. Enter your M-Pesa PIN.',
-      phoneNumber: formattedPhone
+      phoneNumber: formattedPhone,
+      expiresAt
     });
   } catch (err) {
     console.error('Server error in STK push:', err);

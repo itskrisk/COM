@@ -123,24 +123,55 @@ export default function StorefrontNav({
         <header className="relative z-40 w-full border-b border-white/10 text-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 
-                {/* ═══ PRIMARY TOP BAR ═══ */}
-                <div className="flex items-center justify-between gap-3 sm:gap-6 py-3 md:py-4">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 sm:gap-6 py-3 md:py-4">
                     
-                    {/* 1. BRAND & DELIVERY LOCATION */}
-                    <div className="flex items-center gap-3 sm:gap-6 shrink-0 min-w-0">
-                        {/* Muncheez Logo */}
+                    {/* Mobile: Logo centered at top, Desktop: Logo left */}
+                    <div className="flex items-center justify-center md:justify-start md:gap-3 sm:gap-6 shrink-0 min-w-0 relative">
+                        {/* Muncheez Logo - Centered on mobile */}
                         <button
                             onClick={() => navigate('/')}
-                            className="group flex items-center text-xl sm:text-2xl font-heading font-black tracking-tighter text-white hover:opacity-90 transition-opacity shrink-0"
+                            className="group flex items-center text-xl sm:text-2xl font-heading font-black tracking-tighter text-white hover:opacity-90 transition-opacity shrink-0 md:order-1"
                             aria-label="Muncheez Home"
                         >
                             Muncheez<span className="text-[#D4AF37]">.</span>
                         </button>
 
-                        {/* Visible Address Selector (Mobile & Web) */}
+                        {/* Mobile Menu/Search/Cart/Account - spread out around logo conceptually */}
+                        <div className="md:hidden absolute left-0 flex items-center gap-1">
+                            <button
+                                onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
+                                className="text-white/80 hover:text-white p-1.5 transition-colors cursor-pointer"
+                                aria-label="Toggle search field"
+                            >
+                                {isMobileSearchOpen ? <X size={18} /> : <Search size={18} />}
+                            </button>
+                        </div>
+                        <div className="md:hidden absolute right-0 flex items-center gap-1">
+                            <button
+                                onClick={handleCartClick}
+                                className="relative p-1.5 text-white/90 hover:text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                                aria-label="Shopping Cart"
+                            >
+                                <ShoppingBag size={18} />
+                                {itemCount > 0 && (
+                                    <span className="absolute top-0 right-0 bg-[#D4AF37] text-black text-[8px] font-black w-3.5 h-3.5 rounded-full flex items-center justify-center border border-black shadow-sm">
+                                        {itemCount > 99 ? '99+' : itemCount}
+                                    </span>
+                                )}
+                            </button>
+                            <button
+                                onClick={() => onOpenProfile()}
+                                className="p-1.5 text-white/80 hover:text-white transition-colors"
+                                aria-label="Account"
+                            >
+                                <User size={18} />
+                            </button>
+                        </div>
+
+                        {/* Desktop address selector */}
                         <button
                             onClick={onOpenLocation}
-                            className="flex items-center gap-1.5 text-left border-b border-white/20 hover:border-[#D4AF37] pb-0.5 transition-colors group cursor-pointer max-w-[120px] xs:max-w-[150px] sm:max-w-[200px]"
+                            className="hidden md:flex items-center gap-1.5 text-left border-b border-white/20 hover:border-[#D4AF37] pb-0.5 transition-colors group cursor-pointer max-w-[120px] xs:max-w-[150px] sm:max-w-[200px] md:order-2"
                             title={userLocation || 'Select delivery location'}
                             aria-label="Delivery location selector"
                         >
@@ -204,30 +235,7 @@ export default function StorefrontNav({
                     </div>
 
                     {/* 3. RIGHT ICONS: SEARCH TOGGLE (Mobile/Tablet) + CART + ACCOUNT */}
-                    <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-                        
-                        {/* Search Icon (Mobile & Tablet - opens search) */}
-                        <button
-                            onClick={() => setIsMobileSearchOpen(!isMobileSearchOpen)}
-                            className="lg:hidden text-white/80 hover:text-white p-2 transition-colors cursor-pointer"
-                            aria-label="Toggle search field"
-                        >
-                            {isMobileSearchOpen ? <X size={19} /> : <Search size={19} />}
-                        </button>
-
-                        {/* Shopping Bag with item count */}
-                        <button
-                            onClick={handleCartClick}
-                            className="relative p-2 text-white/90 hover:text-white transition-all hover:scale-105 active:scale-95 cursor-pointer"
-                            aria-label="Shopping Cart"
-                        >
-                            <ShoppingBag size={20} />
-                            {itemCount > 0 && (
-                                <span className="absolute top-0.5 right-0.5 bg-[#D4AF37] text-black text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border border-black shadow-sm">
-                                    {itemCount > 99 ? '99+' : itemCount}
-                                </span>
-                            )}
-                        </button>
+                    <div className="hidden md:flex items-center gap-2 sm:gap-4 shrink-0">
 
                         {/* Account Menu Button & Dropdown (Mobile & Web) */}
                         <div className="relative" ref={profileMenuRef}>

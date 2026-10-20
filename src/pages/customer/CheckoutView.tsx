@@ -63,6 +63,9 @@ export default function CheckoutView() {
     const [stkStatus, setStkStatus] = useState<'PENDING' | 'SUCCESS' | 'FAILED'>('PENDING');
     const [stkErrorMessage, setStkErrorMessage] = useState<string>('');
     const [isRetryingStk, setIsRetryingStk] = useState(false);
+    // Expiry window supplied by server after STK push (ISO string, 10 min from push time)
+    const [stkExpiresAt, setStkExpiresAt] = useState<string | null>(null);
+    const [stkCountdown, setStkCountdown] = useState<number>(600); // seconds
 
     // Prefill profile data
     useEffect(() => {
@@ -193,6 +196,17 @@ export default function CheckoutView() {
     const deliveryFee = merchant?.deliveryFee || 150;
     const finalTotal = total + deliveryFee;
 
+    // Countdown timer derived from server-set payment_expires_at
+    useEffect(() => {
+        if (!isStkModalOpen || !stkExpiresAt || stkStatus !== 'PENDING') return;
+        const tick = setInterval(() => {
+            const remaining = Math.max(0, Math.ceil((new Date(stkExpiresAt).getTime() - Date.now()) / 1000));
+            setStkCountdown(remaining);
+            if (remaining === 0) clearInterval(tick);
+        }, 1000);
+        return () => clearInterval(tick);
+    }, [isStkModalOpen, stkExpiresAt, stkStatus]);
+
     // Real Safaricom M-Pesa STK Push Network Listener & Poller (No Simulation)
     useEffect(() => {
         if (!isStkModalOpen || !stkOrderId) return;
@@ -232,20 +246,29 @@ export default function CheckoutView() {
 
         // 2. Poll Safaricom query endpoint every 3 seconds
         let attempts = 0;
-        const maxAttempts = 35; // ~100s timeout (matches Safaricom PIN prompt lifecycle)
+        const maxAttempts = 35; // ~100s timeout matches Safaricom PIN prompt lifecycle
 
         const pollStatus = async () => {
             if (!isMounted || attempts >= maxAttempts) {
                 if (attempts >= maxAttempts && isMounted && stkStatus === 'PENDING') {
                     setStkStatus('FAILED');
                     setStkErrorMessage('M-Pesa authorization timed out. Please check your phone or retry.');
+                    // Write the expiry to DB so order is not left dangling as PENDING
+                    if (stkOrderId) {
+                        supabase
+                            .from('orders')
+                            .update({ payment_status: 'EXPIRED', updated_at: new Date().toISOString() })
+                            .eq('id', stkOrderId)
+                            .neq('payment_status', 'PAID')
+                            .then();
+                    }
                 }
                 return;
             }
             attempts++;
 
             try {
-                const res = await mpesaService.queryStatus(stkCheckoutRequestId, stkOrderId);
+                const res = await mpesaService.queryStatus(stkCheckoutRequestId, stkOrderId || '');
                 if (!isMounted) return;
 
                 if (res.isComplete) {
@@ -380,20 +403,17 @@ export default function CheckoutView() {
                 setStkCheckoutRequestId(stkRes.checkoutRequestId || '');
                 setStkReceiptNumber(stkRes.receiptNumber || '');
                 setStkStatus('PENDING');
+                // Store server-issued expiry (10 min window set by stkpush.js)
+                const expiresAt = (stkRes as any).expiresAt || null;
+                setStkExpiresAt(expiresAt);
+                setStkCountdown(expiresAt ? Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000)) : 600);
                 setIsStkModalOpen(true);
                 return;
             }
 
-            // Cash or Card: directly clear cart and navigate to live tracking
-            if (paymentMethod === 'cash') {
-                await walletService.allocateOrderRevenue({
-                    orderId: createdOrderId,
-                    totalAmount: finalTotal,
-                    merchantId: effectiveMerchantId,
-                    receiptNumber: `CASH-${createdOrderId.slice(0, 6).toUpperCase()}`
-                });
-            }
-
+            // Cash / Card: navigate directly to order tracking.
+            // Wallet allocation happens ONLY after merchant confirms delivery
+            // (not at checkout time) to preserve payment integrity.
             clearCart();
             navigate(`/order/${createdOrderId}`);
         } catch (error: any) {
@@ -934,6 +954,13 @@ export default function CheckoutView() {
                                         <p className="text-xs text-neutral-600 leading-relaxed font-mono">
                                             Please check your phone, enter your 4-digit M-Pesa PIN on the SIM prompt to complete authorization.
                                         </p>
+                                        {/* Expiry countdown */}
+                                        <div className="inline-flex items-center gap-1.5 font-mono text-xs text-neutral-500">
+                                            <span>Session expires in</span>
+                                            <span className={`font-bold tabular-nums ${stkCountdown <= 60 ? 'text-red-500' : 'text-black'}`}>
+                                                {`${String(Math.floor(stkCountdown / 60)).padStart(2, '0')}:${String(stkCountdown % 60).padStart(2, '0')}`}
+                                            </span>
+                                        </div>
                                         <p className="text-[11px] text-neutral-400 font-mono">
                                             Listening for network confirmation...
                                         </p>

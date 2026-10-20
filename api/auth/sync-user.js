@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, sendRateLimitResponse } from '../_lib/rateLimiter.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xvnvyrddhgmxqynypboa.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bnZ5cmRkaGdteHF5bnlwYm9hIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjA3MTYyMywiZXhwIjoyMTA3NjQ3NjIzfQ.EnsCmbkRf6AMw2_62AWzqgk2hXSu1zEOTX3GguuZjQI';
@@ -27,6 +28,10 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
+  // Rate limit: 10 auth/sync requests per IP per 5 minutes
+  const limit = checkRateLimit(req, { max: 10, windowMs: 5 * 60_000, keyPrefix: 'auth-sync' });
+  if (!limit.allowed) return sendRateLimitResponse(res, limit);
+
   // Optional Backfill Mode: /api/auth/sync-user?backfill=true
   if (req.method === 'GET' && req.query.backfill === 'true') {
     try {
@@ -41,7 +46,6 @@ export default async function handler(req, res) {
         const role = u.user_metadata?.role || 'customer';
 
         if (normalized) {
-          // Sync auth user phone column if empty
           if (!u.phone) {
             try {
               await supabase.auth.admin.updateUserById(u.id, {
@@ -53,7 +57,6 @@ export default async function handler(req, res) {
             }
           }
 
-          // Sync public.profiles
           const { error: profErr } = await supabase.from('profiles').upsert({
             id: u.id,
             full_name: fullName,
@@ -103,7 +106,6 @@ export default async function handler(req, res) {
     const finalName = fullName || targetUser?.user_metadata?.full_name || email?.split('@')[0] || 'User';
     const finalRole = role || targetUser?.user_metadata?.role || 'customer';
 
-    // 1. Update Supabase Auth admin user (phone and metadata)
     const updatePayload = {
       user_metadata: {
         ...(targetUser?.user_metadata || {}),
@@ -125,7 +127,6 @@ export default async function handler(req, res) {
       const { data: updatedAuthUser, error: authErr } = await supabase.auth.admin.updateUserById(targetId, updatePayload);
       if (authErr) {
         console.warn('[Sync-User] Auth admin update warning:', authErr.message);
-        // If phone already taken on auth table, retry metadata update without top-level phone
         if (authErr.message?.includes('already exists') || authErr.message?.includes('unique')) {
           delete updatePayload.phone;
           delete updatePayload.phone_confirm;
@@ -139,7 +140,6 @@ export default async function handler(req, res) {
       console.warn('[Sync-User] Auth admin error:', e.message);
     }
 
-    // 2. Upsert public.profiles with guaranteed phone and full_name
     const profilePayload = {
       id: targetId,
       full_name: finalName,

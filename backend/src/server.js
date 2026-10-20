@@ -69,6 +69,32 @@ const authLimiter = rateLimit({
   }
 });
 
+// Checkout & order creation rate limiting
+const checkoutLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many order requests, please try again later'
+    }
+  }
+});
+
+// Payment initiation rate limiting
+const paymentLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  message: {
+    success: false,
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Too many payment attempts, please try again later'
+    }
+  }
+});
+
 // Body parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -99,7 +125,8 @@ app.use('/api/auth', authLimiter, authRoutes);
 // PROTECTED ROUTES (Authentication required)
 // ============================================
 
-// Customer routes
+// Checkout routes (with stricter rate limiting)
+app.use('/api/customer/orders', authenticate, validateSession, checkoutLimiter);
 app.use('/api/customer', authenticate, validateSession, customerRoutes);
 
 // Merchant routes (require auth + merchant role + approval)
@@ -114,7 +141,8 @@ app.use('/api/rider', authenticate, validateSession, requireRole('RIDER'), requi
 // Admin routes (require auth + admin role)
 app.use('/api/admin', authenticate, validateSession, requireRole('ADMIN'), adminRoutes);
 
-// Payment routes (require auth)
+// Payment routes (require auth, with rate limiting)
+app.use('/api/payments/initiate', authenticate, validateSession, paymentLimiter);
 app.use('/api/payments', authenticate, validateSession, paymentRoutes);
 
 // Upload routes (require auth)
