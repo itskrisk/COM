@@ -105,6 +105,22 @@ export default async function handler(req, res) {
             .update({ status: 'SUCCESS', result_code: 0, result_desc: sfData.ResultDesc })
             .eq('checkout_request_id', checkoutRequestId);
 
+          // Credit wallets if not already credited
+          const topupUserId = tx?.raw_payload?.topupUserId;
+          if (topupUserId) {
+            const { data: existingTx } = await supabase.from('wallet_transactions').select('id').eq('reference', tx.mpesa_receipt_number || checkoutRequestId).maybeSingle();
+            if (!existingTx) {
+              const { data: w } = await supabase.from('wallets').select('id,balance,total_earned').eq('owner_id', topupUserId).eq('owner_type', 'CUSTOMER').maybeSingle();
+              if (w) {
+                await supabase.from('wallets').update({ balance: Number(w.balance) + Number(tx.amount), total_earned: Number(w.total_earned) + Number(tx.amount), updated_at: new Date().toISOString() }).eq('id', w.id);
+              } else {
+                await supabase.from('wallets').insert({ owner_id: topupUserId, owner_type: 'CUSTOMER', balance: Number(tx.amount), total_earned: Number(tx.amount), total_withdrawn: 0, pending_balance: 0, currency: 'KES' });
+              }
+              const { data: w2 } = await supabase.from('wallets').select('id').eq('owner_id', topupUserId).eq('owner_type', 'CUSTOMER').maybeSingle();
+              await supabase.from('wallet_transactions').insert({ wallet_id: w2?.id || w?.id, type: 'ADJUSTMENT', amount: Number(tx.amount), fee: 0, reference: tx.mpesa_receipt_number || checkoutRequestId, description: 'Wallet top-up via M-Pesa', status: 'COMPLETED' });
+            }
+          }
+
           return res.status(200).json({
             status: 'SUCCESS',
             resultCode: 0,
