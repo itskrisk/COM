@@ -4,8 +4,7 @@ import { supabase } from './supabaseClient';
 export interface Wallet {
     id: string;
     owner_id: string;
-    owner_type: 'MERCHANT' | 'RIDER' | 'PLATFORM';
-    balance: number;
+    owner_type: 'MERCHANT' | 'RIDER' | 'PLATFORM' | 'CUSTOMER';    balance: number;
     pending_balance: number;
     total_earned: number;
     total_withdrawn: number;
@@ -32,7 +31,7 @@ export const walletService = {
     /**
      * Get or create wallet for an entity
      */
-    async getOrCreateWallet(ownerId: string, ownerType: 'MERCHANT' | 'RIDER' | 'PLATFORM'): Promise<Wallet | null> {
+    async getOrCreateWallet(ownerId: string, ownerType: 'MERCHANT' | 'RIDER' | 'PLATFORM' | 'CUSTOMER'): Promise<Wallet | null> {
         const client = adminSupabase || supabase;
         try {
             // Find existing
@@ -192,6 +191,61 @@ export const walletService = {
         }
     },
 
+    /**
+     * Credit a customer wallet (top-up)
+     */
+    async creditWallet(ownerId: string, amount: number, reference: string, description?: string): Promise<boolean> {
+        const client = adminSupabase || supabase;
+        try {
+            const wallet = await this.getOrCreateWallet(ownerId, 'CUSTOMER');
+            if (!wallet) return false;
+            const newBalance = Number(wallet.balance || 0) + amount;
+            const newEarned = Number(wallet.total_earned || 0) + amount;
+            await client.from('wallets').update({ balance: newBalance, total_earned: newEarned, updated_at: new Date().toISOString() }).eq('id', wallet.id);
+            await client.from('wallet_transactions').insert({
+                wallet_id: wallet.id,
+                type: 'ADJUSTMENT',
+                amount,
+                fee: 0,
+                reference,
+                description: description || 'Wallet top-up',
+                status: 'COMPLETED'
+            });
+            window.dispatchEvent(new CustomEvent('muncheez_wallet_updated'));
+            return true;
+        } catch (e) {
+            console.error('creditWallet failed:', e);
+            return false;
+        }
+    },
+    /**
+     * Debit a customer wallet (checkout)
+     */
+    async debitWallet(ownerId: string, amount: number, orderId: string, reference: string): Promise<boolean> {
+        const client = adminSupabase || supabase;
+        try {
+            const wallet = await this.getOrCreateWallet(ownerId, 'CUSTOMER');
+            if (!wallet || Number(wallet.balance || 0) < amount) return false;
+            const newBalance = Number(wallet.balance || 0) - amount;
+            const newWithdrawn = Number(wallet.total_withdrawn || 0) + amount;
+            await client.from('wallets').update({ balance: newBalance, total_withdrawn: newWithdrawn, updated_at: new Date().toISOString() }).eq('id', wallet.id);
+            await client.from('wallet_transactions').insert({
+                wallet_id: wallet.id,
+                order_id: orderId,
+                type: 'ADJUSTMENT',
+                amount: -amount,
+                fee: 0,
+                reference,
+                description: `Wallet payment for order #${orderId.slice(0, 8).toUpperCase()}`,
+                status: 'COMPLETED'
+            });
+            window.dispatchEvent(new CustomEvent('muncheez_wallet_updated'));
+            return true;
+        } catch (e) {
+            console.error('debitWallet failed:', e);
+            return false;
+        }
+    },
     /**
      * Get all wallets for Admin console
      */

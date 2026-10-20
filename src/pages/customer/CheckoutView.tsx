@@ -11,6 +11,7 @@ import {
     CreditCard,
     Smartphone,
     Banknote,
+    Wallet,
     Plus,
     Minus,
     Trash2,
@@ -50,7 +51,7 @@ export default function CheckoutView() {
     // Form States
     const [deliveryAddress, setDeliveryAddress] = useState(() => localStorage.getItem('muncheez_delivery_address') || '');
     const [deliveryInstructions, setDeliveryInstructions] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash' | 'card'>('mpesa');
+    const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash' | 'card' | 'wallet'>('mpesa');
     const [phoneNumber, setPhoneNumber] = useState(profile?.phone || '');
     const [wantsCutlery, setWantsCutlery] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
@@ -382,6 +383,16 @@ export default function CheckoutView() {
 
             // Store last order for immediate retrieval
             localStorage.setItem('muncheez_last_order', createdOrderId);
+
+            // If wallet payment, debit customer wallet
+            if (paymentMethod === 'wallet') {
+                const ok = await walletService.debitWallet(user.id, finalTotal, createdOrderId, `WLT-${Date.now()}`);
+                if (!ok) {
+                    setErrorMessage('Insufficient wallet balance. Please top up or choose another method.');
+                    setIsProcessing(false);
+                    return;
+                }
+            }
 
             // If M-Pesa, dispatch STK Push via Daraja API and open modal
             if (paymentMethod === 'mpesa') {
@@ -810,12 +821,12 @@ export default function CheckoutView() {
                                     <div className="flex items-center gap-3 min-w-0 flex-1">
                                         <CreditCard size={18} className={`shrink-0 ${paymentMethod === 'card' ? 'text-black' : 'text-neutral-400'}`} />
                                         <div className="min-w-0 flex-1">
-                                            <span className="text-xs sm:text-sm font-medium text-black block truncate">
-                                                Card / Visa / Mastercard
-                                            </span>
-                                            <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate">
-                                                Online card gateway checkout
-                                            </span>
+                                                <span className="text-xs sm:text-sm font-medium text-black block truncate">
+                                                    Card / Visa / Mastercard
+                                                </span>
+                                                <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate">
+                                                    Coming soon
+                                                </span>
                                         </div>
                                     </div>
                                     <input
@@ -823,7 +834,31 @@ export default function CheckoutView() {
                                         name="payment_method"
                                         value="card"
                                         checked={paymentMethod === 'card'}
-                                        onChange={() => setPaymentMethod('card')}
+                                        onChange={() => {}}
+                                        disabled
+                                        className="w-4 h-4 accent-black cursor-not-allowed shrink-0 opacity-40"
+                                    />
+                                </label>
+
+                                {/* Wallet Option */}
+                                <label className="py-3.5 sm:py-4 flex items-center justify-between cursor-pointer group gap-3">
+                                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <Wallet size={18} className={`shrink-0 ${paymentMethod === 'wallet' ? 'text-[#4A90E2]' : 'text-neutral-400'}`} />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-xs sm:text-sm font-medium text-black block truncate">
+                                                Muncheez Wallet
+                                            </span>
+                                            <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate">
+                                                Pay instantly from your balance
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="wallet"
+                                        checked={paymentMethod === 'wallet'}
+                                        onChange={() => setPaymentMethod('wallet')}
                                         className="w-4 h-4 accent-black cursor-pointer shrink-0"
                                     />
                                 </label>

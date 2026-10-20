@@ -66,7 +66,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ ResultCode: 0, ResultDesc: 'Callback acknowledged - no linked order' });
     }
 
-    if (isSuccess) {
+    if (isSuccess && orderId && String(orderId).startsWith('TOPUP-')) {
+      const phone = txData?.phone_number;
+      // Resolve customer profile by phone
+      const { data: prof } = await supabase.from('profiles').select('id').eq('phone', phone).maybeSingle();
+      const customerId = prof?.id;
+      if (customerId) {
+        const { data: w } = await supabase.from('wallets').select('id,balance,total_earned').eq('owner_id', customerId).eq('owner_type', 'CUSTOMER').maybeSingle();
+        if (w) {
+          await supabase.from('wallets').update({ balance: Number(w.balance) + amount, total_earned: Number(w.total_earned) + amount, updated_at: new Date().toISOString() }).eq('id', w.id);
+        } else {
+          await supabase.from('wallets').insert({ owner_id: customerId, owner_type: 'CUSTOMER', balance: amount, total_earned: amount, total_withdrawn: 0, pending_balance: 0, currency: 'KES' });
+        }
+        await supabase.from('wallet_transactions').insert({ wallet_id: w?.id || null, type: 'ADJUSTMENT', amount, fee: 0, reference: receiptNumber, description: 'Wallet top-up via M-Pesa', status: 'COMPLETED' });
+      }
+      return res.status(200).json({ ResultCode: 0, ResultDesc: 'Top-up processed' });
+    }
+
       // --- IDEMPOTENCY: only credit wallets once per order ---
       // Check if this order was already marked PAID to prevent double-credit
       const { data: existingOrder } = await supabase

@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { useCart } from "../../../context/CartContext";
 import { supabase } from '../../../lib/supabaseClient';
 import { orderService, profileService, complaintService } from '../../../lib/supabaseService';
+import { walletService } from '../../../lib/walletService';
+import { mpesaService } from '../../../lib/mpesaService';
 import CookieModal from './CookieModal';
 
 type ModalView =
@@ -72,6 +74,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialVie
 
     // Payment Methods State
     const [mpesaNumber, setMpesaNumber] = useState(profile?.phone || '');
+const [walletBalance, setWalletBalance] = useState(0);
+const [isToppingUp, setIsToppingUp] = useState(false);
     const [defaultPayment, setDefaultPayment] = useState('MPESA');
 
     // Location Preferences State
@@ -113,6 +117,11 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialVie
                     });
                     setNeighborhood(profile.location_preferences?.neighborhood || '');
                     setDeliveryNotes(profile.location_preferences?.delivery_notes || '');
+                }
+                // Load wallet balance
+                if (user?.id) {
+                    const w = await walletService.getOrCreateWallet(user.id, 'CUSTOMER');
+                    setWalletBalance(Number(w?.balance || 0));
                 }
             } catch (err) {
                 console.error('Error loading profile data:', err);
@@ -169,6 +178,28 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialVie
         }
     };
 
+    const handleTopUpWallet = async () => {
+        if (!user) return;
+        const amtStr = window.prompt('Enter top-up amount (KES):');
+        const amt = Number(amtStr);
+        if (!amt || amt <= 0) return;
+        setIsToppingUp(true);
+        try {
+            const res = await mpesaService.initiateSTKPush({ phoneNumber: (mpesaNumber || profile?.phone || '').trim(), amount: amt, orderId: `TOPUP-${Date.now()}`, merchantId: 'platform' });
+            if (res.success) {
+                await walletService.creditWallet(user.id, amt, res.receiptNumber || `TOPUP-${Date.now()}`, 'Wallet top-up via M-Pesa');
+                const w = await walletService.getOrCreateWallet(user.id, 'CUSTOMER');
+                setWalletBalance(Number(w?.balance || 0));
+                setFeedback({ type: 'success', text: `Wallet topped up by KES ${amt.toLocaleString()}` });
+            } else {
+                setFeedback({ type: 'error', text: res.error || 'Top-up failed' });
+            }
+        } catch (e: any) {
+            setFeedback({ type: 'error', text: e.message || 'Top-up failed' });
+        } finally {
+            setIsToppingUp(false);
+        }
+    };
     const handleResetPassword = async () => {
         if (!user?.email) return;
         const { error } = await resetPassword(user.email);
@@ -872,6 +903,16 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialVie
                                     {view === 'payments' && (
                                         <motion.div key="payments" initial={{ opacity: 0, x: 15 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 15 }} className="space-y-4">
                                             <h3 className="font-heading font-black text-lg text-gray-900">Payment Methods</h3>
+
+                                            <div className="border border-gray-200 p-4 flex items-center justify-between">
+                                                <div>
+                                                    <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Muncheez Wallet</div>
+                                                    <div className="text-lg font-bold text-gray-900">KES {walletBalance.toLocaleString()}</div>
+                                                </div>
+                                                <button onClick={handleTopUpWallet} disabled={isToppingUp} className="px-4 py-2 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50">
+                                                    {isToppingUp ? 'Processing...' : 'Top Up'}
+                                                </button>
+                                            </div>
 
                                             <div className="space-y-6">
                                                 <div>
