@@ -75,7 +75,10 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialVie
     // Payment Methods State
     const [mpesaNumber, setMpesaNumber] = useState(profile?.phone || '');
 const [walletBalance, setWalletBalance] = useState(0);
-const [isToppingUp, setIsToppingUp] = useState(false);
+const [topUpOpen, setTopUpOpen] = useState(false);
+const [topUpAmount, setTopUpAmount] = useState('');
+const [topUpStatus, setTopUpStatus] = useState<'idle' | 'pending' | 'success' | 'failed'>('idle');
+const [topUpError, setTopUpError] = useState('');
     const [defaultPayment, setDefaultPayment] = useState('MPESA');
 
     // Location Preferences State
@@ -180,22 +183,28 @@ const [isToppingUp, setIsToppingUp] = useState(false);
 
     const handleTopUpWallet = async () => {
         if (!user) return;
-        const amtStr = window.prompt('Enter top-up amount (KES):');
-        const amt = Number(amtStr);
-        if (!amt || amt <= 0) return;
-        setIsToppingUp(true);
+        const amt = Number(topUpAmount);
+        if (!amt || amt <= 0) { setTopUpError('Enter a valid amount greater than 0'); return; }
+        setTopUpError('');
+        setTopUpStatus('pending');
         try {
-            const res = await mpesaService.initiateSTKPush({ phoneNumber: (mpesaNumber || profile?.phone || '').trim(), amount: amt, orderId: `TOPUP-${Date.now()}`, merchantId: 'platform' });
+            const res = await mpesaService.initiateSTKPush({ phoneNumber: (mpesaNumber || profile?.phone || '').trim(), amount: amt, orderId: `TOPUP-${user.id}` });
             if (res.success) {
-                setFeedback({ type: 'success', text: `STK push sent. Complete payment on your phone to top up.` });
+                setTopUpStatus('pending');
             } else {
-                setFeedback({ type: 'error', text: res.error || 'Top-up failed' });
+                setTopUpStatus('failed');
+                setTopUpError(res.error || 'Failed to dispatch STK push prompt.');
             }
         } catch (e: any) {
-            setFeedback({ type: 'error', text: e.message || 'Top-up failed' });
-        } finally {
-            setIsToppingUp(false);
+            setTopUpStatus('failed');
+            setTopUpError(e.message || 'Network error');
         }
+    };
+
+    const refreshWallet = async () => {
+        if (!user?.id) return;
+        const w = await walletService.getOrCreateWallet(user.id, 'CUSTOMER');
+        setWalletBalance(Number(w?.balance || 0));
     };
     const handleResetPassword = async () => {
         if (!user?.email) return;
@@ -906,8 +915,11 @@ const [isToppingUp, setIsToppingUp] = useState(false);
                                                     <div className="text-[10px] font-black uppercase tracking-widest text-gray-400">Muncheez Wallet</div>
                                                     <div className="text-lg font-bold text-gray-900">KES {walletBalance.toLocaleString()}</div>
                                                 </div>
-                                                <button onClick={handleTopUpWallet} disabled={isToppingUp} className="px-4 py-2 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800 disabled:opacity-50">
-                                                    {isToppingUp ? 'Processing...' : 'Top Up'}
+                                                <button onClick={() => { setTopUpOpen(true); setTopUpStatus('idle'); setTopUpError(''); setTopUpAmount(''); }} className="px-4 py-2 bg-black text-white text-xs font-bold uppercase tracking-widest hover:bg-gray-800">
+                                                    Top Up
+                                                </button>
+                                                <button onClick={refreshWallet} className="px-3 py-2 border border-gray-200 text-xs font-bold uppercase tracking-widest hover:bg-gray-50">
+                                                    Refresh
                                                 </button>
                                             </div>
 
@@ -1263,6 +1275,22 @@ const [isToppingUp, setIsToppingUp] = useState(false);
                     </div>
                 )}
             </AnimatePresence>
+
+            {topUpOpen && (
+                <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+                    <div className="absolute inset-0 bg-black/70" onClick={() => setTopUpOpen(false)} />
+                    <div className="relative bg-white p-6 w-full max-w-sm space-y-4">
+                        <h3 className="text-lg font-bold">Top Up Wallet</h3>
+                        <input type="number" value={topUpAmount} onChange={e => setTopUpAmount(e.target.value)} placeholder="Amount (KES)" className="w-full border-b border-gray-200 py-2 text-sm" />
+                        {topUpError && <p className="text-red-600 text-xs">{topUpError}</p>}
+                        <p className="text-xs text-gray-500">Status: {topUpStatus}</p>
+                        <div className="flex gap-2">
+                            <button onClick={handleTopUpWallet} className="flex-1 bg-black text-white py-2 text-xs font-bold uppercase">Continue</button>
+                            <button onClick={() => setTopUpOpen(false)} className="flex-1 border border-gray-200 py-2 text-xs font-bold uppercase">Cancel</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <CookieModal
                 isOpen={isCookieModalOpen}
