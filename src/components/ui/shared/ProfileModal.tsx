@@ -187,10 +187,7 @@ const [isToppingUp, setIsToppingUp] = useState(false);
         try {
             const res = await mpesaService.initiateSTKPush({ phoneNumber: (mpesaNumber || profile?.phone || '').trim(), amount: amt, orderId: `TOPUP-${Date.now()}`, merchantId: 'platform' });
             if (res.success) {
-                await walletService.creditWallet(user.id, amt, res.receiptNumber || `TOPUP-${Date.now()}`, 'Wallet top-up via M-Pesa');
-                const w = await walletService.getOrCreateWallet(user.id, 'CUSTOMER');
-                setWalletBalance(Number(w?.balance || 0));
-                setFeedback({ type: 'success', text: `Wallet topped up by KES ${amt.toLocaleString()}` });
+                setFeedback({ type: 'success', text: `STK push sent. Complete payment on your phone to top up.` });
             } else {
                 setFeedback({ type: 'error', text: res.error || 'Top-up failed' });
             }

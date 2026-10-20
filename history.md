@@ -5099,3 +5099,12 @@ Implement three improvements without breaking existing checkout, Supabase auth, 
 - Successfully pushed to remote origin/main (commit 94ba962).
 - Documented complete technical blueprints for Merchant Escrow Wallets, Customer Wallets, Cash-on-Delivery fulfillment reconciliation, Card processing gateways (Paystack/Pesapal), and Vite PWA setup.
 
+
+---
+
+## Session: 2026-10-20 - Customer Wallet, Top-Up Callback, Signup Trigger Fix
+- Implemented customer wallet (CUSTOMER owner_type) with top-up via M-Pesa and wallet payment at checkout.
+- Wallet credit now occurs only on successful M-Pesa callback; no premature balance updates.
+- Fixed handle_new_user trigger to use existing profile columns only.
+- Guarded mpesaService JSON parsing against empty responses.
+- Updated history per project requirement.

@@ -114,7 +114,9 @@ export const mpesaService = {
                 })
             });
 
-            const data = await res.json();
+            const text = await res.text();
+            let data: any = {};
+            try { data = text ? JSON.parse(text) : {}; } catch { data = {}; }
             if (res.ok && data.success) {
                 return {
                     success: true,
