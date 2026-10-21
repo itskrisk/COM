@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import {
     Bike, Search, Activity, Package, Star,
     X, CheckCircle, Shield, Download, Printer,
@@ -13,7 +13,7 @@ import { adminSupabase } from '../../lib/adminSupabase';
 type ActionType = 'approve' | 'suspend' | 'offboard' | null;
 type DrawerTab = 'details' | 'documents' | 'performance' | 'timeline';
 
-// ─── CSV Export Utility ────────────────────────────────────────────────────
+// â”€â”€â”€ CSV Export Utility â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function exportRidersToCSV(riders: Rider[], filename: string) {
     const headers = [
         'ID', 'Name', 'Phone', 'Vehicle Type', 'Status', 'Online',
@@ -37,7 +37,7 @@ function exportRidersToCSV(riders: Rider[], filename: string) {
 }
 
 
-// ─── Main Page ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Riders() {
     const [orders, setOrders] = useState<any[]>([]);
     const [riders, setRiders] = useState<Rider[]>([]);
@@ -196,7 +196,7 @@ export default function Riders() {
         busy: riders.filter(r => r.status === 'BUSY').length,
         avgRating: riders.length
             ? (riders.reduce((acc, r) => acc + (r.performance?.rating || 0), 0) / riders.length).toFixed(1)
-            : '—',
+            : 'â€”',
     };
 
     const toggleSelect = (id: string) => {
@@ -296,7 +296,7 @@ export default function Riders() {
                 <RiderStat label="Total Fleet" value={stats.total.toString()} icon={Bike} color="black" onClick={() => setStatusFilter('ALL')} />
                 <RiderStat label="On-Duty" value={stats.online.toString()} icon={Activity} color="green" onClick={() => setStatusFilter('ONLINE')} />
                 <RiderStat label="Active" value={stats.busy.toString()} icon={Package} color="blue" onClick={() => setStatusFilter('OFFLINE')} />
-                <RiderStat label="Avg. Rating" value={stats.avgRating !== '—' ? stats.avgRating : '—'} icon={Star} color="amber" onClick={() => setStatusFilter('ALL')} />
+                <RiderStat label="Avg. Rating" value={stats.avgRating !== 'â€”' ? stats.avgRating : 'â€”'} icon={Star} color="amber" onClick={() => setStatusFilter('ALL')} />
             </div>
 
             {/* Filters */}
@@ -392,7 +392,7 @@ export default function Riders() {
                                         <td className="p-4 hidden md:table-cell">
                                             <div>
                                                 <p className="text-sm text-gray-700">{rider.vehicleType}</p>
-                                                <p className="text-xs text-gray-400">{rider.vehicle?.plate || '—'}</p>
+                                                <p className="text-xs text-gray-400">{rider.vehicle?.plate || 'â€”'}</p>
                                             </div>
                                         </td>
                                         <td className="p-4">
@@ -404,7 +404,7 @@ export default function Riders() {
                                         <td className="p-4 hidden lg:table-cell">
                                             <span className="flex items-center gap-1 text-sm">
                                                 <Star size={12} className="text-amber-400 fill-amber-400" />
-                                                {rider.performance?.rating?.toFixed(1) || '—'}
+                                                {rider.performance?.rating?.toFixed(1) || 'â€”'}
                                             </span>
                                         </td>
                                         <td className="p-4 hidden lg:table-cell">
@@ -421,7 +421,7 @@ export default function Riders() {
                                                 >
                                                     <FileText size={16} />
                                                 </button>
-                                                {!rider.isOnline && rider.status !== 'APPROVED' && (
+                                                {!rider.isOnline && (
                                                     <button
                                                         onClick={() => setPendingAction({ type: 'approve', rider })}
                                                         className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
@@ -490,7 +490,7 @@ export default function Riders() {
     );
 }
 
-// ─── Rider Detail Drawer ───────────────────────────────────────────────────
+// â”€â”€â”€ Rider Detail Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onApprove, onSuspend, onOffboard }: any) {
     const printRef = useRef<HTMLDivElement>(null);
 
@@ -501,7 +501,7 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
         if (!win) return;
         win.document.write(`
             <!DOCTYPE html><html><head>
-            <title>Rider Application — ${rider.name}</title>
+            <title>Rider Application â€” ${rider.name}</title>
             <style>
                 * { margin:0; padding:0; box-sizing:border-box; }
                 body { font-family: sans-serif; color:#111; background: white; padding: 40px; }
@@ -516,7 +516,7 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
             </style>
             </head><body>
             ${content}
-            <div class="footer"><p>Muncheez Fleet Verification Report · Printed: ${new Date().toLocaleString()} · Confidential</p></div>
+            <div class="footer"><p>Muncheez Fleet Verification Report Â· Printed: ${new Date().toLocaleString()} Â· Confidential</p></div>
             </body></html>
         `);
         win.document.close();
@@ -530,10 +530,10 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
             const isObj = doc && typeof doc === 'object';
             const url = isObj ? doc.url : (typeof doc === 'string' && (doc.startsWith('http') || doc.startsWith('data:')) ? doc : undefined);
             const filename = isObj ? doc.filename : (typeof doc === 'string' ? doc : undefined);
-            const date = isObj && doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : '—';
+            const date = isObj && doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString() : 'â€”';
             return {
                 type: key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()),
-                icon: key.toLowerCase().includes('id') ? '🪪' : key.toLowerCase().includes('license') ? '📋' : key.toLowerCase().includes('logbook') ? '📄' : '📎',
+                icon: key.toLowerCase().includes('id') ? 'ðŸªª' : key.toLowerCase().includes('license') ? 'ðŸ“‹' : key.toLowerCase().includes('logbook') ? 'ðŸ“„' : 'ðŸ“Ž',
                 status: url ? 'Submitted' : (filename ? 'Uploaded' : 'Pending Upload'),
                 date,
                 url,
@@ -545,11 +545,11 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
     const REAL_DOCS = getRealDocs();
 
     const TIMELINE = [
-        { event: 'Application Submitted', date: 'Feb 10, 2026', by: rider.name, icon: '📥' },
-        { event: 'Documents Uploaded', date: 'Feb 13, 2026', by: rider.name, icon: '📎' },
-        { event: 'Background Check Initiated', date: 'Feb 14, 2026', by: 'System', icon: '🔍' },
-        { event: 'Training Module Completed', date: 'Feb 15, 2026', by: rider.name, icon: '🎓' },
-        ...(rider.isOnline ? [{ event: 'Account Activated', date: 'Feb 17, 2026', by: 'Admin', icon: '✅' }] : []),
+        { event: 'Application Submitted', date: 'Feb 10, 2026', by: rider.name, icon: 'ðŸ“¥' },
+        { event: 'Documents Uploaded', date: 'Feb 13, 2026', by: rider.name, icon: 'ðŸ“Ž' },
+        { event: 'Background Check Initiated', date: 'Feb 14, 2026', by: 'System', icon: 'ðŸ”' },
+        { event: 'Training Module Completed', date: 'Feb 15, 2026', by: rider.name, icon: 'ðŸŽ“' },
+        ...(rider.isOnline ? [{ event: 'Account Activated', date: 'Feb 17, 2026', by: 'Admin', icon: 'âœ…' }] : []),
     ];
 
     return (
@@ -581,7 +581,7 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
                             onClick={() => onTabChange(t)}
                             className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold capitalize transition-colors ${tab === t ? 'bg-black text-white' : 'text-gray-500 hover:bg-gray-100'}`}
                         >
-                            {t === 'details' ? '👤 Details' : t === 'documents' ? '📂 Documents' : t === 'performance' ? '📊 Performance' : '⏱ Timeline'}
+                            {t === 'details' ? 'ðŸ‘¤ Details' : t === 'documents' ? 'ðŸ“‚ Documents' : t === 'performance' ? 'ðŸ“Š Performance' : 'â± Timeline'}
                         </button>
                     ))}
                 </div>
@@ -627,29 +627,29 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
                     <div ref={printRef}>
                         {tab === 'details' && (
                             <div className="space-y-8">
-                                <Section title="Rider Information" icon="👤">
+                                <Section title="Rider Information" icon="ðŸ‘¤">
                                     <InfoGrid items={[
                                         { label: 'Full Name', value: rider.name },
-                                        { label: 'Phone Number', value: rider.phone || '—' },
+                                        { label: 'Phone Number', value: rider.phone || 'â€”' },
                                         { label: 'Transport Mode / Vehicle', value: rider.vehicleType },
                                         { label: 'Current Status', value: rider.status || 'N/A' },
                                     ]} />
                                 </Section>
-                                <Section title="Emergency Contact Details" icon="🚨">
+                                <Section title="Emergency Contact Details" icon="ðŸš¨">
                                     <InfoGrid items={[
-                                        { label: 'Contact Name', value: rider.emergencyContact?.name || '—' },
-                                        { label: 'Relationship', value: rider.emergencyContact?.relationship || '—' },
-                                        { label: 'Emergency Phone', value: rider.emergencyContact?.phone || '—', full: true },
+                                        { label: 'Contact Name', value: rider.emergencyContact?.name || 'â€”' },
+                                        { label: 'Relationship', value: rider.emergencyContact?.relationship || 'â€”' },
+                                        { label: 'Emergency Phone', value: rider.emergencyContact?.phone || 'â€”', full: true },
                                     ]} />
                                 </Section>
-                                <Section title="Vehicle / Logistics Information" icon="🚗">
+                                <Section title="Vehicle / Logistics Information" icon="ðŸš—">
                                     <InfoGrid items={[
-                                        { label: 'Make', value: rider.vehicle?.make || '—' },
-                                        { label: 'Model', value: rider.vehicle?.model || '—' },
-                                        { label: 'Plate Number', value: rider.vehicle?.plate || '—' },
+                                        { label: 'Make', value: rider.vehicle?.make || 'â€”' },
+                                        { label: 'Model', value: rider.vehicle?.model || 'â€”' },
+                                        { label: 'Plate Number', value: rider.vehicle?.plate || 'â€”' },
                                     ]} />
                                 </Section>
-                                <Section title="Wallet & Earnings" icon="💰">
+                                <Section title="Wallet & Earnings" icon="ðŸ’°">
                                     <InfoGrid items={[
                                         { label: "Today's Earnings", value: `KES ${(rider.earnings?.today || 0).toLocaleString()}` },
                                         { label: 'Weekly Earnings', value: `KES ${(rider.earnings?.weekly || 0).toLocaleString()}` },
@@ -701,11 +701,11 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
                             <div className="space-y-6">
                                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                     {[
-                                        { label: 'Star Rating', value: `${rider.performance?.rating?.toFixed(1) || '—'} / 5.0`, icon: '⭐' },
-                                        { label: 'Acceptance Rate', value: `${rider.performance?.acceptanceRate || 0}%`, icon: '✅' },
-                                        { label: 'Completion Rate', value: `${rider.performance?.completionRate || 0}%`, icon: '🏁' },
-                                        { label: 'On-Time Rate', value: `${rider.performance?.onTimeRate || 0}%`, icon: '⏰' },
-                                        { label: 'Reliability Score', value: `${rider.performance?.reliabilityScore || 0}`, icon: '🛡️' },
+                                        { label: 'Star Rating', value: `${rider.performance?.rating?.toFixed(1) || 'â€”'} / 5.0`, icon: 'â­' },
+                                        { label: 'Acceptance Rate', value: `${rider.performance?.acceptanceRate || 0}%`, icon: 'âœ…' },
+                                        { label: 'Completion Rate', value: `${rider.performance?.completionRate || 0}%`, icon: 'ðŸ' },
+                                        { label: 'On-Time Rate', value: `${rider.performance?.onTimeRate || 0}%`, icon: 'â°' },
+                                        { label: 'Reliability Score', value: `${rider.performance?.reliabilityScore || 0}`, icon: 'ðŸ›¡ï¸' },
                                     ].map((kpi, i) => (
                                         <div key={i} className="p-5 bg-gray-50 rounded-2xl border border-gray-100 text-center">
                                             <p className="text-3xl mb-2">{kpi.icon}</p>
@@ -771,7 +771,7 @@ function RiderDetailDrawer({ rider, tab, onTabChange, activeOrder, onClose, onAp
 }
 
 
-// ─── Helper Components ─────────────────────────────────────────────────────
+// â”€â”€â”€ Helper Components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Section({ title, icon, children }: any) {
     return (
         <div>
@@ -815,7 +815,7 @@ function RiderActionModal({ action, onClose, onConfirm }: any) {
         },
         offboard: {
             title: 'Offboard Rider', icon: Trash2, iconColor: 'text-red-600', bg: 'bg-red-50',
-            description: `⚠️ Offboarding ${rider.name} will permanently remove them from the platform.`,
+            description: `âš ï¸ Offboarding ${rider.name} will permanently remove them from the platform.`,
             buttonText: 'Confirm Offboarding', buttonClass: 'bg-red-600 hover:bg-red-700',
             placeholder: 'Reason for offboarding (required)...', required: true,
         },
@@ -1018,3 +1018,4 @@ function RiderFormModal({ onClose, onSave }: { onClose: () => void; onSave: (rid
         </div>
     );
 }
+
