@@ -128,21 +128,21 @@ export default function Financials() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-3">
-                        Financial Core
-                        <span className={`text-xs px-2 py-1 rounded-full font-bold ${peak ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                            {peak ? '🔥 Peak Hours' : '● Live'}
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                        Financials
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-widest ${peak ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-green-50 text-green-700 border border-green-100'}`}>
+                            {peak ? 'Peak' : 'Live'}
                         </span>
                     </h1>
-                    <p className="text-sm text-gray-400 font-medium">Revenue orchestration, partner settlements & ledger audit.</p>
+                    <p className="text-sm text-gray-400 font-medium">Revenue, settlements & ledger</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <div className="flex bg-white p-1 rounded-xl border border-gray-100 shadow-sm">
+                    <div className="flex items-center p-1 bg-gray-100 rounded-xl">
                         {(['DAILY', 'WEEKLY', 'MONTHLY'] as const).map(t => (
                             <button
                                 key={t}
                                 onClick={() => setTimeframe(t)}
-                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${timeframe === t ? 'bg-black text-white shadow-md' : 'text-gray-400 hover:text-black'}`}
+                                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all ${timeframe === t ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
                             >
                                 {t}
                             </button>
@@ -159,19 +159,19 @@ export default function Financials() {
 
             {/* KPI Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <KpiCard label="Gross Revenue" value={formatKES(finances.gross)} icon={TrendingUp} color="black" change="+12%" />
-                <KpiCard label="Platform Commission" value={formatKES(finances.commission)} icon={PieChart} color="blue" change={`${(MUNCHEEZ_COMMISSION_RATE * 100).toFixed(0)}% cut`} />
-                <KpiCard label="Rider Payouts" value={formatKES(finances.riderPayouts)} icon={Bike} color="orange" change={`${finances.deliveredCount} deliveries`} />
-                <KpiCard label="Net Platform Revenue" value={formatKES(finances.netRevenue)} icon={Wallet} color="green" change="After payouts" />
+                <KpiCard label="Gross Revenue" value={formatKES(finances.gross)} icon={TrendingUp} color="black" />
+                <KpiCard label="Platform Commission" value={formatKES(finances.commission)} icon={PieChart} color="blue" />
+                <KpiCard label="Rider Payouts" value={formatKES(finances.riderPayouts)} icon={Bike} color="orange" />
+                <KpiCard label="Net Revenue" value={formatKES(finances.netRevenue)} icon={Wallet} color="green" />
             </div>
 
             {/* Tabs */}
-            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+            <div className="flex items-center p-1 bg-gray-100 rounded-xl w-fit">
                 {(['overview', 'ledger', 'payouts', 'splits'] as const).map(t => (
                     <button
                         key={t}
                         onClick={() => setActiveTab(t)}
-                        className={`px-5 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all capitalize ${activeTab === t ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
+                        className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all capitalize ${activeTab === t ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
                     >
                         {t}
                     </button>
@@ -180,37 +180,35 @@ export default function Financials() {
 
             {/* Tab Content */}
             {activeTab === 'overview' && (
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Revenue Breakdown Card */}
-                    <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                        <h3 className="font-bold text-lg mb-6">Revenue Waterfall</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                        <h3 className="font-semibold mb-6">Revenue Breakdown</h3>
                         <WaterfallChart finances={finances} />
                     </div>
 
-                    {/* Platform Rules */}
                     <div className="space-y-4">
-                        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-                            <h3 className="font-bold text-sm uppercase tracking-widest text-gray-400 mb-4">Platform Rules Engine</h3>
+                        <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                            <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-4">Platform Rules</h3>
                             <div className="space-y-3">
                                 {[
-                                    { label: 'Commission Rate', value: `${(MUNCHEEZ_COMMISSION_RATE * 100).toFixed(0)}%`, color: 'bg-blue-50 text-blue-600' },
-                                    { label: 'VAT (KRA)', value: `${(VAT_RATE * 100).toFixed(0)}%`, color: 'bg-purple-50 text-purple-600' },
-                                    { label: 'Rider Base Fee', value: `KES ${RIDER_BASE_FEE}`, color: 'bg-amber-50 text-amber-600' },
-                                    { label: 'M-Pesa Fee/Txn', value: `KES ${MPESA_FEE_PER_TXN}`, color: 'bg-gray-50 text-gray-600' },
-                                    { label: 'Peak Hours Active', value: peak ? 'Yes (+15%)' : 'No', color: peak ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-400' },
+                                    { label: 'Commission', value: `${(MUNCHEEZ_COMMISSION_RATE * 100).toFixed(0)}%` },
+                                    { label: 'VAT (KRA)', value: `${(VAT_RATE * 100).toFixed(0)}%` },
+                                    { label: 'Rider Base', value: `KES ${RIDER_BASE_FEE}` },
+                                    { label: 'M-Pesa Fee', value: `KES ${MPESA_FEE_PER_TXN}` },
+                                    { label: 'Peak Hours', value: peak ? 'Active' : 'Inactive' },
                                 ].map(rule => (
-                                    <div key={rule.label} className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-500">{rule.label}</span>
-                                        <span className={`text-xs font-black px-2.5 py-1 rounded-lg ${rule.color}`}>{rule.value}</span>
+                                    <div key={rule.label} className="flex items-center justify-between text-sm">
+                                        <span className="text-gray-600">{rule.label}</span>
+                                        <span className="font-medium">{rule.value}</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="bg-amber-50 border border-amber-100 rounded-2xl p-5">
-                            <p className="text-xs font-black uppercase tracking-widest text-amber-600 mb-2">Pending Settlement</p>
-                            <p className="text-2xl font-black">{formatKES(finances.pendingValue)}</p>
-                            <p className="text-xs text-amber-700 mt-1">{finances.pendingCount} orders in transit</p>
+                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-5">
+                            <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 mb-1">Pending Settlement</p>
+                            <p className="text-xl font-bold">{formatKES(finances.pendingValue)}</p>
+                            <p className="text-xs text-amber-700 mt-1">{finances.pendingCount} orders</p>
                         </div>
                     </div>
                 </div>
@@ -413,21 +411,22 @@ function SplitSimulator() {
 
 
 // ─── KPI Card ──────────────────────────────────────────────────────────────
-function KpiCard({ label, value, icon: Icon, color, change }: any) {
+function KpiCard({ label, value, icon: Icon, color }: any) {
     const colors: any = {
-        black: 'bg-gray-900 text-white',
+        black: 'bg-black/10 text-black',
         blue: 'bg-blue-50 text-blue-600',
         orange: 'bg-orange-50 text-orange-600',
         green: 'bg-emerald-50 text-emerald-600',
     };
     return (
-        <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
-            <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${colors[color]}`}>
-                <Icon size={20} />
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{label}</p>
+                <p className="text-xl font-bold text-black tracking-tight">{value}</p>
             </div>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">{label}</p>
-            <p className="text-2xl font-black mt-1 tracking-tight">{value}</p>
-            <p className="text-xs text-gray-400 mt-1">{change}</p>
+            <div className={`p-2 rounded-lg border ${colors[color]}`}>
+                <Icon size={18} />
+            </div>
         </div>
     );
 }

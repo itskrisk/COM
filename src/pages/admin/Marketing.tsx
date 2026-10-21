@@ -50,39 +50,37 @@ export default function Marketing() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-3">
-                        Growth Engines <span className="text-xs bg-black text-white px-2 py-1 rounded-full">{campaigns.length} Live</span>
-                    </h1>
-                    <p className="text-sm text-gray-400 font-medium">Campaign orchestration & conversion optimization</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Marketing</h1>
+                    <p className="text-sm text-gray-400 font-medium">Campaigns & promotions</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="px-5 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
-                        <BarChart3 size={18} /> Performance Reports
+                    <button className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm">
+                        <BarChart3 size={16} /> Reports
                     </button>
                     <button
                         onClick={() => setIsCreatorOpen(true)}
-                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 shadow-lg shadow-black/10 transition-all flex items-center gap-2"
+                        className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all flex items-center gap-2"
                     >
-                        <Plus size={18} /> New Campaign
+                        <Plus size={16} /> New Campaign
                     </button>
                 </div>
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <MarketingStat label="Active Reach" value="0" sub="Unique Users" icon={Users} color="black" />
-                <MarketingStat label="Avg. Conversion" value="0%" sub="No active ops" icon={TrendingUp} color="emerald" />
-                <MarketingStat label="Promo Burn" value="KES 0" sub="Budget Utilization" icon={Zap} color="orange" />
-                <MarketingStat label="Loyalty Index" value="--/5" sub="User Sentiment" icon={Gift} color="purple" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <MarketingStat label="Campaigns" value={campaigns.length.toString()} sub="Total" icon={Users} color="black" />
+                <MarketingStat label="Promo Codes" value={promos.length.toString()} sub="Active" icon={Tag} color="emerald" />
+                <MarketingStat label="Reach" value="0" sub="Users" icon={TrendingUp} color="orange" />
+                <MarketingStat label="Conversions" value="0%" sub="Avg" icon={Gift} color="purple" />
             </div>
 
             {/* Active Campaigns */}
-            <div className="space-y-6">
-                <h2 className="text-xs font-black uppercase tracking-[0.3em] text-gray-300">Operational Campaigns</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="space-y-4">
+                <h2 className="text-xs font-semibold uppercase tracking-widest text-gray-500">Campaigns</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {campaigns.length === 0 ? (
-                        <div className="col-span-1 md:col-span-3 p-12 text-center border-2 border-dashed border-gray-100 rounded-[2.5rem]">
-                            <p className="font-bold text-gray-400">No active campaigns.</p>
+                        <div className="col-span-full p-10 text-center border border-dashed border-gray-200 rounded-xl">
+                            <p className="text-sm text-gray-400">No campaigns</p>
                         </div>
                     ) : campaigns.map((c) => (
                         <CampaignCard key={c.id} campaign={c} />
@@ -91,78 +89,54 @@ export default function Marketing() {
             </div>
 
             {/* Promo Code Management */}
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                <div className="p-10 border-b border-gray-50 flex flex-col md:flex-row gap-6 items-center justify-between">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div>
-                        <h3 className="text-xl font-black tracking-tight italic uppercase">Promo Inventory</h3>
-                        <p className="text-sm text-gray-400 font-medium">Track and manage dynamic discount codes</p>
+                        <h3 className="font-semibold">Promo Codes</h3>
+                        <p className="text-sm text-gray-400">Manage discount codes</p>
                     </div>
-                    <div className="relative w-full md:w-80">
+                    <div className="relative w-full md:w-72">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                         <input
                             type="text"
-                            placeholder="Find code..."
+                            placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-medium outline-none focus:bg-white focus:border-black/5 transition-all"
+                            className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm font-medium focus:outline-none focus:bg-white focus:border-gray-200 transition-all"
                         />
                     </div>
                 </div>
 
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left">
+                    <table className="w-full">
                         <thead>
-                            <tr className="border-b border-gray-50">
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-300 uppercase tracking-widest">Access Code</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-300 uppercase tracking-widest text-center">Value Logic</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-300 uppercase tracking-widest text-center">Utilization</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-300 uppercase tracking-widest text-center">Expiry</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-300 uppercase tracking-widest text-center">Operational Status</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-300 uppercase tracking-widest text-right">Actions</th>
+                            <tr className="border-b border-gray-100">
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Code</th>
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Discount</th>
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Usage</th>
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Expiry</th>
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Status</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
                             {promos.length === 0 ? (
                                 <tr>
-                                    <td colSpan={6} className="px-10 py-12 text-center text-gray-400 font-bold border-b border-gray-50">
-                                        No promos available.
+                                    <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-400">
+                                        No promo codes
                                     </td>
                                 </tr>
                             ) : promos.map((p) => (
-                                <tr key={p.code} className="hover:bg-gray-50/50 transition-colors group">
-                                    <td className="px-10 py-8">
-                                        <div className="flex items-center gap-3">
-                                            <div className="px-4 py-2 bg-black text-white rounded-xl font-black text-xs tracking-widest group-hover:scale-105 transition-transform">
-                                                {p.code}
-                                            </div>
-                                            <button className="text-gray-200 hover:text-black transition-colors"><Copy size={14} /></button>
-                                        </div>
+                                <tr key={p.code} className="hover:bg-gray-50/60 transition-colors">
+                                    <td className="px-6 py-4">
+                                        <span className="px-2 py-1 bg-gray-100 rounded-lg text-xs font-mono font-semibold">{p.code}</span>
                                     </td>
-                                    <td className="px-10 py-8 text-center">
-                                        <span className="font-black text-sm tracking-tighter italic">{p.discount}</span>
-                                    </td>
-                                    <td className="px-10 py-8 text-center">
-                                        <div className="flex flex-col items-center">
-                                            <span className="font-bold text-sm">{p.usage}</span>
-                                            <div className="w-24 h-1 bg-gray-100 rounded-full mt-2 overflow-hidden">
-                                                <div className="h-full bg-black rounded-full" style={{ width: '45%' }} />
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-10 py-8 text-center">
-                                        <div className="flex items-center justify-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest font-mono">
-                                            <Clock size={12} /> {p.expiry}
-                                        </div>
-                                    </td>
-                                    <td className="px-10 py-8 text-center">
-                                        <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${p.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-orange-50 text-orange-600 border border-orange-100'}`}>
+                                    <td className="px-6 py-4 text-sm">{p.discount}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-600">{p.usage}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-600">{p.expiry}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase border ${p.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
                                             {p.status}
                                         </span>
-                                    </td>
-                                    <td className="px-10 py-8 text-right">
-                                        <button className="p-3 bg-gray-50 rounded-xl hover:bg-black hover:text-white transition-all">
-                                            <ChevronRight size={18} />
-                                        </button>
                                     </td>
                                 </tr>
                             ))}
@@ -289,21 +263,21 @@ export default function Marketing() {
 
 function MarketingStat({ label, value, sub, icon: Icon, color }: any) {
     const colors: any = {
-        black: 'bg-black text-white',
+        black: 'bg-black/10 text-black',
         emerald: 'bg-emerald-50 text-emerald-600',
         orange: 'bg-orange-50 text-orange-600',
         purple: 'bg-purple-50 text-purple-600'
     };
 
     return (
-        <div className="bg-white p-8 rounded-[2rem] border border-gray-50 shadow-sm flex items-center gap-6 group hover:shadow-xl hover:-translate-y-1 transition-all">
-            <div className={`p-5 rounded-2xl ${colors[color]} group-hover:scale-110 transition-transform`}>
-                <Icon size={24} />
-            </div>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
             <div>
-                <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">{label}</p>
-                <p className="text-2xl font-black text-black tracking-tighter italic">{value}</p>
-                <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1">{sub}</p>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{label}</p>
+                <p className="text-xl font-bold text-black tracking-tight">{value}</p>
+                {sub && <p className="text-xs text-gray-400">{sub}</p>}
+            </div>
+            <div className={`p-2 rounded-lg border ${colors[color]}`}>
+                <Icon size={18} />
             </div>
         </div>
     );
@@ -311,36 +285,27 @@ function MarketingStat({ label, value, sub, icon: Icon, color }: any) {
 
 function CampaignCard({ campaign }: any) {
     return (
-        <motion.div
-            whileHover={{ y: -10 }}
-            className={`p-8 rounded-[2.5rem] ${campaign.mesh} text-white shadow-xl relative overflow-hidden group cursor-pointer h-72 flex flex-col justify-between`}
-        >
-            <div className="absolute top-0 right-0 w-48 h-48 bg-white/20 rounded-full blur-3xl -mr-24 -mt-24 group-hover:bg-white/30 transition-all duration-700" />
-
-            <div className="relative z-10">
-                <div className="flex justify-between items-start mb-4">
-                    <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-lg text-[9px] font-black uppercase tracking-widest border border-white/20">
-                        {campaign.type.replace(/_/g, ' ')}
-                    </span>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-                        <span className="text-[10px] font-black uppercase tracking-widest opacity-80">{campaign.status}</span>
-                    </div>
-                </div>
-                <h3 className="text-2xl font-black tracking-tight italic uppercase leading-tight group-hover:scale-105 transition-transform origin-left">{campaign.name}</h3>
-            </div>
-
-            <div className="relative z-10 flex justify-between items-end border-t border-white/20 pt-6">
+        <div className="p-5 bg-white rounded-xl border border-gray-100 shadow-sm hover:border-gray-200 transition-all">
+            <div className="flex items-start justify-between mb-3">
                 <div>
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Active Reach</p>
-                    <p className="text-xl font-black italic">{campaign.reach}</p>
+                    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">{campaign.type?.replace(/_/g, ' ')}</span>
+                    <h3 className="text-base font-semibold mt-1">{campaign.name}</h3>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase border ${campaign.status === 'ACTIVE' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                    {campaign.status}
+                </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+                <div>
+                    <p className="text-gray-500">Reach</p>
+                    <p className="font-medium">{campaign.reach || '0'}</p>
                 </div>
                 <div className="text-right">
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-1">Impact</p>
-                    <p className="text-xl font-black italic text-[#D4AF37]">{campaign.conversion}</p>
+                    <p className="text-gray-500">Conv.</p>
+                    <p className="font-medium">{campaign.conversion || '0%'}</p>
                 </div>
             </div>
-        </motion.div>
+        </div>
     );
 }
 

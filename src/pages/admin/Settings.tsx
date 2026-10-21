@@ -99,122 +99,126 @@ export default function Settings() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-3">
-                        System Control <span className="text-xs bg-black text-white px-2 py-1 rounded-full">v1.0.4</span>
-                    </h1>
-                    <p className="text-sm text-gray-400 font-medium">Core protocol management & global overrides</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+                    <p className="text-sm text-gray-400 font-medium">System configuration</p>
                 </div>
                 <div className="flex items-center gap-3">
                     <button
                         onClick={() => window.location.reload()}
-                        className="px-5 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2"
+                        className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
                     >
-                        <RefreshCcw size={18} /> Sync Registry
+                        <RefreshCcw size={16} /> Reload
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={isSaving || isLoading}
-                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 shadow-lg shadow-black/10 transition-all flex items-center gap-2 disabled:opacity-50"
+                        className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all flex items-center gap-2 disabled:opacity-50"
                     >
-                        {saveSuccess ? <><CheckCircle size={18} /> Saved!</> : isSaving ? 'Saving...' : <><Save size={18} /> Push Changes</>}
+                        {saveSuccess ? <><CheckCircle size={16} /> Saved</> : isSaving ? 'Saving...' : <><Save size={16} /> Save</>}
                     </button>
                 </div>
             </div>
 
-            {/* Quick Overrides */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <OverrideCard
-                    label="Core Availability"
-                    desc="Master switch for the entire Muncheez network"
-                    active={isSiteLive}
-                    onToggle={() => setIsSiteLive(!isSiteLive)}
-                    icon={Power}
-                />
-                <OverrideCard
-                    label="Merchant Intake"
-                    desc="Enable/Disable new partner registration"
-                    active={merchantSignups}
-                    onToggle={() => setMerchantSignups(!merchantSignups)}
-                    icon={Users}
-                />
-                <OverrideCard
-                    label="Maintenance Mode"
-                    desc="Display maintenance screen to all users"
-                    active={maintenanceMode}
-                    onToggle={() => setMaintenanceMode(!maintenanceMode)}
-                    icon={Server}
-                />
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Navigation Sidebar */}
-                <div className="lg:col-span-1 space-y-2">
-                    <SettingsTab label="General Environment" active={true} icon={Globe} />
-                    <SettingsTab label="Security & Access" icon={Shield} />
-                    <SettingsTab label="Financial Rules" icon={Scale} />
-                    <SettingsTab label="Push & Webhooks" icon={Bell} />
-                    <SettingsTab label="Data Management" icon={Database} />
-                    <SettingsTab label="API & Integrations" icon={Smartphone} />
+            {/* Bento Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+                <div className="md:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Power size={18} className="text-gray-600" />
+                            <h3 className="font-semibold">Site Status</h3>
+                        </div>
+                        <button
+                            onClick={() => setIsSiteLive(!isSiteLive)}
+                            className={`w-11 h-6 rounded-full relative transition-colors ${isSiteLive ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${isSiteLive ? 'left-[22px]' : 'left-0.5'}`} />
+                        </button>
+                    </div>
+                    <p className="text-sm text-gray-500">Platform availability</p>
                 </div>
 
-                {/* Form Area */}
-                <div className="lg:col-span-2 bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col">
-                    <div className="p-8 border-b border-gray-50 bg-gray-50/20">
-                        <h3 className="text-xl font-black tracking-tight italic uppercase">General Environment</h3>
-                        <p className="text-sm text-gray-400 font-medium mt-1">Configure global operational parameters</p>
-                    </div>
-
-                    <div className="p-8 space-y-8">
-                        <section className="space-y-5">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">Operational Constants</h4>
-                            <div className="grid grid-cols-2 gap-5">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Default Delivery Fee (KES)</label>
-                                    <input
-                                        type="number"
-                                        value={deliveryFee}
-                                        onChange={e => setDeliveryFee(e.target.value)}
-                                        className="w-full px-5 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-black/10 outline-none transition-all"
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 ml-1">Platform Commission (%)</label>
-                                    <input
-                                        type="number"
-                                        value={commissionRate}
-                                        onChange={e => setCommissionRate(e.target.value)}
-                                        className="w-full px-5 py-4 bg-gray-50 border border-transparent rounded-2xl text-sm font-bold focus:bg-white focus:border-black/10 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-                        </section>
-
-                        <section className="space-y-4">
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-300">Regional Branding</h4>
-                            <div className="p-6 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between group cursor-pointer hover:bg-black hover:text-white transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 bg-white text-black rounded-xl flex items-center justify-center font-black text-sm group-hover:bg-white/10 group-hover:text-white transition-colors">
-                                        KE
-                                    </div>
-                                    <div>
-                                        <p className="font-black">Nairobi, Kenya</p>
-                                        <p className="text-xs opacity-50 font-medium">Primary Operational Zone</p>
-                                    </div>
-                                </div>
-                                <ChevronRight size={18} className="text-gray-300 group-hover:text-white transition-colors" />
-                            </div>
-                        </section>
-
-                        <div className="p-8 bg-[#D4AF37] rounded-3xl text-black space-y-4 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 w-48 h-48 bg-black/5 rounded-full blur-3xl -mr-24 -mt-24" />
-                            <div className="relative z-10">
-                                <h4 className="text-lg font-black italic uppercase">Superuser Access</h4>
-                                <p className="text-sm font-bold opacity-60 mt-1">You are Currently Authenticated as Root Admin</p>
-                                <button className="mt-6 px-6 py-3 bg-black text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg flex items-center gap-3">
-                                    Manage Admin Team <ArrowRight size={16} />
-                                </button>
-                            </div>
+                <div className="md:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Users size={18} className="text-gray-600" />
+                            <h3 className="font-semibold">Merchant Signups</h3>
                         </div>
+                        <button
+                            onClick={() => setMerchantSignups(!merchantSignups)}
+                            className={`w-11 h-6 rounded-full relative transition-colors ${merchantSignups ? 'bg-green-500' : 'bg-gray-300'}`}
+                        >
+                            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${merchantSignups ? 'left-[22px]' : 'left-0.5'}`} />
+                        </button>
+                    </div>
+                    <p className="text-sm text-gray-500">New partner registration</p>
+                </div>
+
+                <div className="md:col-span-2 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                            <Server size={18} className="text-gray-600" />
+                            <h3 className="font-semibold">Maintenance</h3>
+                        </div>
+                        <button
+                            onClick={() => setMaintenanceMode(!maintenanceMode)}
+                            className={`w-11 h-6 rounded-full relative transition-colors ${maintenanceMode ? 'bg-amber-500' : 'bg-gray-300'}`}
+                        >
+                            <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${maintenanceMode ? 'left-[22px]' : 'left-0.5'}`} />
+                        </button>
+                    </div>
+                    <p className="text-sm text-gray-500">Maintenance mode</p>
+                </div>
+
+                <div className="md:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Scale size={18} className="text-gray-600" />
+                        <h3 className="font-semibold">Financial Parameters</h3>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-gray-600">Delivery Fee (KES)</label>
+                            <input
+                                type="number"
+                                value={deliveryFee}
+                                onChange={e => setDeliveryFee(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            />
+                        </div>
+                        <div className="space-y-1.5">
+                            <label className="text-sm text-gray-600">Commission (%)</label>
+                            <input
+                                type="number"
+                                value={commissionRate}
+                                onChange={e => setCommissionRate(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <div className="md:col-span-3 bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Globe size={18} className="text-gray-600" />
+                        <h3 className="font-semibold">Region</h3>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-sm font-semibold">KE</div>
+                        <div>
+                            <p className="text-sm font-medium">Nairobi, Kenya</p>
+                            <p className="text-xs text-gray-400">Primary operational zone</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="md:col-span-6 bg-gradient-to-r from-gray-900 to-black rounded-xl p-6 text-white">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h3 className="font-semibold">Admin Access</h3>
+                            <p className="text-sm text-gray-400">Root administrator privileges</p>
+                        </div>
+                        <button className="px-4 py-2 bg-white text-black rounded-lg text-sm font-medium hover:bg-gray-100 transition-colors flex items-center gap-2">
+                            Manage Team <ArrowRight size={16} />
+                        </button>
                     </div>
                 </div>
             </div>
@@ -224,33 +228,32 @@ export default function Settings() {
 
 function OverrideCard({ label, desc, active, onToggle, icon: Icon }: any) {
     return (
-        <div className={`p-6 rounded-3xl border transition-all ${active ? 'bg-white border-black/5 shadow-xl' : 'bg-gray-50 border-transparent opacity-60'}`}>
-            <div className="flex justify-between items-start mb-6">
-                <div className={`p-3.5 rounded-2xl ${active ? 'bg-black text-white shadow-lg' : 'bg-gray-200 text-gray-400'}`}>
-                    <Icon size={22} />
+        <div className="p-5 bg-white rounded-xl border border-gray-100 shadow-sm">
+            <div className="flex justify-between items-start mb-3">
+                <div className={`p-2 rounded-lg border ${active ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
+                    <Icon size={18} />
                 </div>
                 <button
                     onClick={onToggle}
-                    className={`w-13 h-7 rounded-full relative transition-colors duration-500 ${active ? 'bg-emerald-500' : 'bg-gray-300'}`}
-                    style={{ width: 52, height: 28 }}
+                    className={`w-11 h-6 rounded-full relative transition-colors ${active ? 'bg-green-500' : 'bg-gray-300'}`}
                 >
-                    <div className={`absolute top-1 w-5 h-5 bg-white rounded-full shadow-md transition-all duration-500 ${active ? 'left-[28px]' : 'left-1'}`} />
+                    <div className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${active ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
             </div>
-            <h3 className="text-lg font-black tracking-tight italic uppercase mb-1">{label}</h3>
-            <p className="text-xs font-medium text-gray-400 leading-relaxed">{desc}</p>
+            <h3 className="text-sm font-semibold mb-1">{label}</h3>
+            <p className="text-xs text-gray-500">{desc}</p>
         </div>
     );
 }
 
 function SettingsTab({ label, active = false, icon: Icon }: any) {
     return (
-        <div className={`p-5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between group ${active ? 'bg-black text-white border-black shadow-xl' : 'bg-white border-gray-50 text-gray-400 hover:border-gray-200'}`}>
-            <div className="flex items-center gap-3">
-                <Icon size={18} className={active ? 'text-[#D4AF37]' : 'group-hover:text-black transition-colors'} />
-                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+        <div className={`p-3 rounded-lg transition-colors cursor-pointer flex items-center justify-between ${active ? 'bg-black text-white' : 'hover:bg-gray-100'}`}>
+            <div className="flex items-center gap-2">
+                <Icon size={16} />
+                <span className="text-sm font-medium">{label}</span>
             </div>
-            {active && <div className="w-1.5 h-1.5 bg-[#D4AF37] rounded-full" />}
+            {active && <span className="w-1.5 h-1.5 bg-white rounded-full" />}
         </div>
     );
 }

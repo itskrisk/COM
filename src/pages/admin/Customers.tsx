@@ -154,73 +154,74 @@ export default function Customers() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-3">
-                        Client Directory <span className="text-xs bg-black text-white px-2 py-1 rounded-full">{customerDirectory.length}</span>
-                    </h1>
-                    <p className="text-sm text-gray-400 font-medium">Customer Relationship Management • Nairobi Zone</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Customers</h1>
+                    <p className="text-sm text-gray-400 font-medium">Customer directory & activity</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="px-5 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
-                        <TrendingUp size={18} /> Analytics
+                    <button className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm">
+                        <TrendingUp size={16} /> Analytics
                     </button>
-                    <button className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 shadow-lg shadow-black/10 transition-all flex items-center gap-2">
-                        <Mail size={18} /> Broadcase Blast
+                    <button className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all flex items-center gap-2">
+                        <Mail size={16} /> Message All
                     </button>
                 </div>
             </div>
 
             {/* Quick Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-black p-8 rounded-[2rem] text-white flex justify-between items-center">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-white/40 mb-2">Total Outreach</p>
-                        <p className="text-3xl font-black italic tracking-tighter">{stats.total}</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Total Customers</p>
+                        <p className="text-xl font-bold text-black tracking-tight">{stats.total}</p>
                     </div>
-                    <User className="text-white/20" size={40} />
+                    <div className="p-2 rounded-lg border bg-gray-50 border-gray-100">
+                        <User size={18} />
+                    </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] border border-gray-50 shadow-sm flex justify-between items-center">
+                <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Avg Ticket/Client</p>
-                        <p className="text-3xl font-black tracking-tighter">KES {Math.round(stats.avgOrderValue || 0).toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Avg Order Value</p>
+                        <p className="text-xl font-bold text-black tracking-tight">KES {Math.round(stats.avgOrderValue || 0).toLocaleString()}</p>
                     </div>
-                    <ShoppingBag className="text-gray-100" size={40} />
+                    <div className="p-2 rounded-lg border bg-blue-50 border-blue-100 text-blue-600">
+                        <ShoppingBag size={18} />
+                    </div>
                 </div>
-                <div className="bg-white p-8 rounded-[2rem] border border-gray-50 shadow-sm flex justify-between items-center">
+                <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
                     <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Muncheez Fam (10+)</p>
-                        <p className="text-3xl font-black tracking-tighter">{stats.frequent}</p>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Frequent (10+)</p>
+                        <p className="text-xl font-bold text-black tracking-tight">{stats.frequent}</p>
                     </div>
-                    <Star className="text-amber-100 fill-amber-100" size={40} />
+                    <div className="p-2 rounded-lg border bg-amber-50 border-amber-100 text-amber-600">
+                        <Star size={18} />
+                    </div>
                 </div>
             </div>
 
             {/* Content Area */}
-            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm flex flex-col min-h-[500px]">
-                <div className="p-8 border-b border-gray-50 flex flex-col lg:flex-row gap-6 items-center justify-between">
-                    <div className="relative w-full lg:w-96 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-black transition-colors" size={20} />
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col lg:flex-row gap-4 items-center justify-between">
+                    <div className="relative w-full lg:w-96">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                         <input
                             type="text"
-                            placeholder="Find client by name or phone..."
+                            placeholder="Find customer by name or phone..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-6 py-4 bg-gray-50 border border-transparent rounded-[1.5rem] text-sm font-medium focus:bg-white focus:border-black/5 transition-all outline-none"
+                            className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm font-medium focus:outline-none focus:bg-white focus:border-gray-200 transition-all"
                         />
                     </div>
-                    <button className="flex items-center gap-2 px-6 py-4 bg-gray-50 text-gray-400 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-gray-100 transition-colors">
-                        <Filter size={16} /> Advanced Segments
-                    </button>
                 </div>
 
-                <div className="flex-1 overflow-x-auto">
-                    <table className="w-full text-left">
+                <div className="overflow-x-auto">
+                    <table className="w-full">
                         <thead>
-                            <tr className="border-b border-gray-50">
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest">Client Identity</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Engagement</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Loyalty Tier</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-right">Lifetime Value</th>
-                                <th className="px-10 py-6 text-[10px] font-black text-gray-400 uppercase tracking-widest text-center">Latest Activity</th>
+                            <tr className="border-b border-gray-100">
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Customer</th>
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Orders</th>
+                                <th className="px-6 py-3 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Tier</th>
+                                <th className="px-6 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Lifetime Value</th>
+                                <th className="px-6 py-3 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Last Order</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-50">
@@ -228,37 +229,32 @@ export default function Customers() {
                                 <tr
                                     key={customer.id}
                                     onClick={() => setSelectedCustomer(customer)}
-                                    className="hover:bg-gray-50 transition-all cursor-pointer group"
+                                    className="hover:bg-gray-50/60 transition-colors cursor-pointer"
                                 >
-                                    <td className="px-10 py-8">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-2xl bg-black text-white flex items-center justify-center font-black text-sm italic shadow-lg shadow-black/10">
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-9 h-9 rounded-lg bg-gray-100 flex items-center justify-center font-medium">
                                                 {customer.name.slice(0, 1)}
                                             </div>
                                             <div>
-                                                <p className="font-black text-lg tracking-tight group-hover:text-[#D4AF37] transition-colors">{customer.name}</p>
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">{customer.phone}</p>
+                                                <p className="text-sm font-medium">{customer.name}</p>
+                                                <p className="text-xs text-gray-400">{customer.phone}</p>
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-10 py-8 text-center">
-                                        <div className="inline-flex flex-col items-center">
-                                            <span className="font-black text-lg tracking-tight">{customer.orderCount}</span>
-                                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Orders</span>
-                                        </div>
+                                    <td className="px-6 py-4">
+                                        <span className="text-sm">{customer.orderCount}</span>
                                     </td>
-                                    <td className="px-10 py-8 text-center">
+                                    <td className="px-6 py-4">
                                         <StatusBadge status={customer.status} />
                                     </td>
-                                    <td className="px-10 py-8 text-right">
-                                        <p className="font-black text-lg tracking-tighter">KES {customer.totalSpent.toLocaleString()}</p>
-                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Revenue Flow</p>
+                                    <td className="px-6 py-4 text-right">
+                                        <p className="text-sm font-medium">KES {customer.totalSpent.toLocaleString()}</p>
                                     </td>
-                                    <td className="px-10 py-8 text-center">
-                                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-50 rounded-xl group-hover:bg-white transition-colors border border-transparent group-hover:border-gray-100">
-                                            <History size={14} className="text-gray-300" />
-                                            <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">View History</span>
-                                        </div>
+                                    <td className="px-6 py-4 text-right">
+                                        <p className="text-sm text-gray-600">
+                                            {customer.lastOrder?.created_at ? new Date(customer.lastOrder.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' }) : '—'}
+                                        </p>
                                     </td>
                                 </tr>
                             ))}
@@ -268,83 +264,65 @@ export default function Customers() {
             </div>
 
             {/* Customer Details Modal */}
-            <AnimatePresence>
-                {selectedCustomer && (
-                    <>
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            onClick={() => setSelectedCustomer(null)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-md z-[100]"
-                        />
-                        <motion.div
-                            initial={{ x: '100%' }}
-                            animate={{ x: 0 }}
-                            exit={{ x: '100%' }}
-                            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                            className="fixed top-0 right-0 h-full w-full max-w-3xl bg-white shadow-2xl z-[101] overflow-hidden flex flex-col"
-                        >
-                            <div className="flex-1 overflow-y-auto">
-                                {/* Header */}
-                                <div className="p-12 border-b border-gray-50 bg-[#D4AF37] text-black relative">
-                                    <div className="absolute top-0 right-0 p-8">
-                                        <button onClick={() => setSelectedCustomer(null)} className="p-3 bg-black/10 hover:bg-black/20 rounded-2xl transition-all">
-                                            <X size={24} />
-                                        </button>
-                                    </div>
-                                    <div className="mb-8">
-                                        <StatusBadge status={selectedCustomer.status} />
-                                    </div>
-                                    <h2 className="text-5xl font-black tracking-tighter italic uppercase mb-2">{selectedCustomer.name}</h2>
-                                    <p className="text-lg font-bold opacity-70 tracking-widest">{selectedCustomer.phone} • Nairobi, Central</p>
+            {selectedCustomer && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setSelectedCustomer(null)} />
+                    <div className="relative w-full max-w-2xl max-h-[90vh] bg-white rounded-xl border border-gray-100 shadow-lg overflow-hidden flex flex-col">
+                        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center font-medium">
+                                    {selectedCustomer.name.slice(0, 1)}
                                 </div>
+                                <div>
+                                    <h2 className="text-lg font-semibold">{selectedCustomer.name}</h2>
+                                    <p className="text-xs text-gray-500">{selectedCustomer.phone}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setSelectedCustomer(null)} className="p-2 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors">
+                                <X size={18} />
+                            </button>
+                        </div>
 
-                                <div className="p-12 space-y-12">
-                                    {/* Action Grid */}
-                                    <div className="grid grid-cols-2 gap-6">
-                                        <ActionCard icon={MessageSquare} label="Send Message" sub="WhatsApp/SMS Integration" />
-                                        <ActionCard icon={CreditCard} label="Wallet Balance" sub="KES 0.00 (Muncheez Credits)" />
-                                    </div>
+                        <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                            <div className="flex items-center gap-2">
+                                <StatusBadge status={selectedCustomer.status} />
+                                <span className="text-sm text-gray-600">{selectedCustomer.orderCount} orders • KES {selectedCustomer.totalSpent.toLocaleString()}</span>
+                            </div>
 
-                                    {/* Recent Ops */}
-                                    <div>
-                                        <h3 className="text-xs font-black uppercase tracking-[0.3em] text-gray-400 mb-8">Purchase Manifest</h3>
-                                        <div className="space-y-4">
-                                            {orders.filter(o => (o.customer?.phone || 'Unknown') === selectedCustomer.phone).map(order => (
-                                                <div key={order.id} className="p-6 bg-gray-50 rounded-3xl border border-gray-100 flex items-center justify-between hover:border-black transition-all group">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="p-3 bg-white rounded-xl shadow-sm">
-                                                            <Package size={20} className="text-gray-300 group-hover:text-black transition-colors" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-black text-sm tracking-tight text-gray-900">#{order.id.slice(0, 8).toUpperCase()}</p>
-                                                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{order.status} • {order.merchant_id}</p>
-                                                        </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <p className="font-black text-sm">KES {order.total.toLocaleString()}</p>
-                                                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">{new Date(order.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
-                                                    </div>
+                            <div>
+                                <h3 className="text-xs font-semibold uppercase tracking-widest text-gray-500 mb-3">Order History</h3>
+                                <div className="space-y-2">
+                                    {orders.filter(o => (o.customer?.phone || 'Unknown') === selectedCustomer.phone).map(order => (
+                                        <div key={order.id} className="p-3 border border-gray-100 rounded-lg flex items-center justify-between hover:bg-gray-50/60 transition-colors">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gray-50 rounded-lg">
+                                                    <Package size={16} className="text-gray-500" />
                                                 </div>
-                                            ))}
+                                                <div>
+                                                    <p className="text-sm font-medium">#{order.id.slice(0, 8).toUpperCase()}</p>
+                                                    <p className="text-xs text-gray-400">{order.status} • {order.merchant_id}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-sm">KES {order.total?.toLocaleString()}</p>
+                                                <p className="text-xs text-gray-400">{new Date(order.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}</p>
+                                            </div>
                                         </div>
-                                    </div>
+                                    ))}
+                                    {orders.filter(o => (o.customer?.phone || 'Unknown') === selectedCustomer.phone).length === 0 && (
+                                        <p className="text-sm text-gray-400 text-center py-6">No orders found</p>
+                                    )}
                                 </div>
                             </div>
+                        </div>
 
-                            <div className="p-12 border-t border-gray-100 bg-gray-50/50 flex gap-4">
-                                <button className="flex-1 py-5 bg-white border border-gray-100 rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all shadow-sm">
-                                    Flag for Fraud
-                                </button>
-                                <button className="flex-1 py-5 bg-black text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-widest hover:bg-gray-800 transition-all shadow-lg shadow-black/10 flex items-center justify-center gap-3">
-                                    Issue Promo Code <ChevronRight size={18} />
-                                </button>
-                            </div>
-                        </motion.div>
-                    </>
-                )}
-            </AnimatePresence>
+                        <div className="p-4 border-t border-gray-100 flex gap-2">
+                            <button className="flex-1 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition-colors">Message</button>
+                            <button className="flex-1 px-3 py-2 text-sm bg-black text-white hover:bg-gray-800 rounded-lg transition-colors">Issue Promo</button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
@@ -352,14 +330,14 @@ export default function Customers() {
 function StatusBadge({ status }: { status: any }) {
     const configs: any = {
         'FREQUENT': 'bg-black text-white border-black',
-        'ACTIVE': 'bg-green-50 text-green-600 border-green-100',
-        'NEW': 'bg-blue-50 text-blue-600 border-blue-100',
-        'INACTIVE': 'bg-gray-100 text-gray-400 border-gray-200'
+        'ACTIVE': 'bg-green-50 text-green-700 border-green-100',
+        'NEW': 'bg-blue-50 text-blue-700 border-blue-100',
+        'INACTIVE': 'bg-gray-50 text-gray-600 border-gray-200'
     };
 
     return (
-        <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border ${configs[status]}`}>
-            {status} Tier
+        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${configs[status]}`}>
+            {status}
         </span>
     );
 }

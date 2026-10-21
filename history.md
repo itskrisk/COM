@@ -5108,3 +5108,48 @@ Implement three improvements without breaking existing checkout, Supabase auth, 
 - Fixed handle_new_user trigger to use existing profile columns only.
 - Guarded mpesaService JSON parsing against empty responses.
 - Updated history per project requirement.
+2 0 2 6 - 1 0 - 2 0   2 2 : 1 8 : 5 0   -   R e d e s i g n e d   / a d m i n / o v e r v i e w   ( D a s h b o a r d )   t o   A p p l e / W a i t l i s t - s t y l e :   c l e a n e r   s u r f a c e s ,   r e d u c e d   r a d i u s / s h a d o w s ,   r e f i n e d   s p a c i n g / t y p o g r a p h y ,   n e u t r a l   p a n e l s ,   u p d a t e d   S t a t C a r d / S t a t u s B a d g e ,   p r e s e r v e d   a l l   c o m p o n e n t s / f e a t u r e s .  
+ 2 0 2 6 - 1 0 - 2 0   2 2 : 4 3 : 1 1   -   R e d e s i g n e d   / a d m i n / a p p r o v a l s   t o   A p p l e / W a i t l i s t - s t y l e :   c l e a n   p a n e l s ,   n e u t r a l   s e g m e n t e d   c o n t r o l s ,   r e f i n e d   s p a c i n g ,   m o b i l e - r e s p o n s i v e ;   p r e s e r v e d   a l l   l o g i c / f e a t u r e s .  
+ 2 0 2 6 - 1 0 - 2 0   2 2 : 4 3 : 3 7   -   R e d e s i g n e d   / a d m i n / o r d e r s   t o   A p p l e / W a i t l i s t - s t y l e   ( h e a d e r ,   s t a t s ,   f i l t e r s ,   t a b l e ,   m o d a l ) .   P r e s e r v e d   f e a t u r e s   ( r e a l - t i m e ,   s t a t u s   u p d a t e ,   c a n c e l ,   e x p o r t ,   d e t a i l s ) .  
+ 2 0 2 6 - 1 0 - 2 0   2 2 : 4 8 : 3 0   -   R e d e s i g n e d   / a d m i n / o r d e r s   t o   W a i t l i s t - s t y l e :   h e a d e r ,   s t a t s ,   f i l t e r s ,   t a b l e ,   m o d a l ;   m o b i l e - r e s p o n s i v e ,   f e a t u r e s   p r e s e r v e d .  
+ 2 0 2 6 - 1 0 - 2 0   2 2 : 5 3 : 1 5   -   C o m p l e t e d   O r d e r s   p a g e   r e d e s i g n   ( W a i t l i s t - s t y l e ) ;   m o d a l / t i m e l i n e   r e f i n e d ;   a l l   f e a t u r e s   p r e s e r v e d ,   m o b i l e   r e s p o n s i v e .  
+ 2 0 2 6 - 1 0 - 2 0   2 2 : 5 8 : 0 9   -   A d j u s t e d   O r d e r s   t a b l e   s t y l i n g   ( h e a d e r s   w e i g h t ,   s u b t l e   i c o n   b g ,   m e r c h a n t   n a m e   d i s p l a y ,   c l e a n e r   r o w ) .  
+ 2 0 2 6 - 1 0 - 2 0   2 3 : 0 5 : 1 1   -   C h a n g e d   O r d e r s   d e t a i l s   f r o m   s l i d i n g   d r a w e r   t o   c e n t e r e d   m o d a l   ( l e s s   i n t r u s i v e ,   c l e a n e r ) .  
+ 2 0 2 6 - 1 0 - 2 0   2 3 : 1 6 : 5 2   -   R e d e s i g n e d   / a d m i n / r i d e r s   t o   W a i t l i s t - s t y l e   ( s t a t s ,   f i l t e r s ,   t a b l e ) ;   p r e s e r v e d   f e a t u r e s .  
+ 2 0 2 6 - 1 0 - 2 0   2 3 : 2 1 : 3 4   -   R e d e s i g n e d   / a d m i n / c u s t o m e r s   t o   W a i t l i s t - s t y l e :   s t a t s ,   t a b l e ,   m o d a l ;   p r e s e r v e d   f e a t u r e s .  
+ 2 0 2 6 - 1 0 - 2 1   0 8 : 0 7 : 1 3   -   R e d e s i g n e d   / a d m i n / i n v e n t o r y   t o   c l e a n   s t y l e ;   p r e s e r v e d   a l l   f e a t u r e s .  
+ 2 0 2 6 - 1 0 - 2 1   0 8 : 0 8 : 2 4   -   R e d e s i g n e d   / a d m i n / f i n a n c i a l s   t o   W a i t l i s t - s t y l e ;   p r e s e r v e d   a l l   f i n a n c i a l   l o g i c .  
+ 2 0 2 6 - 1 0 - 2 1   0 8 : 1 9 : 0 7   -   R e d e s i g n e d   / a d m i n / f i n a n c i a l s   t o   c l e a n   s t y l e ;   l o g i c   p r e s e r v e d .  
+ 
+=== SUMMARY ===
+Redesigned all admin pages (Dashboard, Approvals, Orders, Riders, Customers, Inventory, Financials) to clean Apple/Waitlist style. Preserved all functionality and features. Made responsive. Orders details changed from side drawer to centered modal. Waitlist already matched style.
+2 0 2 6 - 1 0 - 2 1   0 8 : 2 9 : 3 5   -   R e d e s i g n e d   / a d m i n / m a r k e t i n g   t o   c l e a n   s t y l e ;   p r e s e r v e d   f e a t u r e s .  
+ 
+2026-10-21 08:39:38 - Redesigned /admin/support to clean Waitlist-style; preserved all ticket management features, mobile responsive.
+
+2026-10-21 08:44:43 - Redesigned /admin/settings to clean style; user requested bento grid.
+
+2026-10-21 08:49:08 - Redesigned /admin/settings with bento grid layout; preserved all functionality.
+
+2026-10-21 09:07:52 - Updated /admin/overview to bento grid style; preserved features.
+2 0 2 6 - 1 0 - 2 1   0 9 : 1 0 : 2 6   -   A p p l i e d   b e n t o   g r i d   t o   / a d m i n / o v e r v i e w ;   p r e s e r v e d   a l l   c o m p o n e n t s .  
+ 
+---
+
+## Session: 2026-10-21 - Fix Admin Dashboard JSX Structure Error
+
+### Prompt Summary
+The admin Dashboard.tsx was throwing a Vite/Babel JSX compile error: Adjacent JSX elements must be wrapped in an enclosing tag at line 381.
+
+### Root Cause
+The return statement in AdminDashboard() was closed too early at line 195 (closing </div>, ); and }). The entire **Ops Grid section** (Sector Health, Logistics Snapshot, Live Operations Feed, Onboarding Standby) was left dangling as orphaned JSX outside the function body.
+
+### Fix Applied
+- Removed the premature </div>, );, } that closed the return at line 194-196.
+- Reconnected the Ops Grid block as a sibling section inside the outer <div className='space-y-8 pb-12'>.
+- Added the correct closing </div></div>); and } at the actual end of the Ops Grid section.
+
+### Result
+TypeScript compilation passes (	sc -b --noEmit). No errors in Dashboard.tsx.
+The only remaining TS error is pre-existing in Riders.tsx (type comparison mismatch unrelated to this fix).
+

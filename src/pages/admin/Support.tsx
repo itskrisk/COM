@@ -95,116 +95,97 @@ export default function Support() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black tracking-tight text-black flex items-center gap-3">
-                        Support Tickets <span className="text-xs bg-red-500 text-white px-2 py-1 rounded-full">{stats.open}</span>
+                    <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
+                        Support
+                        {stats.open > 0 && <span className="text-xs bg-red-50 text-red-700 px-2 py-0.5 rounded-full border border-red-100">{stats.open}</span>}
                     </h1>
-                    <p className="text-sm text-gray-400 font-medium">Real-time resolution & customer support management</p>
+                    <p className="text-sm text-gray-400 font-medium">Customer support tickets</p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <button className="px-5 py-2.5 bg-white border border-gray-100 shadow-sm rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2">
-                        <ShieldAlert size={18} /> Safety Protocols
+                    <button className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm">
+                        <ShieldAlert size={16} /> Protocols
                     </button>
-                    <button className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 shadow-lg shadow-black/10 transition-all flex items-center gap-2">
-                        <MessageSquare size={18} /> New Ticket
+                    <button className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all flex items-center gap-2">
+                        <MessageSquare size={16} /> New Ticket
                     </button>
                 </div>
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <SupportStat label="Open" value={stats.open.toString()} sub="Action Required" icon={LifeBuoy} color="red" />
-                <SupportStat label="In Progress" value={stats.inProgress.toString()} sub="Being Handled" icon={Clock} color="orange" />
-                <SupportStat label="Urgent / High" value={stats.urgent.toString()} sub="Priority Cases" icon={AlertCircle} color="blue" />
-                <SupportStat label="Resolved" value={stats.resolved.toString()} sub="Completed" icon={CheckCircle} color="emerald" />
+                <SupportStat label="Open" value={stats.open.toString()} sub="Action needed" icon={LifeBuoy} color="red" />
+                <SupportStat label="In Progress" value={stats.inProgress.toString()} sub="Handling" icon={Clock} color="orange" />
+                <SupportStat label="Urgent/High" value={stats.urgent.toString()} sub="Priority" icon={AlertCircle} color="blue" />
+                <SupportStat label="Resolved" value={stats.resolved.toString()} sub="Done" icon={CheckCircle} color="emerald" />
             </div>
 
             {/* Ticket List */}
-            <div className="bg-white rounded-[2rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-                <div className="p-6 border-b border-gray-50 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between bg-gray-50/20">
-                    <div className="flex bg-white p-1 rounded-2xl border border-gray-100 shadow-sm flex-wrap gap-1">
+            <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+                <div className="p-4 md:p-6 border-b border-gray-100 flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+                    <div className="flex items-center p-1 bg-gray-100 rounded-xl flex-wrap">
                         {(['ALL', 'OPEN', 'IN_PROGRESS', 'RESOLVED'] as const).map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${activeTab === tab
-                                    ? tab === 'OPEN' ? 'bg-red-500 text-white shadow-lg'
-                                        : tab === 'IN_PROGRESS' ? 'bg-orange-500 text-white shadow-lg'
-                                            : tab === 'RESOLVED' ? 'bg-emerald-500 text-white shadow-lg'
-                                                : 'bg-black text-white shadow-lg'
-                                    : 'text-gray-400 hover:text-black'}`}
+                                className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
                             >
-                                {tab.replace('_', ' ')} {tab === 'ALL' ? `(${tickets.length})` : tab === 'OPEN' ? `(${stats.open})` : tab === 'IN_PROGRESS' ? `(${stats.inProgress})` : `(${stats.resolved})`}
+                                {tab.replace('_', ' ')}
                             </button>
                         ))}
                     </div>
 
-                    <div className="relative w-full lg:w-72 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 group-focus-within:text-black transition-colors" size={18} />
+                    <div className="relative w-full lg:w-72">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" size={18} />
                         <input
                             type="text"
-                            placeholder="Search tickets..."
+                            placeholder="Search..."
                             value={searchQuery}
                             onChange={e => setSearchQuery(e.target.value)}
-                            className="w-full pl-11 pr-5 py-3.5 bg-white border border-transparent rounded-2xl text-sm font-medium focus:border-black/5 transition-all outline-none shadow-sm"
+                            className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-transparent rounded-xl text-sm font-medium focus:outline-none focus:bg-white focus:border-gray-200 transition-all"
                         />
                     </div>
                 </div>
 
-                <div className="flex-1">
-                    {isLoading ? (
-                        <div className="p-20 text-center opacity-20">
-                            <div className="animate-spin w-10 h-10 border-4 border-black border-t-transparent rounded-full mx-auto mb-4" />
-                            <p className="text-sm font-black uppercase tracking-widest">Loading tickets...</p>
-                        </div>
-                    ) : filteredTickets.length === 0 ? (
-                        <div className="p-20 text-center opacity-20">
-                            <Inbox size={60} className="mx-auto mb-6" />
-                            <p className="text-xl font-black italic">No tickets found</p>
-                            <p className="text-sm font-medium mt-2">Support tickets submitted via the app will appear here</p>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-gray-50">
-                            {filteredTickets.map(t => (
-                                <div
-                                    key={t.id}
-                                    onClick={() => { setSelectedTicket(t); setAdminNote(t.admin_notes || ''); }}
-                                    className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 hover:bg-gray-50/50 cursor-pointer group transition-all"
-                                >
-                                    <div className="flex items-center gap-4 flex-1 min-w-0">
-                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${t.priority === 'URGENT' ? 'bg-red-50 text-red-500' :
-                                            t.priority === 'HIGH' ? 'bg-orange-50 text-orange-500' :
-                                                'bg-blue-50 text-blue-500'
-                                            } group-hover:bg-black group-hover:text-white transition-all`}>
-                                            <LifeBuoy size={20} />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37]">{t.category || 'GENERAL'}</span>
-                                                <span className="px-1.5 py-0.5 bg-gray-100 rounded text-[8px] font-black text-gray-400">#{t.id.slice(0, 8).toUpperCase()}</span>
-                                                <span className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${t.priority === 'URGENT' ? 'bg-red-100 text-red-600' :
-                                                    t.priority === 'HIGH' ? 'bg-orange-100 text-orange-600' :
-                                                        'bg-gray-100 text-gray-400'
-                                                    }`}>{t.priority || 'MEDIUM'}</span>
-                                            </div>
-                                            <h3 className="font-black tracking-tight truncate text-sm">{t.subject}</h3>
-                                            <p className="text-xs text-gray-400 font-medium">{t.user?.full_name || 'Anonymous'} · {new Date(t.created_at).toLocaleDateString()}</p>
-                                        </div>
+                {isLoading ? (
+                    <div className="p-12 text-center">
+                        <div className="animate-spin w-6 h-6 border-2 border-black border-t-transparent rounded-full mx-auto mb-2" />
+                        <p className="text-sm text-gray-400">Loading...</p>
+                    </div>
+                ) : filteredTickets.length === 0 ? (
+                    <div className="p-12 text-center">
+                        <Inbox size={40} className="mx-auto mb-3 text-gray-300" />
+                        <p className="text-sm text-gray-500">No tickets</p>
+                    </div>
+                ) : (
+                    <div className="divide-y divide-gray-50">
+                        {filteredTickets.map(t => (
+                            <div
+                                key={t.id}
+                                onClick={() => { setSelectedTicket(t); setAdminNote(t.admin_notes || ''); }}
+                                className="p-4 md:p-6 flex items-center justify-between gap-4 hover:bg-gray-50/60 cursor-pointer transition-colors"
+                            >
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${t.priority === 'URGENT' ? 'bg-red-50 text-red-600' : t.priority === 'HIGH' ? 'bg-orange-50 text-orange-600' : 'bg-gray-50 text-gray-500'}`}>
+                                        <LifeBuoy size={16} />
                                     </div>
-                                    <div className="flex items-center gap-4">
-                                        <span className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wide ${t.status === 'OPEN' ? 'bg-red-50 text-red-500' :
-                                            t.status === 'IN_PROGRESS' ? 'bg-orange-50 text-orange-500' :
-                                                t.status === 'RESOLVED' ? 'bg-emerald-50 text-emerald-600' :
-                                                    'bg-gray-100 text-gray-400'
-                                            }`}>{t.status.replace('_', ' ')}</span>
-                                        <button className="p-2.5 bg-gray-50 rounded-xl text-gray-300 group-hover:text-black group-hover:bg-white border border-transparent group-hover:border-gray-100 transition-all">
-                                            <ChevronRight size={16} />
-                                        </button>
+                                    <div className="min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className="text-xs font-medium truncate">{t.subject}</span>
+                                            <span className="text-[10px] text-gray-400">#{t.id.slice(0, 6).toUpperCase()}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-400">{t.user?.full_name || 'User'} · {new Date(t.created_at).toLocaleDateString()}</p>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase border ${t.status === 'OPEN' ? 'bg-red-50 text-red-700 border-red-100' : t.status === 'IN_PROGRESS' ? 'bg-amber-50 text-amber-700 border-amber-100' : t.status === 'RESOLVED' ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                                        {t.status.replace('_', ' ')}
+                                    </span>
+                                    <ChevronRight size={16} className="text-gray-400" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Ticket Detail Drawer */}
@@ -324,13 +305,15 @@ function SupportStat({ label, value, sub, icon: Icon, color }: any) {
     };
 
     return (
-        <div className="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm group hover:shadow-xl transition-all">
-            <div className={`p-3.5 rounded-2xl ${colors[color]} inline-flex mb-4 group-hover:scale-110 transition-transform`}>
-                <Icon size={22} />
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+            <div>
+                <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{label}</p>
+                <p className="text-xl font-bold text-black tracking-tight">{value}</p>
+                {sub && <p className="text-xs text-gray-400">{sub}</p>}
             </div>
-            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mb-1">{label}</p>
-            <p className="text-2xl font-black text-black tracking-tighter italic">{value}</p>
-            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-1 opacity-60">{sub}</p>
+            <div className={`p-2 rounded-lg border ${colors[color]}`}>
+                <Icon size={18} />
+            </div>
         </div>
     );
 }

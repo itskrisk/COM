@@ -266,10 +266,10 @@ export default function Riders() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Fleet & Courier Management</h1>
-                    <p className="text-sm text-gray-400 font-medium">Review applications, manage verification, and monitor active riders.</p>
+                    <h1 className="text-2xl font-bold tracking-tight">Fleet & Couriers</h1>
+                    <p className="text-sm text-gray-400 font-medium">Manage riders, verifications, and fleet status</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                     <button
                         onClick={fetchRiders}
                         className="px-4 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-xl text-sm font-bold hover:bg-gray-50 transition-all flex items-center gap-2 shadow-sm"
@@ -284,19 +284,19 @@ export default function Riders() {
                     </button>
                     <button
                         onClick={() => setIsAddModalOpen(true)}
-                        className="px-5 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 shadow-lg shadow-black/10 transition-all flex items-center gap-2 cursor-pointer"
+                        className="px-4 py-2.5 bg-black text-white rounded-xl text-sm font-bold hover:bg-gray-800 transition-all flex items-center gap-2"
                     >
-                        <Bike size={18} /> Onboard Rider
+                        <Bike size={16} /> Onboard Rider
                     </button>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <RiderStat label="Total Fleet" value={stats.total.toString()} icon={Bike} color="black" onClick={() => setStatusFilter('ALL')} />
                 <RiderStat label="On-Duty" value={stats.online.toString()} icon={Activity} color="green" onClick={() => setStatusFilter('ONLINE')} />
-                <RiderStat label="Active Drops" value={stats.busy.toString()} icon={Package} color="blue" onClick={() => setStatusFilter('OFFLINE')} />
-                <RiderStat label="Avg. Rating" value={`⭐ ${stats.avgRating}`} icon={Shield} color="amber" onClick={() => setStatusFilter('ALL')} />
+                <RiderStat label="Active" value={stats.busy.toString()} icon={Package} color="blue" onClick={() => setStatusFilter('OFFLINE')} />
+                <RiderStat label="Avg. Rating" value={stats.avgRating !== '—' ? stats.avgRating : '—'} icon={Star} color="amber" onClick={() => setStatusFilter('ALL')} />
             </div>
 
             {/* Filters */}
@@ -316,7 +316,7 @@ export default function Riders() {
                         <button
                             key={s}
                             onClick={() => setStatusFilter(s)}
-                            className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statusFilter === s ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
+                            className={`px-4 py-2 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all whitespace-nowrap ${statusFilter === s ? 'bg-white text-black shadow-sm' : 'text-gray-400 hover:text-black'}`}
                         >
                             {s}
                         </button>
@@ -327,7 +327,7 @@ export default function Riders() {
             {/* Bulk selector row */}
             {filteredRiders.length > 0 && (
                 <div className="flex items-center justify-between px-1">
-                    <label className="flex items-center gap-2 text-sm text-gray-500 cursor-pointer select-none">
+                    <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
                         <input
                             type="checkbox"
                             checked={selectedIds.size === filteredRiders.length && filteredRiders.length > 0}
@@ -335,98 +335,96 @@ export default function Riders() {
                                 if (selectedIds.size === filteredRiders.length) setSelectedIds(new Set());
                                 else setSelectedIds(new Set(filteredRiders.map(r => r.id)));
                             }}
-                            className="rounded border-gray-300 accent-black"
+                            className="rounded border-gray-300"
                         />
-                        Select all ({filteredRiders.length})
+                        Select all
                     </label>
-                    <span className="text-xs text-gray-400">{filteredRiders.length} rider{filteredRiders.length !== 1 ? 's' : ''}</span>
+                    <span className="text-xs text-gray-400">{filteredRiders.length}</span>
                 </div>
             )}
 
             {/* Riders Table */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
                 {filteredRiders.length === 0 ? (
-                    <div className="p-16 text-center">
-                        <Bike className="mx-auto mb-4 text-gray-200" size={48} />
-                        <p className="text-gray-400 font-medium">No riders found.</p>
+                    <div className="p-14 text-center">
+                        <Bike className="mx-auto mb-3 text-gray-300" size={40} />
+                        <p className="text-sm text-gray-500">No riders found</p>
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
                         <table className="w-full">
                             <thead>
-                                <tr className="border-b border-gray-100 bg-gray-50/50">
+                                <tr className="border-b border-gray-100">
                                     <th className="p-4 w-10"></th>
-                                    <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Rider</th>
-                                    <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden md:table-cell">Vehicle</th>
-                                    <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider">Status</th>
-                                    <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Rating</th>
-                                    <th className="p-4 text-left text-xs font-bold text-gray-400 uppercase tracking-wider hidden lg:table-cell">Earnings</th>
-                                    <th className="p-4 text-right text-xs font-bold text-gray-400 uppercase tracking-wider">Actions</th>
+                                    <th className="p-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Rider</th>
+                                    <th className="p-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest hidden md:table-cell">Vehicle</th>
+                                    <th className="p-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Status</th>
+                                    <th className="p-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest hidden lg:table-cell">Rating</th>
+                                    <th className="p-4 text-left text-[10px] font-semibold text-gray-500 uppercase tracking-widest hidden lg:table-cell">Earnings</th>
+                                    <th className="p-4 text-right text-[10px] font-semibold text-gray-500 uppercase tracking-widest">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
                                 {filteredRiders.map(rider => (
                                     <tr
                                         key={rider.id}
-                                        className={`hover:bg-gray-50/70 transition-colors ${selectedIds.has(rider.id) ? 'bg-blue-50/30' : ''}`}
+                                        className={`hover:bg-gray-50/60 transition-colors ${selectedIds.has(rider.id) ? 'bg-gray-50/40' : ''}`}
                                     >
                                         <td className="p-4">
                                             <input
                                                 type="checkbox"
                                                 checked={selectedIds.has(rider.id)}
                                                 onChange={() => toggleSelect(rider.id)}
-                                                className="rounded border-gray-300 accent-black"
+                                                className="rounded border-gray-300"
                                             />
                                         </td>
                                         <td className="p-4">
                                             <div className="flex items-center gap-3">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center border ${rider.isOnline ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-400 border-gray-100'}`}>
-                                                    <Bike size={17} />
+                                                <div className={`w-9 h-9 rounded-lg flex items-center justify-center border ${rider.isOnline ? 'bg-black text-white border-black' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
+                                                    <Bike size={16} />
                                                 </div>
                                                 <div>
-                                                    <p className="font-semibold text-sm text-gray-900">{rider.name}</p>
-                                                    <p className="text-xs text-gray-400">{rider.phone || rider.id.slice(-8)}</p>
+                                                    <p className="text-sm font-medium">{rider.name}</p>
+                                                    <p className="text-xs text-gray-400">{rider.phone || rider.id.slice(-6)}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="p-4 hidden md:table-cell">
                                             <div>
-                                                <p className="text-sm font-medium text-gray-700">{rider.vehicleType}</p>
+                                                <p className="text-sm text-gray-700">{rider.vehicleType}</p>
                                                 <p className="text-xs text-gray-400">{rider.vehicle?.plate || '—'}</p>
                                             </div>
                                         </td>
                                         <td className="p-4">
-                                            <div className="flex items-center gap-2">
-                                                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${rider.isOnline ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-500 border-gray-100'}`}>
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${rider.isOnline ? 'bg-green-500' : 'bg-gray-300'}`}></span>
-                                                    {rider.status || (rider.isOnline ? 'Online' : 'Offline')}
-                                                </span>
-                                            </div>
+                                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-semibold uppercase border ${rider.isOnline ? 'bg-green-50 text-green-700 border-green-100' : 'bg-gray-50 text-gray-600 border-gray-200'}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${rider.isOnline ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                                {rider.status || (rider.isOnline ? 'Online' : 'Offline')}
+                                            </span>
                                         </td>
                                         <td className="p-4 hidden lg:table-cell">
-                                            <span className="flex items-center gap-1 text-sm font-semibold">
+                                            <span className="flex items-center gap-1 text-sm">
                                                 <Star size={12} className="text-amber-400 fill-amber-400" />
                                                 {rider.performance?.rating?.toFixed(1) || '—'}
                                             </span>
                                         </td>
                                         <td className="p-4 hidden lg:table-cell">
-                                            <span className="text-sm font-semibold text-gray-700">
+                                            <span className="text-sm text-gray-700">
                                                 KES {(rider.earnings?.total || 0).toLocaleString()}
                                             </span>
                                         </td>
                                         <td className="p-4">
-                                            <div className="flex items-center justify-end gap-1.5">
+                                            <div className="flex items-center justify-end gap-1">
                                                 <button
                                                     onClick={() => { setSelectedRider(rider); setDrawerTab('details'); }}
-                                                    className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg transition-colors"
-                                                    title="View Full Profile"
+                                                    className="p-1.5 text-gray-400 hover:text-black hover:bg-gray-100 rounded-lg transition-colors"
+                                                    title="View"
                                                 >
                                                     <FileText size={16} />
                                                 </button>
-                                                {!rider.isOnline && (
+                                                {!rider.isOnline && rider.status !== 'APPROVED' && (
                                                     <button
                                                         onClick={() => setPendingAction({ type: 'approve', rider })}
-                                                        className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                                                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                                                         title="Activate"
                                                     >
                                                         <CheckCircle size={16} />
@@ -435,7 +433,7 @@ export default function Riders() {
                                                 {rider.isOnline && (
                                                     <button
                                                         onClick={() => setPendingAction({ type: 'suspend', rider })}
-                                                        className="p-2 text-orange-500 hover:bg-orange-50 rounded-lg transition-colors"
+                                                        className="p-1.5 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                                                         title="Suspend"
                                                     >
                                                         <XCircle size={16} />
@@ -443,7 +441,7 @@ export default function Riders() {
                                                 )}
                                                 <button
                                                     onClick={() => setPendingAction({ type: 'offboard', rider })}
-                                                    className="p-2 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                                                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                                                     title="Offboard"
                                                 >
                                                     <Trash2 size={16} />

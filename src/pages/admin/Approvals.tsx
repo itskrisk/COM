@@ -579,61 +579,63 @@ export default function Approvals() {
     };
 
     return (
-        <div className="min-h-screen bg-[#FDFBF7] px-4 sm:px-6 lg:px-8 py-6">
-            <div className="max-w-6xl mx-auto">
+        <div className="space-y-8 pb-12">
+            <div>
                 {/* Header */}
-                <div className="mb-6 sm:mb-8">
-                    <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-black mb-2">Approvals</h1>
-                    <p className="text-gray-500 font-medium text-sm">Review and manage merchant and rider applications</p>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <h1 className="text-2xl font-bold tracking-tight">Approvals</h1>
+                        <p className="text-sm text-gray-400 font-medium">Review and manage merchant and rider applications</p>
+                    </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex gap-2 mb-4 sm:mb-6 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                <div className="mt-6 flex items-center p-1 bg-gray-100 rounded-xl w-fit">
                     <button
                         onClick={() => setActiveTab('merchants')}
-                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all whitespace-nowrap ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                             activeTab === 'merchants'
-                                ? 'bg-black text-white shadow-lg'
-                                : 'bg-white text-gray-400 hover:bg-gray-50'
+                                ? 'bg-white text-black shadow-sm'
+                                : 'text-gray-400 hover:text-black'
                         }`}
                     >
-                        <Store size={16} />
+                        <Store size={14} />
                         Merchants
                     </button>
                     <button
                         onClick={() => setActiveTab('riders')}
-                        className={`flex items-center gap-2 px-4 sm:px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-widest transition-all whitespace-nowrap ${
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                             activeTab === 'riders'
-                                ? 'bg-black text-white shadow-lg'
-                                : 'bg-white text-gray-400 hover:bg-gray-50'
+                                ? 'bg-white text-black shadow-sm'
+                                : 'text-gray-400 hover:text-black'
                         }`}
                     >
-                        <Bike size={16} />
+                        <Bike size={14} />
                         Riders
                     </button>
                 </div>
 
                 {/* Filters */}
-                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-4 sm:mb-6">
-                    <div className="flex-1 relative">
-                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                <div className="mt-4 flex flex-col md:flex-row gap-3 items-center">
+                    <div className="relative w-full md:flex-1">
+                        <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300" />
                         <input
                             type="text"
                             placeholder={`Search ${activeTab}...`}
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#D4AF37] transition-all text-sm min-h-[48px]"
+                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:border-gray-300 transition-all"
                         />
                     </div>
-                    <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+                    <div className="flex items-center p-1 bg-gray-100 rounded-xl overflow-x-auto">
                         {(['PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED', 'ALL'] as Status[]).map((status) => (
                             <button
                                 key={status}
                                 onClick={() => setStatusFilter(status)}
-                                className={`flex items-center px-3 sm:px-4 py-3.5 rounded-xl font-bold text-xs uppercase tracking-widest transition-all whitespace-nowrap min-h-[48px] ${
+                                className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                                     statusFilter === status
-                                        ? 'bg-black text-white'
-                                        : 'bg-white text-gray-400 hover:bg-gray-50'
+                                        ? 'bg-white text-black shadow-sm'
+                                        : 'text-gray-400 hover:text-black'
                                 }`}
                             >
                                 {status}
@@ -644,64 +646,62 @@ export default function Approvals() {
 
                 {/* Content */}
                 {loading ? (
-                    <div className="flex items-center justify-center py-12 sm:py-20">
-                        <div className="animate-spin rounded-full h-10 w-10 sm:h-12 sm:w-12 border-b-2 border-[#D4AF37]"></div>
+                    <div className="flex items-center justify-center py-16">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black"></div>
                     </div>
                 ) : (
-                    <div className="space-y-4">
+                    <div className="mt-6 space-y-4">
                         <AnimatePresence mode="popLayout">
                             {activeTab === 'merchants' && merchants.map((merchant) => (
                                 <motion.div
                                     key={merchant.id}
-                                    initial={{ opacity: 0, y: 20 }}
+                                    initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    className="bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 shadow-sm hover:shadow-md transition-all"
+                                    exit={{ opacity: 0, y: -10 }}
+                                    className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden"
                                 >
-                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                                        <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                                            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <div className="p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                        <div className="flex items-center gap-4 min-w-0">
+                                            <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden border border-gray-100">
                                                 {merchant.logo_url ? (
-                                                    <img src={merchant.logo_url} alt="" className="w-full h-full object-cover rounded-xl" />
+                                                    <img src={merchant.logo_url} alt="" className="w-full h-full object-cover" />
                                                 ) : (
-                                                    <span className="w-5 h-5 sm:w-6 sm:h-6">
-                                                        <Store size={24} className="w-full h-full text-gray-400" />
-                                                    </span>
+                                                    <Store size={20} className="text-gray-400" />
                                                 )}
                                             </div>
                                             <div className="min-w-0">
-                                                <h3 className="font-bold text-base sm:text-lg truncate">{merchant.business_name}</h3>
-                                                <p className="text-xs sm:text-sm text-gray-500">{merchant.type}</p>
+                                                <h3 className="font-semibold text-base truncate">{merchant.business_name}</h3>
+                                                <p className="text-sm text-gray-500">{merchant.type}</p>
                                                 {merchant.description && (
-                                                    <p className="text-xs text-gray-400 mt-1 max-w-md sm:max-w-xs truncate">{merchant.description}</p>
+                                                    <p className="text-xs text-gray-400 mt-1 max-w-md truncate">{merchant.description}</p>
                                                 )}
                                             </div>
                                         </div>
 
-                                        <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-                                            <span className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[9px] sm:text-xs font-black uppercase tracking-widest ${getStatusColor(merchant.status)}`}>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase border ${getStatusColor(merchant.status) === 'bg-green-100 text-green-700' ? 'bg-green-50 text-green-700 border-green-100' : getStatusColor(merchant.status) === 'bg-red-100 text-red-700' ? 'bg-red-50 text-red-700 border-red-100' : getStatusColor(merchant.status) === 'bg-amber-100 text-amber-700' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-gray-50 text-gray-700 border-gray-200'}`}>
                                                 {merchant.status}
                                             </span>
 
                                             {merchant.status === 'PENDING' && (
-                                                <div className="flex gap-2">
+                                                <div className="flex gap-1">
                                                     <button
                                                         onClick={() => handleApprove(merchant.id)}
                                                         disabled={processing === merchant.id}
-                                                        className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                        className="p-2 bg-white border border-gray-200 text-green-600 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
                                                         aria-label="Approve merchant"
                                                         title="Approve Merchant"
                                                     >
-                                                        <CheckCircle2 size={20} />
+                                                        <CheckCircle2 size={18} />
                                                     </button>
                                                     <button
                                                         onClick={() => handleReject(merchant.id)}
                                                         disabled={processing === merchant.id}
-                                                        className="p-2.5 sm:p-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                        className="p-2 bg-white border border-gray-200 text-red-600 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
                                                         aria-label="Reject merchant"
                                                         title="Reject Merchant"
                                                     >
-                                                        <XCircle size={20} />
+                                                        <XCircle size={18} />
                                                     </button>
                                                 </div>
                                             )}
@@ -709,29 +709,28 @@ export default function Approvals() {
                                                 <button
                                                     onClick={() => handleSuspend(merchant.id)}
                                                     disabled={processing === merchant.id}
-                                                    className="p-2.5 sm:p-3 bg-amber-50 text-amber-600 rounded-xl hover:bg-amber-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    className="p-2 bg-white border border-gray-200 text-amber-600 rounded-lg hover:bg-amber-50 transition-colors disabled:opacity-50"
                                                     aria-label="Suspend merchant"
                                                     title="Suspend Store"
                                                 >
-                                                    <Pause size={20} />
+                                                    <Pause size={18} />
                                                 </button>
                                             )}
                                             {merchant.status === 'SUSPENDED' && (
                                                 <button
                                                     onClick={() => handleUnsuspend(merchant.id)}
                                                     disabled={processing === merchant.id}
-                                                    className="p-2.5 sm:p-3 bg-green-50 text-green-600 rounded-xl hover:bg-green-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                    className="p-2 bg-white border border-gray-200 text-green-600 rounded-lg hover:bg-green-50 transition-colors disabled:opacity-50"
                                                     aria-label="Unsuspend merchant"
                                                     title="Unsuspend Store"
                                                 >
-                                                    <CheckCircle2 size={20} />
+                                                    <CheckCircle2 size={18} />
                                                 </button>
                                             )}
-                                            {/* Delete — always visible */}
                                             <button
                                                 onClick={() => handleDelete(merchant.id, 'merchant')}
                                                 disabled={processing === merchant.id}
-                                                className="p-2.5 sm:p-3 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 transition-all disabled:opacity-50 min-h-[44px] min-w-[44px] flex items-center justify-center"
+                                                className="p-2 bg-white border border-gray-200 text-red-500 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
                                                 aria-label="Delete merchant"
                                                 title="Delete Permanently"
                                             >
