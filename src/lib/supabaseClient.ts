@@ -13,6 +13,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
         persistSession: true,
         autoRefreshToken: true,
-        detectSessionInUrl: true
+        detectSessionInUrl: true,
+        // Use implicit flow so email confirmation links work from any browser/device.
+        // PKCE (the default) stores a code-verifier in the tab that initiated signup —
+        // when the user clicks the link in their email client it opens a NEW tab that
+        // has no verifier, causing "Session expired / code exchange failed" for everyone.
+        flowType: 'implicit',
     }
 });

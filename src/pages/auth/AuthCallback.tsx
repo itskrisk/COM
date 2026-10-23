@@ -22,19 +22,45 @@ export default function AuthCallback() {
                 const code = searchParams.get('code');
                 const tokenHash = searchParams.get('token_hash');
                 const typeParam = searchParams.get('type');
+                // Supabase itself may return an error in the URL — surface it immediately
+                const urlError = searchParams.get('error');
+                const urlErrorDesc = searchParams.get('error_description');
 
-                // ── Step 1: Try to establish a session from URL params or hash ───────
+                if (urlError) {
+                    console.warn('[AuthCallback] URL error from Supabase:', urlError, urlErrorDesc);
+                    if (!cancelled) {
+                        setStatus('error');
+                        setMessage(urlErrorDesc || 'The verification link is invalid or has expired. Please sign in or request a new link.');
+                    }
+                    return;
+                }
 
-                // Legacy/Implicit flow: Supabase sends access_token & refresh_token in URL hash
+                // ── Step 1: Establish a session from URL params or hash ────────────
+
+                // Implicit flow: Supabase sends access_token & refresh_token in URL hash
+                // This is the PRIMARY path now (flowType: 'implicit' in supabaseClient.ts).
+                // The tokens live in the URL fragment, so they work from any browser/device
+                // without needing a PKCE code-verifier stored in the originating tab.
                 const hash = window.location.hash;
                 const hashParams = new URLSearchParams(hash.substring(1));
                 const accessToken = hashParams.get('access_token');
                 const refreshToken = hashParams.get('refresh_token');
                 const hashType = hashParams.get('type');
+                const hashError = hashParams.get('error');
+                const hashErrorDesc = hashParams.get('error_description');
+
+                if (hashError) {
+                    console.warn('[AuthCallback] Hash error from Supabase:', hashError, hashErrorDesc);
+                    if (!cancelled) {
+                        setStatus('error');
+                        setMessage(hashErrorDesc || 'The verification link is invalid or has expired. Please sign in or request a new link.');
+                    }
+                    return;
+                }
 
                 if (cancelled) return;
 
-                // Password reset is a special case — redirect to reset page
+                // Password reset — redirect to reset page before doing anything else
                 if (accessToken && hashType === 'recovery') {
                     setStatus('success');
                     setMessage('Password reset link confirmed. Redirecting...');
@@ -44,8 +70,9 @@ export default function AuthCallback() {
                     return;
                 }
 
-                // If tokens are present in the hash, set session explicitly immediately
+                // Implicit flow: tokens in hash — set session directly
                 if (accessToken && refreshToken) {
+                    console.log('[AuthCallback] Implicit flow — setting session from hash tokens');
                     try {
                         const { error: setErr } = await supabase.auth.setSession({
                             access_token: accessToken,
@@ -59,8 +86,9 @@ export default function AuthCallback() {
                     }
                 }
 
-                // PKCE code flow (Supabase sends ?code= when PKCE is used)
+                // PKCE code flow fallback (only fires if somehow a ?code= is in the URL)
                 if (code) {
+                    console.log('[AuthCallback] PKCE fallback — exchanging code for session');
                     try {
                         const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
                         if (exchangeError) {
@@ -71,8 +99,9 @@ export default function AuthCallback() {
                     }
                 }
 
-                // OTP / token_hash flow (Supabase sends ?token_hash=&type=signup or type=email)
+                // OTP / token_hash flow (some Supabase setups send ?token_hash=&type=)
                 if (tokenHash) {
+                    console.log('[AuthCallback] token_hash flow — verifying OTP');
                     const otpType = (typeParam === 'email' || typeParam === 'signup' || typeParam === 'magiclink') 
                         ? typeParam 
                         : 'signup';
@@ -91,14 +120,15 @@ export default function AuthCallback() {
 
                 // ── Step 2: Get the current session (most reliable post-exchange) ──
 
-                // Give Supabase client a brief moment to finish setting session
-                await new Promise(res => setTimeout(res, 250));
+                // Give Supabase client a brief moment to finish persisting the session
+                await new Promise(res => setTimeout(res, 300));
 
                 const { data: { session } } = await supabase.auth.getSession();
                 let verifiedUser = session?.user ?? null;
 
-                // If session is still null, try getUser() as a fallback (handles edge-cases)
+                // Fallback: getUser() works even if getSession() is momentarily stale
                 if (!verifiedUser) {
+                    console.log('[AuthCallback] getSession returned null, trying getUser()');
                     const { data: { user: directUser } } = await supabase.auth.getUser();
                     verifiedUser = directUser ?? null;
                 }
@@ -107,7 +137,7 @@ export default function AuthCallback() {
 
                 if (!verifiedUser) {
                     setStatus('error');
-                    setMessage('Session not found or link has expired. Please sign in with your credentials to access your portal.');
+                    setMessage('The verification link has expired or was already used. Please sign in directly — your account may already be active.');
                     return;
                 }
 
