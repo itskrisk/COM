@@ -5216,3 +5216,11 @@ User reported that following recent commits to fix the email verification issue,
 3. **Database Migration:**
    - [020_resilient_handle_new_user.sql](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/supabase/migrations/020_resilient_handle_new_user.sql)
    Created migration containing a resilient `handle_new_user()` function with an inner `EXCEPTION WHEN unique_violation THEN` block that inserts the profile without the conflicting phone, plus an outer `WHEN OTHERS THEN RAISE WARNING` block ensuring database triggers never abort `auth.users` creation.
+
+
+### Push Verification & Deployment
+- Ran `scripts/validate-sitemaps.mjs` and resolved the indexability exception for `/merchant/signup` and `/rider/signup` in `public/robots.txt` and `scripts/sitemap.config.mjs`.
+- Executed `npm run sitemap:validate` and confirmed all sitemap validation checks passed.
+- Ran full production `npm run build` (`tsc -b && vite build`) with 0 errors.
+- Staged all 33 files covering Auth signup resilience, M-Pesa STK push integrity, sitemap automation suite, and mobile UI adjustments.
+- Committed (`9fced0f`) and successfully pushed to `origin/main`.
