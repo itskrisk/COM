@@ -27,7 +27,7 @@ export default function HowItWorks() {
     ];
 
     return (
-        <section ref={ref} className="relative py-24 lg:py-32 bg-[#D4AF37] overflow-hidden text-gray-900" id="how-it-works">
+        <section ref={ref} className="relative py-16 md:py-24 lg:py-32 bg-[#D4AF37] overflow-hidden text-gray-900" id="how-it-works">
 
             {/* Editorial Background Texture */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay grayscale">
@@ -38,9 +38,9 @@ export default function HowItWorks() {
                 />
             </div>
 
-            <div className="container relative z-10 px-8 lg:px-20">
+            <div className="container relative z-10 px-6 md:px-10 lg:px-20">
                 {/* Header */}
-                <div className="max-w-4xl mb-24">
+                <div className="max-w-4xl mb-12 md:mb-16 lg:mb-24">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -50,7 +50,7 @@ export default function HowItWorks() {
                         <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-gray-900/60 mb-8 block">
                             The Narrative
                         </span>
-                        <h2 className="text-5xl md:text-7xl font-heading font-light text-gray-900 leading-[1.1] tracking-tighter mb-8">
+                        <h2 className="text-4xl md:text-5xl lg:text-7xl font-heading font-light text-gray-900 leading-[1.1] tracking-tighter mb-6 md:mb-8">
                             How we move <br />
                             <span className="text-gray-900/40 italic">the city</span>.
                         </h2>
@@ -59,7 +59,7 @@ export default function HowItWorks() {
 
                 {/* Vertical Unboxed Flow */}
                 <div className="max-w-4xl relative">
-                    <div className="space-y-16 lg:space-y-24 border-t border-gray-900/20 pt-12">
+                    <div className="space-y-10 md:space-y-16 lg:space-y-24 border-t border-gray-900/20 pt-8 md:pt-12">
                         {steps.map((step, index) => (
                             <motion.div
                                 key={index}
@@ -67,7 +67,7 @@ export default function HowItWorks() {
                                 whileInView={{ opacity: 1, x: 0 }}
                                 transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                                 viewport={{ amount: 0.5 }}
-                                className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start border-b border-gray-900/20 pb-12"
+                                className="grid grid-cols-1 md:grid-cols-12 gap-4 md:gap-6 items-start border-b border-gray-900/20 pb-10 md:pb-12"
                             >
                                 <div className="md:col-span-3">
                                     <span className="text-xs font-mono font-bold uppercase tracking-[0.4em] text-gray-900/50 block mb-1">
@@ -77,10 +77,10 @@ export default function HowItWorks() {
                                 </div>
 
                                 <div className="md:col-span-9 space-y-4">
-                                    <h3 className="text-3xl md:text-5xl font-heading font-light text-gray-900 tracking-tight">
+                                    <h3 className="text-2xl md:text-4xl lg:text-5xl font-heading font-light text-gray-900 tracking-tight">
                                         {step.title}
                                     </h3>
-                                    <p className="text-lg md:text-xl text-gray-800 font-light leading-relaxed max-w-xl">
+                                    <p className="text-base md:text-lg xl:text-xl text-gray-800 font-light leading-relaxed max-w-xl">
                                         {step.description}
                                     </p>
                                 </div>

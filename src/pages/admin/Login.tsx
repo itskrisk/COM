@@ -72,7 +72,7 @@ export default function AdminLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4 py-12">
+        <div className="min-h-screen bg-gray-50 flex items-start md:items-center justify-center px-4 py-8 md:py-12 overflow-y-auto">
             <div className="w-full max-w-sm">
                 {/* Back Button */}
                 <Link

@@ -3,6 +3,7 @@ import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut, Eye, EyeOff } from
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
 import { isValidKenyanPhone, normalizeKenyanPhone } from '../../utils/phone';
 import customerLoginImg from '../../assets/images/customerloginpic.jpg';
 
@@ -72,6 +73,30 @@ export default function Signup() {
 
         const normalizedPhone = normalizeKenyanPhone(phone);
 
+        // Pre-check: Ensure phone number is not already associated with another profile
+        if (normalizedPhone) {
+            try {
+                const { data: existingProfile } = await supabase
+                    .from('profiles')
+                    .select('id')
+                    .eq('phone', normalizedPhone)
+                    .maybeSingle();
+
+                if (existingProfile) {
+                    setError('This phone number is already registered to an existing account. Please log in or use a different phone number.');
+                    setPortalHint({
+                        message: 'This phone number is already registered.',
+                        link: '/login',
+                        label: 'Proceed to Customer Login'
+                    });
+                    setLoading(false);
+                    return;
+                }
+            } catch (checkErr) {
+                console.warn('Phone pre-check notice:', checkErr);
+            }
+        }
+
         try {
             const { error: signupError } = await signUp(email, password, {
                 name: fullName.trim(),
@@ -106,6 +131,13 @@ export default function Signup() {
                     label: 'Proceed to Customer Login'
                 });
                 setError('This email is already registered. Each email can only be used for one role.');
+            } else if (lower.includes('saving new user') || lower.includes('error saving user') || lower.includes('database error')) {
+                setPortalHint({
+                    message: 'An account with this phone number or email may already exist.',
+                    link: '/login',
+                    label: 'Proceed to Customer Login'
+                });
+                setError('An account with this phone number or email already exists. Please sign in or use a different phone number.');
             } else if (lower.includes('rate limit')) {
                 setError("Email rate limit reached. Please wait a moment before trying again, or use a different email.");
             } else {
@@ -127,8 +159,8 @@ export default function Signup() {
 
     return (
         <div className="min-h-screen bg-white flex overflow-hidden">
-            {/* Left Side: Editorial Image (Desktop Only) */}
-            <div className="hidden lg:block lg:w-1/2 relative">
+            {/* Left Side: Editorial Image — tablet portrait and up */}
+            <div className="hidden md:block md:w-5/12 lg:w-1/2 relative flex-shrink-0">
                 <img
                     src={customerLoginImg}
                     alt="Customer Signup"
@@ -148,7 +180,7 @@ export default function Signup() {
             </div>
 
             {/* Right Side: Auth Form */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative overflow-y-auto">
+            <div className="w-full md:w-7/12 lg:w-1/2 flex flex-col justify-center px-6 sm:px-10 md:px-12 lg:px-24 py-10 md:py-12 relative overflow-y-auto min-h-screen">
                 {/* Logo & Header */}
                 <div className="mb-12 relative">
                     <Link
@@ -165,7 +197,7 @@ export default function Signup() {
                             </span>
                         </Link>
                     </div>
-                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Join the Fam.</h1>
+                    <h1 className="text-3xl sm:text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Join the Fam.</h1>
                     <p className="text-sm text-gray-500">
                         Create an account to start your journey. Already a member?{' '}
                         <Link to="/login" className="font-medium text-[#4A90E2] hover:underline transition-all">

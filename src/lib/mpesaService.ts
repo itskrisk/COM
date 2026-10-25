@@ -101,10 +101,22 @@ export const mpesaService = {
         const ref = params.accountReference || `MUNCHEEZ-${params.orderId.slice(0, 6).toUpperCase()}`;
 
         try {
+            const { data: sessionData } = await supabase.auth.getSession();
+            const accessToken = sessionData?.session?.access_token;
+            if (!accessToken) {
+                return {
+                    success: false,
+                    error: 'You must be signed in to start an M-Pesa payment.'
+                };
+            }
+
             // Call serverless proxy (bypasses browser CORS and executes real Safaricom Daraja STK Push)
             const res = await fetch('/api/mpesa/stkpush', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${accessToken}`
+                },
                 body: JSON.stringify({
                     phoneNumber: formattedPhone,
                     amount: roundAmount,

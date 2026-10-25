@@ -91,8 +91,8 @@ export default function Login() {
 
     return (
         <div className="min-h-screen bg-white flex overflow-hidden">
-            {/* Left Side: Editorial Image (Desktop Only) */}
-            <div className="hidden lg:block lg:w-1/2 relative">
+            {/* Left Side: Editorial Image — tablet portrait and up */}
+            <div className="hidden md:block md:w-5/12 lg:w-1/2 relative flex-shrink-0">
                 <img
                     src={customerLoginImg}
                     alt="Customer Login"
@@ -112,7 +112,7 @@ export default function Login() {
             </div>
 
             {/* Right Side: Auth Form */}
-            <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 sm:px-12 lg:px-24 py-12 relative overflow-y-auto">
+            <div className="w-full md:w-7/12 lg:w-1/2 flex flex-col justify-center px-6 sm:px-10 md:px-12 lg:px-24 py-10 md:py-12 relative overflow-y-auto min-h-screen">
                 {/* Logo & Header */}
                 <div className="mb-12 relative">
                     <Link
@@ -129,7 +129,7 @@ export default function Login() {
                             </span>
                         </Link>
                     </div>
-                    <h1 className="text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Customer Login.</h1>
+                    <h1 className="text-3xl sm:text-4xl font-heading font-light text-gray-900 tracking-tight mb-3">Customer Login.</h1>
                     <p className="text-sm text-gray-500">
                         Don't have an account?{' '}
                         <Link to="/signup" className="font-medium text-[#2563EB] hover:underline transition-all">

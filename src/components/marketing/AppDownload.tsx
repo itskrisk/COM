@@ -4,7 +4,7 @@ import googlePlayIcon from "../../assets/google-play-icon.png";
 
 export default function AppDownload() {
     return (
-        <section className="relative py-24 lg:py-32 bg-[#00A082] text-white overflow-hidden" id="app-download">
+        <section className="relative py-16 md:py-24 lg:py-32 bg-[#00A082] text-white overflow-hidden" id="app-download">
 
             {/* Editorial Background Texture */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay grayscale">
@@ -15,7 +15,7 @@ export default function AppDownload() {
                 />
             </div>
 
-            <div className="container relative z-20 px-8 lg:px-20">
+            <div className="container relative z-20 px-6 md:px-10 lg:px-20">
                 <div className="max-w-4xl flex flex-col md:flex-row items-center justify-between gap-12 md:gap-16 text-center md:text-left border-t border-b border-white/20 py-12">
 
                     {/* Content */}
@@ -27,9 +27,9 @@ export default function AppDownload() {
                         className="space-y-6 md:space-y-8"
                     >
                         <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-white/60 block">Get the App</span>
-                        <h2 className="text-4xl md:text-6xl font-heading font-light text-white leading-[1.1] tracking-tight">
+                        <h2 className="text-3xl md:text-4xl lg:text-6xl font-heading font-light text-white leading-[1.1] tracking-tight">
                             The city in your <br />
-                            <span className="text-white/40 italic text-5xl md:text-6xl">pocket.</span>
+                            <span className="text-white/40 italic text-4xl md:text-5xl lg:text-6xl">pocket.</span>
                         </h2>
                         <p className="text-lg md:text-xl text-white/80 font-light leading-relaxed max-w-md">
                             Tap into the best of Nairobi. From local bakes to fine dining, it's all on Muncheez.

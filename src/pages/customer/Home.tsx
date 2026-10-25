@@ -41,10 +41,10 @@ export default function Home() {
                 <div className="flex flex-col lg:flex-row border-y border-white/20">
 
                     {/* Merchant Canvas */}
-                    <div className="flex-1 py-20 px-8 lg:px-20 border-b lg:border-b-0 lg:border-r border-white/20 group relative overflow-hidden">
+                    <div className="flex-1 py-12 md:py-16 lg:py-20 px-6 md:px-10 lg:px-20 border-b lg:border-b-0 lg:border-r border-white/20 group relative overflow-hidden">
                         <div className="relative z-10 transition-transform duration-700 group-hover:-translate-y-1">
                             <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-[#D4AF37] mb-8 block">The Collective</span>
-                            <h2 className="text-5xl font-heading font-light text-white mb-8 leading-[1.1] tracking-tight">
+                            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-light text-white mb-6 md:mb-8 leading-[1.1] tracking-tight">
                                 Build Your <br />
                                 Legacy.
                             </h2>
@@ -66,10 +66,10 @@ export default function Home() {
                     </div>
 
                     {/* Rider Canvas */}
-                    <div className="flex-1 py-20 px-8 lg:px-20 group relative overflow-hidden">
+                    <div className="flex-1 py-12 md:py-16 lg:py-20 px-6 md:px-10 lg:px-20 group relative overflow-hidden">
                         <div className="relative z-10 transition-transform duration-700 group-hover:-translate-y-1">
                             <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-[#D4AF37] mb-8 block">The Movement</span>
-                            <h2 className="text-5xl font-heading font-light text-white mb-8 leading-[1.1] tracking-tight">
+                            <h2 className="text-3xl md:text-4xl lg:text-5xl font-heading font-light text-white mb-6 md:mb-8 leading-[1.1] tracking-tight">
                                 Own the <br />
                                 Streets.
                             </h2>

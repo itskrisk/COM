@@ -43,7 +43,7 @@ export default function Services() {
     const [activeId, setActiveId] = useState("01");
 
     return (
-        <section ref={ref} className="relative py-20 lg:py-32 bg-[#4A90E2] text-white overflow-hidden" id="about">
+        <section ref={ref} className="relative py-16 md:py-20 lg:py-32 bg-[#4A90E2] text-white overflow-hidden" id="about">
 
             {/* Faint Background Texture */}
             <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay grayscale">
@@ -54,9 +54,9 @@ export default function Services() {
                 />
             </div>
 
-            <div className="container relative z-10 px-6 lg:px-20">
+            <div className="container relative z-10 px-5 md:px-10 lg:px-20">
                 {/* Header */}
-                <div className="mb-12 lg:mb-20 text-center lg:text-left">
+                <div className="mb-10 md:mb-14 lg:mb-20 text-center lg:text-left">
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
@@ -64,15 +64,15 @@ export default function Services() {
                         viewport={{ once: true }}
                     >
                         <span className="text-[10px] font-bold uppercase tracking-[0.6em] text-white/60 mb-4 block">Our Offerings</span>
-                        <h2 className="text-4xl md:text-5xl lg:text-7xl font-heading font-light text-white leading-[1.1] tracking-tighter">
+                        <h2 className="text-3xl md:text-4xl lg:text-7xl font-heading font-light text-white leading-[1.1] tracking-tighter">
                             Essentials, <br className="hidden lg:block" />
                             Elevated.
                         </h2>
                     </motion.div>
                 </div>
 
-                {/* Desktop: Unboxed Interactive Accordion (No rounded card padding) */}
-                <div className="hidden lg:flex h-[600px] gap-2 border-t border-b border-white/20 py-6">
+                {/* Tablet & Desktop: Unboxed Interactive Accordion (No rounded card padding) */}
+                <div className="hidden md:flex h-[420px] lg:h-[600px] gap-2 border-t border-b border-white/20 py-4 lg:py-6">
                     {offerings.map((item) => (
                         <motion.div
                             key={item.id}
@@ -142,15 +142,15 @@ export default function Services() {
                     ))}
                 </div>
 
-                {/* Mobile: Horizontal Snap Scroll (Unboxed Edge-to-Edge) */}
-                <div className="lg:hidden -mx-6">
-                    <div className="flex overflow-x-auto gap-4 snap-x snap-mandatory px-6 pb-12 scrollbar-hide">
+                {/* Mobile only: Horizontal Snap Scroll (Unboxed Edge-to-Edge) */}
+                <div className="md:hidden -mx-5">
+                    <div className="flex overflow-x-auto gap-4 snap-x snap-mandatory px-5 pb-10 scrollbar-hide">
                         {offerings.map((item) => {
                             return (
                                 <Link
                                     key={item.id}
                                     to="/stores?v=market"
-                                    className="relative shrink-0 w-[85vw] aspect-[4/5] overflow-hidden snap-center group block border-t border-b border-white/20"
+                                    className="relative shrink-0 w-[80vw] landscape:w-[60vw] aspect-[4/5] landscape:aspect-[3/4] overflow-hidden snap-center group block border-t border-b border-white/20"
                                 >
                                     <img
                                         src={item.image}

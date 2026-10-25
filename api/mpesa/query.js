@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, sendRateLimitResponse } from '../_lib/rateLimiter.js';
+import { isDarajaInProgress, isDarajaSuccess, normalizeResultCode, processStkResult } from './_processStkResult.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xvnvyrddhgmxqynypboa.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bnZ5cmRkaGdteHF5bnlwYm9hIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjA3MTYyMywiZXhwIjoyMTA3NjQ3NjIzfQ.EnsCmbkRf6AMw2_62AWzqgk2hXSu1zEOTX3GguuZjQI';
@@ -31,6 +32,22 @@ function getTimestamp() {
   );
 }
 
+function toClientPayload(tx, extra = {}) {
+  const credited = Boolean(tx?.wallet_credited);
+  const complete = tx?.status === 'SUCCESS' || tx?.status === 'FAILED' || tx?.status === 'CANCELLED';
+  return {
+    status: tx?.status || extra.status || 'INITIATED',
+    resultCode: tx?.result_code ?? extra.resultCode ?? null,
+    resultDesc: tx?.result_desc || extra.resultDesc || null,
+    receiptNumber: tx?.mpesa_receipt_number || extra.receiptNumber || null,
+    checkoutRequestId: tx?.checkout_request_id || extra.checkoutRequestId || null,
+    paymentConfirmed: tx?.status === 'SUCCESS',
+    walletCredited: credited,
+    isComplete: complete && (tx?.status !== 'SUCCESS' || credited || !tx?.user_id && !tx?.raw_payload?.topupUserId),
+    ...extra
+  };
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -38,7 +55,6 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') return res.status(200).end();
 
-  // Rate limit: 20 status queries per IP per minute
   const limit = checkRateLimit(req, { max: 20, windowMs: 60_000, keyPrefix: 'mpesa-query' });
   if (!limit.allowed) return sendRateLimitResponse(res, limit);
 
@@ -50,115 +66,145 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'checkoutRequestId or orderId required' });
     }
 
-    // 1. Check database first
     let query = supabase.from('mpesa_transactions').select('*');
     if (checkoutRequestId) query = query.eq('checkout_request_id', checkoutRequestId);
     else if (orderId) query = query.eq('order_id', orderId);
 
     const { data: tx } = await query.order('created_at', { ascending: false }).limit(1).maybeSingle();
 
-    if (tx && (tx.status === 'SUCCESS' || tx.status === 'FAILED')) {
+    const needsTopupCredit = Boolean(
+      tx &&
+      tx.status === 'SUCCESS' &&
+      !tx.wallet_credited &&
+      (tx.user_id || tx.raw_payload?.topupUserId)
+    );
+
+    if (tx && (tx.status === 'SUCCESS' || tx.status === 'FAILED' || tx.status === 'CANCELLED') && !needsTopupCredit) {
+      return res.status(200).json(toClientPayload(tx));
+    }
+
+    if (!checkoutRequestId) {
       return res.status(200).json({
-        status: tx.status,
-        resultCode: tx.result_code,
-        resultDesc: tx.result_desc,
-        receiptNumber: tx.mpesa_receipt_number,
-        isComplete: true
+        status: tx?.status || 'INITIATED',
+        paymentConfirmed: false,
+        walletCredited: Boolean(tx?.wallet_credited),
+        isComplete: false,
+        message: 'Awaiting PIN input on phone'
       });
     }
 
-    // 2. Query Safaricom if still INITIATED and checkoutRequestId is available
-    if (checkoutRequestId) {
-      const authHeader = Buffer.from(`${MPESA_CONFIG.consumerKey}:${MPESA_CONFIG.consumerSecret}`).toString('base64');
-      const tokenRes = await fetch(`${BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
-        headers: { Authorization: `Basic ${authHeader}` }
+    const authHeader = Buffer.from(`${MPESA_CONFIG.consumerKey}:${MPESA_CONFIG.consumerSecret}`).toString('base64');
+    const tokenRes = await fetch(`${BASE_URL}/oauth/v1/generate?grant_type=client_credentials`, {
+      headers: { Authorization: `Basic ${authHeader}` }
+    });
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token;
+
+    if (!accessToken) {
+      return res.status(200).json({
+        status: tx?.status || 'INITIATED',
+        paymentConfirmed: false,
+        walletCredited: Boolean(tx?.wallet_credited),
+        isComplete: false,
+        message: 'Awaiting PIN input on phone'
       });
-      const tokenData = await tokenRes.json();
-      const accessToken = tokenData.access_token;
-
-      if (accessToken) {
-        const timestamp = getTimestamp();
-        const password = Buffer.from(`${MPESA_CONFIG.shortcode}${MPESA_CONFIG.passkey}${timestamp}`).toString('base64');
-
-        const queryPayload = {
-          BusinessShortCode: MPESA_CONFIG.shortcode,
-          Password: password,
-          Timestamp: timestamp,
-          CheckoutRequestID: checkoutRequestId
-        };
-
-        const sfRes = await fetch(`${BASE_URL}/mpesa/stkpushquery/v1/query`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(queryPayload)
-        });
-
-        const sfData = await sfRes.json();
-        console.log('Safaricom query response:', sfData);
-
-        if (sfData.ResultCode === '0') {
-          await supabase
-            .from('mpesa_transactions')
-            .update({ status: 'SUCCESS', result_code: 0, result_desc: sfData.ResultDesc })
-            .eq('checkout_request_id', checkoutRequestId);
-
-          // Credit wallets if not already credited
-          const topupUserId = tx?.raw_payload?.topupUserId;
-          if (topupUserId) {
-            const { data: existingTx } = await supabase.from('wallet_transactions').select('id').eq('reference', tx.mpesa_receipt_number || checkoutRequestId).maybeSingle();
-            if (!existingTx) {
-              const { data: w } = await supabase.from('wallets').select('id,balance,total_earned').eq('owner_id', topupUserId).eq('owner_type', 'CUSTOMER').maybeSingle();
-              if (w) {
-                await supabase.from('wallets').update({ balance: Number(w.balance) + Number(tx.amount), total_earned: Number(w.total_earned) + Number(tx.amount), updated_at: new Date().toISOString() }).eq('id', w.id);
-              } else {
-                await supabase.from('wallets').insert({ owner_id: topupUserId, owner_type: 'CUSTOMER', balance: Number(tx.amount), total_earned: Number(tx.amount), total_withdrawn: 0, pending_balance: 0, currency: 'KES' });
-              }
-              const { data: w2 } = await supabase.from('wallets').select('id').eq('owner_id', topupUserId).eq('owner_type', 'CUSTOMER').maybeSingle();
-              await supabase.from('wallet_transactions').insert({ wallet_id: w2?.id || w?.id, type: 'ADJUSTMENT', amount: Number(tx.amount), fee: 0, reference: tx.mpesa_receipt_number || checkoutRequestId, description: 'Wallet top-up via M-Pesa', status: 'COMPLETED' });
-            }
-          }
-
-          return res.status(200).json({
-            status: 'SUCCESS',
-            resultCode: 0,
-            resultDesc: sfData.ResultDesc,
-            isComplete: true
-          });
-        } else if (sfData.ResultCode && sfData.ResultCode !== '0') {
-          await supabase
-            .from('mpesa_transactions')
-            .update({ status: 'FAILED', result_code: Number(sfData.ResultCode), result_desc: sfData.ResultDesc })
-            .eq('checkout_request_id', checkoutRequestId);
-
-          // Also mark the order payment as FAILED so UI can show correct state
-          if (tx?.order_id) {
-            await supabase
-              .from('orders')
-              .update({ payment_status: 'FAILED', updated_at: new Date().toISOString() })
-              .eq('id', tx.order_id)
-              .neq('payment_status', 'PAID');
-          }
-
-          return res.status(200).json({
-            status: 'FAILED',
-            resultCode: Number(sfData.ResultCode),
-            resultDesc: sfData.ResultDesc,
-            isComplete: true
-          });
-        }
-      }
     }
+
+    const timestamp = getTimestamp();
+    const password = Buffer.from(`${MPESA_CONFIG.shortcode}${MPESA_CONFIG.passkey}${timestamp}`).toString('base64');
+    const sfRes = await fetch(`${BASE_URL}/mpesa/stkpushquery/v1/query`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        BusinessShortCode: MPESA_CONFIG.shortcode,
+        Password: password,
+        Timestamp: timestamp,
+        CheckoutRequestID: checkoutRequestId
+      })
+    });
+
+    const sfData = await sfRes.json();
+    console.log('Safaricom query response', {
+      checkoutRequestId,
+      resultCode: sfData.ResultCode ?? sfData.errorCode ?? sfData.ResponseCode
+    });
+
+    if (isDarajaInProgress(sfData)) {
+      return res.status(200).json({
+        status: tx?.status || 'INITIATED',
+        paymentConfirmed: false,
+        walletCredited: Boolean(tx?.wallet_credited),
+        isComplete: false,
+        message: 'Awaiting PIN input on phone'
+      });
+    }
+
+    const resultCode = normalizeResultCode(sfData.ResultCode);
+    if (resultCode === null) {
+      return res.status(200).json({
+        status: tx?.status || 'INITIATED',
+        paymentConfirmed: false,
+        walletCredited: Boolean(tx?.wallet_credited),
+        isComplete: false,
+        message: 'Awaiting PIN input on phone'
+      });
+    }
+
+    const { data, error } = await processStkResult(supabase, {
+      checkoutRequestId,
+      merchantRequestId: tx?.merchant_request_id || sfData.MerchantRequestID || null,
+      resultCode,
+      resultDesc: sfData.ResultDesc || sfData.ResponseDescription || null,
+      receiptNumber: tx?.mpesa_receipt_number || null,
+      amount: tx?.amount != null ? Number(tx.amount) : null,
+      rawPayload: sfData
+    });
+
+    if (error) {
+      console.error('STK query processing failed:', error.message || error.code);
+      return res.status(500).json({ error: 'Failed to record payment status' });
+    }
+
+    if (!data?.ok && data?.reason === 'NOT_FOUND') {
+      return res.status(200).json({
+        status: 'INITIATED',
+        paymentConfirmed: false,
+        walletCredited: false,
+        isComplete: false,
+        message: 'Awaiting payment record'
+      });
+    }
+
+    if (!data?.ok) {
+      return res.status(200).json({
+        status: tx?.status || 'INITIATED',
+        paymentConfirmed: false,
+        walletCredited: false,
+        isComplete: false,
+        message: 'Awaiting PIN input on phone'
+      });
+    }
+
+    const credited = Boolean(data.credited);
+    const completeStatus = data.status === 'SUCCESS' || data.status === 'FAILED' || data.status === 'CANCELLED';
+    const isTopup = Boolean(tx?.user_id || tx?.raw_payload?.topupUserId);
 
     return res.status(200).json({
-      status: tx?.status || 'INITIATED',
-      isComplete: false,
-      message: 'Awaiting PIN input on phone'
+      status: data.status,
+      resultCode,
+      resultDesc: sfData.ResultDesc,
+      receiptNumber: data.receipt || tx?.mpesa_receipt_number || null,
+      checkoutRequestId,
+      paymentConfirmed: data.status === 'SUCCESS',
+      walletCredited: credited,
+      isComplete: completeStatus && (data.status !== 'SUCCESS' || credited || !isTopup),
+      isDarajaSuccess: isDarajaSuccess(resultCode)
     });
   } catch (err) {
-    console.error('Error in query function:', err);
+    console.error('Error in query function:', err.message || err);
     return res.status(500).json({ error: err.message });
   }
 }

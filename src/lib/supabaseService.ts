@@ -149,7 +149,7 @@ export const authService = {
     vehicle_model?: string;
     vehicle_plate?: string;
   }) {
-    const { data, error } = await supabase.auth.signUp({
+    let { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -157,6 +157,24 @@ export const authService = {
         data: metadata
       }
     });
+
+    // Resilience: If database trigger throws "Database error saving new user" (e.g. phone collision in profiles),
+    // retry without phone in metadata so the auth account is created successfully
+    if (error && (error.message?.includes('Database error saving new user') || error.message?.includes('error saving user')) && metadata.phone) {
+      console.warn('[authService.signUp] Trigger collision detected on phone metadata. Retrying signup without phone in options.data...');
+      const { phone: _, ...metadataWithoutPhone } = metadata;
+      const retryResult = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${typeof window !== 'undefined' ? window.location.origin : 'https://muncheez.co.ke'}/auth/callback`,
+          data: metadataWithoutPhone
+        }
+      });
+      data = retryResult.data;
+      error = retryResult.error;
+    }
+
     return { data, error };
   },
 

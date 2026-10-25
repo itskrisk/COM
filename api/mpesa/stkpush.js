@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { checkRateLimit, sendRateLimitResponse } from '../_lib/rateLimiter.js';
+import { requireSupabaseUser } from '../_lib/requireSupabaseUser.js';
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL || 'https://xvnvyrddhgmxqynypboa.supabase.co';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2bnZ5cmRkaGdteHF5bnlwYm9hIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc5MjA3MTYyMywiZXhwIjoyMTA3NjQ3NjIzfQ.EnsCmbkRf6AMw2_62AWzqgk2hXSu1zEOTX3GguuZjQI';
@@ -58,6 +59,9 @@ export default async function handler(req, res) {
   const ipLimit = checkRateLimit(req, { max: 3, windowMs: 10 * 60_000, keyPrefix: 'stkpush' });
   if (!ipLimit.allowed) return sendRateLimitResponse(res, ipLimit);
 
+  const verifiedUser = await requireSupabaseUser(req, res);
+  if (!verifiedUser) return;
+
   try {
     const { phoneNumber, amount, orderId, accountReference, transactionDesc, topupUserId } = req.body || {};
 
@@ -66,6 +70,10 @@ export default async function handler(req, res) {
     }
 
     const isTopup = !!topupUserId;
+    if (isTopup && String(topupUserId) !== String(verifiedUser.id)) {
+      return res.status(403).json({ error: 'Top-up user does not match the authenticated session' });
+    }
+    const topupOwnerId = isTopup ? verifiedUser.id : null;
 
     const formattedPhone = formatPhone(phoneNumber);
     if (!formattedPhone || formattedPhone.length !== 12) {
@@ -74,26 +82,37 @@ export default async function handler(req, res) {
 
     if (!isTopup) {
       // idempotency check only for real orders
-      const { data: existingOrder } = await supabase
+      const { data: existingOrder, error: orderLookupError } = await supabase
         .from('orders')
-        .select('payment_status, payment_expires_at')
+        .select('customer_id, payment_status, payment_expires_at')
         .eq('id', orderId)
-        .single();
+        .maybeSingle();
 
-      if (existingOrder) {
-        if (existingOrder.payment_status === 'PAID') {
-          return res.status(409).json({ error: 'Order is already paid. Duplicate payment rejected.' });
-        }
-        if (existingOrder.payment_status === 'PENDING' && existingOrder.payment_expires_at) {
-          const expiresAt = new Date(existingOrder.payment_expires_at);
-          if (expiresAt > new Date()) {
-            const remainingMs = expiresAt - new Date();
-            const remainingSec = Math.ceil(remainingMs / 1000);
-            return res.status(409).json({
-              error: `An M-Pesa prompt is already active for this order. Check your phone. It expires in ${remainingSec}s.`,
-              retryAfter: remainingSec
-            });
-          }
+      if (orderLookupError) {
+        console.error('STK push order lookup failed:', orderLookupError.code || orderLookupError.message);
+        return res.status(500).json({ error: 'Unable to verify order ownership' });
+      }
+
+      if (!existingOrder) {
+        return res.status(404).json({ error: 'Order not found' });
+      }
+
+      if (String(existingOrder.customer_id) !== String(verifiedUser.id)) {
+        return res.status(403).json({ error: 'Order does not belong to the authenticated user' });
+      }
+
+      if (existingOrder.payment_status === 'PAID') {
+        return res.status(409).json({ error: 'Order is already paid. Duplicate payment rejected.' });
+      }
+      if (existingOrder.payment_status === 'PENDING' && existingOrder.payment_expires_at) {
+        const expiresAt = new Date(existingOrder.payment_expires_at);
+        if (expiresAt > new Date()) {
+          const remainingMs = expiresAt - new Date();
+          const remainingSec = Math.ceil(remainingMs / 1000);
+          return res.status(409).json({
+            error: `An M-Pesa prompt is already active for this order. Check your phone. It expires in ${remainingSec}s.`,
+            retryAfter: remainingSec
+          });
         }
       }
     }
@@ -124,7 +143,8 @@ export default async function handler(req, res) {
     const timestamp = getTimestamp();
     const password = Buffer.from(`${MPESA_CONFIG.shortcode}${MPESA_CONFIG.passkey}${timestamp}`).toString('base64');
     const roundAmount = Math.max(1, Math.round(Number(amount)));
-    const ref = (accountReference || `MUNCHEEZ-${orderId.slice(0, 6)}`).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
+    const refSource = orderId || topupUserId || 'TOPUP';
+    const ref = (accountReference || `MUNCHEEZ-${String(refSource).slice(0, 6)}`).toUpperCase().replace(/[^A-Z0-9_-]/g, '');
 
     const stkPayload = {
       BusinessShortCode: MPESA_CONFIG.shortcode,
@@ -153,35 +173,59 @@ export default async function handler(req, res) {
     const stkData = await stkRes.json();
     console.log('Safaricom STK Response:', stkData);
 
-    const isSuccess = stkData.ResponseCode === '0';
+    const isAccepted = stkData.ResponseCode === '0';
     const checkoutRequestId = stkData.CheckoutRequestID || null;
     const merchantRequestId = stkData.MerchantRequestID || null;
+    const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
 
-    // 4. Record transaction in Supabase (with idempotency key)
-    const idempotencyKey = `${orderId}-${timestamp}`;
-    await supabase.from('mpesa_transactions').insert({
+    // 4. Record transaction in Supabase (with idempotency key and explicit customer id)
+    const idempotencyKey = `${orderId || topupOwnerId}-${timestamp}`;
+    const insertRow = {
       order_id: isTopup ? null : orderId,
+      user_id: topupOwnerId,
       phone_number: formattedPhone,
       amount: roundAmount,
       merchant_request_id: merchantRequestId,
       checkout_request_id: checkoutRequestId,
-      status: isSuccess ? 'INITIATED' : 'FAILED',
-      result_code: isSuccess ? 0 : Number(stkData.ResponseCode) || 1,
+      status: isAccepted ? 'INITIATED' : 'FAILED',
+      result_code: isAccepted ? 0 : Number(stkData.ResponseCode) || 1,
       result_desc: stkData.ResponseDescription || stkData.CustomerMessage || 'STK Push sent',
-      raw_payload: { ...stkData, topupUserId: topupUserId || null },
-      idempotency_key: idempotencyKey
-    });
+      raw_payload: { ...stkData, topupUserId: topupOwnerId },
+      idempotency_key: idempotencyKey,
+      wallet_credited: false
+    };
 
-    if (!isSuccess) {
+    let { error: insertError } = await supabase.from('mpesa_transactions').insert(insertRow);
+    if (insertError && /user_id|wallet_credited/.test(insertError.message || '')) {
+      delete insertRow.user_id;
+      delete insertRow.wallet_credited;
+      ({ error: insertError } = await supabase.from('mpesa_transactions').insert(insertRow));
+    }
+
+    if (insertError) {
+      console.error('mpesa_transactions insert failed:', insertError.message || insertError.code);
+      return res.status(502).json({
+        success: false,
+        pending: false,
+        paymentConfirmed: false,
+        error: 'STK request could not be recorded. If a prompt appeared, do not retry until support checks this CheckoutRequestID.',
+        checkoutRequestId,
+        merchantRequestId
+      });
+    }
+
+    if (!isAccepted) {
       return res.status(400).json({
         success: false,
+        pending: false,
+        paymentConfirmed: false,
         error: stkData.ResponseDescription || stkData.errorMessage || 'Safaricom STK push rejected',
-        raw: stkData
+        checkoutRequestId,
+        merchantRequestId
       });
     }
 
     if (!isTopup) {
-      const expiresAt = new Date(Date.now() + 10 * 60_000).toISOString();
       await supabase
         .from('orders')
         .update({
@@ -194,6 +238,9 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       success: true,
+      pending: true,
+      paymentConfirmed: false,
+      status: 'INITIATED',
       checkoutRequestId,
       merchantRequestId,
       customerMessage: stkData.CustomerMessage || 'Prompt sent to your phone. Enter your M-Pesa PIN.',

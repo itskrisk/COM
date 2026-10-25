@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/generate-sitemaps.mjs",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sitemap": "node scripts/generate-sitemaps.mjs",
+    "sitemap:validate": "node scripts/validate-sitemaps.mjs"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",

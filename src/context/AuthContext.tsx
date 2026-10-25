@@ -433,7 +433,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setTimeout(() => reject(new Error('Connection timed out. Please try again.')), 15000)
       );
 
-      const { data, error } = await Promise.race([
+      let { data, error } = await Promise.race([
         supabase.auth.signUp({
           email: cleanEmail,
           password,
@@ -451,14 +451,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         timeoutPromise
       ]);
 
-        if (error) {
-          const msg = (error as any)?.message || '';
-          const lower = msg.toLowerCase();
-          if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('user already registered') || lower.includes('email in use')) {
-            return { error: 'This email is already registered. Please proceed to login instead.' };
-          }
-          return { error: msg || 'Signup failed. Please try again.' };
+      // Resilience: If database trigger throws "Database error saving new user" (e.g. phone collision in profiles),
+      // retry without phone in metadata so the auth account is created successfully
+      if (error && (error.message?.includes('Database error saving new user') || error.message?.includes('error saving user')) && cleanPhone) {
+        console.warn('[AuthContext.signUp] Trigger collision detected on phone metadata. Retrying signup without phone in options.data...');
+        const retryResult = await Promise.race([
+          supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+              data: {
+                full_name: metadata?.name || cleanEmail.split('@')[0],
+                role,
+                merchant_type: metadata?.merchantType || 'Restaurant',
+                vehicle_type: metadata?.vehicleType || 'Motorbike',
+              }
+            }
+          }),
+          timeoutPromise
+        ]);
+        data = retryResult.data;
+        error = retryResult.error;
+      }
+
+      if (error) {
+        const msg = (error as any)?.message || '';
+        const lower = msg.toLowerCase();
+        if (lower.includes('already registered') || lower.includes('already exists') || lower.includes('user already registered') || lower.includes('email in use')) {
+          return { error: 'This email is already registered. Please proceed to login instead.' };
         }
+        if (lower.includes('saving new user') || lower.includes('error saving user') || lower.includes('database error')) {
+          return { error: 'An account with this phone number or email may already exist. Please check your credentials or try logging in.' };
+        }
+        return { error: msg || 'Signup failed. Please try again.' };
+      }
+
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        return { error: 'This email is already registered. Please proceed to login instead.' };
+      }
 
       if (!data?.user) {
         return { error: 'Signup failed. Please try again.' };

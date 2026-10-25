@@ -37,9 +37,19 @@ export default function Hero() {
                     .desktop-hero-img { display: none !important; }
                     .mobile-pad-hero-img { display: block !important; }
                 }
+                /* Landscape phones / tablets: reduce hero height so content isn't clipped */
+                @media (max-height: 500px) and (orientation: landscape) {
+                    .hero-section {
+                        height: auto !important;
+                        min-height: 100svh !important;
+                        padding-bottom: 2.5rem !important;
+                        padding-top: 4.5rem !important;
+                        align-items: center !important;
+                    }
+                }
             `}</style>
 
-            <section className="relative h-screen supports-[height:100dvh]:h-[100dvh] min-h-[580px] flex items-end bg-black text-white overflow-hidden pb-16 md:pb-20 px-8 md:px-16">
+            <section className="hero-section relative h-screen supports-[height:100dvh]:h-[100dvh] min-h-[560px] flex items-end bg-black text-white overflow-hidden pb-14 md:pb-20 px-6 md:px-16">
                 {/* Background Imagery - Full bleed, fully filled under navbar */}
                 <div className="absolute inset-0 z-0">
                     {/* Mobile & Tablet (All phones, tablets, and iPads): heroo1.jpg */}
@@ -63,12 +73,12 @@ export default function Hero() {
                 </div>
 
                 {/* Minimal Luxury Content - Unboxed & Clean */}
-                <div className="relative z-20 w-full max-w-xl space-y-6">
+                <div className="relative z-20 w-full max-w-xl space-y-4 md:space-y-6">
                     <div className="space-y-2">
                         <span className="text-[10px] font-bold uppercase tracking-[0.4em] text-[#D4AF37] block">
                             Muncheez
                         </span>
-                        <h1 className="text-3xl md:text-4xl font-heading font-light tracking-tight text-white leading-tight">
+                        <h1 className="text-2xl sm:text-3xl md:text-4xl font-heading font-light tracking-tight text-white leading-tight">
                             Everything you crave, delivered.
                         </h1>
                     </div>
@@ -90,7 +100,7 @@ export default function Hero() {
                     </div>
 
                     {/* Direct Explore Link */}
-                    <div className="pt-2">
+                    <div className="pt-1">
                         <Link
                             to="/stores?v=market"
                             className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-white hover:text-[#D4AF37] border-b border-white hover:border-[#D4AF37] pb-1 transition-colors"

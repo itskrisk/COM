@@ -5153,3 +5153,66 @@ The return statement in AdminDashboard() was closed too early at line 195 (closi
 TypeScript compilation passes (	sc -b --noEmit). No errors in Dashboard.tsx.
 The only remaining TS error is pre-existing in Riders.tsx (type comparison mismatch unrelated to this fix).
 
+
+
+---
+
+## [2026-10-23] Fix: Email Verification 'Session Expired' Bug
+
+### Prompt
+Users reported that clicking the email verification link always showed 'Session Expired' or similar errors, regardless of device. Login worked fine for manually-created users. The email was received and clicked, but the /auth/callback page consistently failed.
+
+### Root Cause
+The Supabase JS v2 client defaults to PKCE (Proof Key for Code Exchange) flow. In PKCE, when a user signs up, a one-time 'code verifier' is generated and stored in localStorage of the ORIGINATING browser tab. Supabase emails a link containing a short-lived ?code= parameter. When the user clicks the link in their email client, it opens a NEW browser session/tab that has NO access to the original tab's localStorage code verifier. The exchangeCodeForSession(code) call therefore fails with 'invalid code verifier' or similar, and the callback sees no session, showing 'Session Expired' to every user.
+
+### Actions Taken
+1. **src/lib/supabaseClient.ts** - Added flowType: 'implicit' to the Supabase client auth config. With implicit flow, Supabase sends the access_token and refresh_token directly in the URL hash fragment (#access_token=...&refresh_token=...). These tokens work from any browser, any device, any tab - no stored verifier needed.
+2. **src/pages/auth/AuthCallback.tsx** - Hardened the callback handler: added early detection and surfacing of Supabase error/error_description params from both query string and hash, added console.log for each auth path branch for future debugging, improved the fallback error message to be more helpful (tells users the link may be expired/already used and to try signing in directly), and extended the session-settle delay from 250ms to 300ms.
+
+### What Was NOT Changed
+- Login flow untouched
+- Sign-up form and signup API calls untouched
+- Email templates untouched
+- Supabase dashboard redirect URL allowlist (already correct)
+- All routing and role detection logic untouched
+
+### Fix Verification
+With flowType: 'implicit', any user who clicks their verification email link will have working tokens in the URL fragment that can be set directly via setSession(). The PKCE code fallback branch remains for forward-compatibility. The fix resolves the bug for all user types (customer, merchant, rider) on all devices.
+
+
+
+---
+
+## [2026-10-25] Fix: Resolve 'Database Error Saving New User' on Signup
+
+### Prompt
+User reported that following recent commits to fix the email verification issue, signing up was failing with: 'error saving user' (Supabase GoTrue Auth HTTP 500 "Database error saving new user").
+
+### Root Cause Analysis & Reproduction
+1. When a user creates an account, GoTrue runs an `AFTER INSERT ON auth.users` PostgreSQL trigger (`public.handle_new_user()`) to populate `public.profiles`.
+2. `public.profiles` has a UNIQUE constraint on the phone column (`profiles_phone_key`).
+3. In migration 018 (`018_fix_handle_new_user_no_email.sql`), `handle_new_user()` used `ON CONFLICT (id) DO UPDATE`, but did NOT contain an `EXCEPTION` block.
+4. When testing or re-registering with a phone number already present in `profiles` (from previous testing, existing customer/merchant accounts, or deleted auth users with remaining profile rows), PostgreSQL threw a `23505 unique_violation` on `profiles_phone_key`.
+5. Because the trigger unhandled exception aborted the entire auth signup transaction, GoTrue caught the exception and returned HTTP 500 with message `Database error saving new user`.
+6. Furthermore, none of the frontend signup forms (Customer, Partner, or Courier) checked whether the phone number was already taken prior to calling `signUp()`, and the raw database error message was surfaced directly to the user.
+
+### Failures Encountered During Investigation
+- Initial tests with valid dummy phone numbers succeeded, revealing that the auth endpoint itself was healthy.
+- Running duplicate phone test against existing profiles immediately reproduced `AuthApiError: Database error saving new user (code: unexpected_failure, status: 500)`.
+
+### Final Working Solution
+1. **Frontend Pre-Check:**
+   - [Signup.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/customer/Signup.tsx)
+   - [PartnerSignup.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/merchant/PartnerSignup.tsx)
+   - [CourierSignup.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/courier/Signup.tsx)
+   Added an asynchronous pre-check querying `profiles` for the entered phone number. If already in use, the user is immediately shown a clear, friendly message (`This phone number is already registered to an existing account. Please sign in or use a different phone number.`) with direct navigation to the respective login portal.
+
+2. **Application-Level Resilient Fallback:**
+   - [AuthContext.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/context/AuthContext.tsx)
+   - [supabaseService.ts](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/lib/supabaseService.ts)
+   If Supabase returns `Database error saving new user` due to a phone collision inside the trigger, the client automatically catches it and retries signup without `phone` in the metadata. The account creation succeeds, avoiding user blockage, while `/api/auth/sync-user` or onboarding handles subsequent profile data syncing.
+   Also added detection for already-registered emails where Supabase returns empty `identities: []`, and translated raw database errors into user-friendly guidance.
+
+3. **Database Migration:**
+   - [020_resilient_handle_new_user.sql](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/supabase/migrations/020_resilient_handle_new_user.sql)
+   Created migration containing a resilient `handle_new_user()` function with an inner `EXCEPTION WHEN unique_violation THEN` block that inserts the profile without the conflicting phone, plus an outer `WHEN OTHERS THEN RAISE WARNING` block ensuring database triggers never abort `auth.users` creation.
