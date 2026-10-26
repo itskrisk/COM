@@ -5291,3 +5291,8 @@ User reported Google Search Console error for `https://muncheez.co.ke/sitemap-jo
    - `sitemap-jobs.xml` now has valid, well-formed entries (`/company/careers` and `/company/careers/apply`).
    - Ran `npm run build` (`tsc -b && vite build`) with 0 errors.
    - Staged, committed, and pushed changes to `origin/main`.
+
+
+### Google Search Console Verification Confirmed
+- Google Search Console re-indexed `https://muncheez.co.ke/sitemap-jobs.xml` successfully with 0 errors and 2 discovered pages.
+- All 4 sitemap endpoints (`sitemap.xml`, `sitemap-pages.xml`, `sitemap-stores.xml`, `sitemap-jobs.xml`) now report **Status: Success** in Google Search Console.
