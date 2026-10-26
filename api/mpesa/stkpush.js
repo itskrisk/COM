@@ -117,10 +117,11 @@ export default async function handler(req, res) {
       }
     }
 
-    // Per-order rate limit: max 2 retries per 15 minutes for the same order
+    // Per-order / per-user top-up rate limit
+    const rateLimitTarget = isTopup ? `topup-${topupOwnerId}` : `order-${orderId}`;
     const orderLimit = checkRateLimit(
-      { ...req, headers: { ...req.headers, 'x-forwarded-for': `order-${orderId}` } },
-      { max: 2, windowMs: 15 * 60_000, keyPrefix: 'stkpush-order' }
+      { ...req, headers: { ...req.headers, 'x-forwarded-for': rateLimitTarget } },
+      { max: isTopup ? 6 : 3, windowMs: 15 * 60_000, keyPrefix: isTopup ? 'stkpush-topup' : 'stkpush-order' }
     );
     if (!orderLimit.allowed) return sendRateLimitResponse(res, orderLimit);
 

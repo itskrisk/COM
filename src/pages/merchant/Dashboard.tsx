@@ -129,6 +129,8 @@ export default function MerchantDashboard() {
     const [bulkPurchaseLimit, setBulkPurchaseLimit] = useState(10);
     const [operatingHours, setOperatingHours] = useState('');
     const [mpesaTill, setMpesaTill] = useState('');
+    const [deliveryFee, setDeliveryFee] = useState(150);
+    const [commissionRate, setCommissionRate] = useState(10);
     // Store cover / card image
     const [storeCoverUrl, setStoreCoverUrl] = useState('');
     const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -197,6 +199,8 @@ export default function MerchantDashboard() {
                 bulk_limit: bulkPurchaseLimit,
                 low_stock_threshold: lowStockThreshold,
                 is_active: isStoreOpen,
+                delivery_fee: Number(deliveryFee) || 150,
+                commission_rate: Number(commissionRate) || 10,
                 // Store card / cover image saved to both fields for compatibility
                 cover_url: storeCoverUrl.trim() || undefined,
                 logo_url: storeCoverUrl.trim() || undefined,
@@ -295,6 +299,8 @@ export default function MerchantDashboard() {
             if (data?.mpesa_till) setMpesaTill(data.mpesa_till);
             if (data?.is_active !== undefined) setIsStoreOpen(data.is_active);
             if (data?.operating_hours?.hours) setOperatingHours(data.operating_hours.hours);
+            if (data?.delivery_fee !== undefined && data.delivery_fee !== null) setDeliveryFee(Number(data.delivery_fee));
+            if (data?.commission_rate !== undefined && data.commission_rate !== null) setCommissionRate(Number(data.commission_rate));
             // Load cover image
             setStoreCoverUrl(data?.cover_url || data?.logo_url || data?.branding?.bannerUrl || '');
             if (data?.address) {
@@ -1563,8 +1569,8 @@ export default function MerchantDashboard() {
                                 <span className="text-[11px] text-neutral-400 block mt-1">Total customer checkouts</span>
                             </div>
                             <div className="p-5">
-                                <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">Muncheez Fee (10%)</span>
-                                <span className="text-3xl font-light text-neutral-600 font-mono">-KES {financials.commission.toLocaleString()}</span>
+                                <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block mb-1">Muncheez Fee ({commissionRate}%)</span>
+                                <span className="text-3xl font-light text-neutral-600 font-mono">-KES {Math.round(financials.gross * (commissionRate / 100)).toLocaleString()}</span>
                                 <span className="text-[11px] text-neutral-400 block mt-1">Marketplace commission</span>
                             </div>
                             <div className="p-5">
@@ -1867,6 +1873,50 @@ export default function MerchantDashboard() {
                                         onChange={(e) => setBulkPurchaseLimit(Number(e.target.value))}
                                         className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono"
                                     />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* SECTION 4: FINANCIAL & DELIVERY PARAMETERS */}
+                        <div className="space-y-6">
+                            <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-400 block border-b border-neutral-100 pb-2">
+                                04 · Delivery Fee & Commission Terms
+                            </span>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-xs">
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Store Delivery Fee (KES)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        step="10"
+                                        value={deliveryFee}
+                                        onChange={(e) => setDeliveryFee(Number(e.target.value))}
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono font-bold"
+                                    />
+                                    <span className="text-[10px] text-neutral-400 block">
+                                        The courier delivery fee charged to customers ordering from your storefront.
+                                    </span>
+                                </div>
+
+                                <div className="space-y-1.5">
+                                    <label className="text-[10px] font-mono uppercase tracking-widest text-neutral-600 block">
+                                        Marketplace Commission (%)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        step="0.5"
+                                        value={commissionRate}
+                                        onChange={(e) => setCommissionRate(Number(e.target.value))}
+                                        className="w-full py-2 bg-transparent border-b border-neutral-300 focus:border-black text-sm text-black outline-none font-mono font-bold"
+                                    />
+                                    <span className="text-[10px] text-neutral-400 block">
+                                        Platform revenue commission percentage applied to product subtotals.
+                                    </span>
                                 </div>
                             </div>
                         </div>

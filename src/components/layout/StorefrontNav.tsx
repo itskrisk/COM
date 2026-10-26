@@ -161,10 +161,16 @@ export default function StorefrontNav({
                             </button>
                             <button
                                 onClick={() => onOpenProfile()}
-                                className="p-1.5 text-white/80 hover:text-white transition-colors"
+                                className="p-1 text-white/90 hover:text-white transition-colors flex items-center justify-center cursor-pointer"
                                 aria-label="Account"
                             >
-                                <User size={18} />
+                                {user ? (
+                                    <span className="w-6 h-6 rounded-full text-white flex items-center justify-center text-[10px] font-black tracking-tighter border border-white" style={{ backgroundColor: '#4A90E2' }}>
+                                        {userInitials}
+                                    </span>
+                                ) : (
+                                    <User size={18} />
+                                )}
                             </button>
                         </div>
 

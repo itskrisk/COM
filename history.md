@@ -5324,3 +5324,94 @@ User reported a mobile responsive storefront bug: when tapping the profile modal
    - Elevated `CookieModal` to `z-[1020]` so when triggered from the profile modal, it reliably stacks on top of the parent modal.
 4. **Validation**:
    - Ran `npm run build` (`tsc -b && vite build`) with 0 errors across 2,246 modules.
+
+---
+
+## [2026-10-26] Feature & Fix: Muncheez Wallet End-to-End Flow & Real-Time Balance Reflection
+
+### Prompt
+Inspect the Muncheez wallet architecture and end-to-end process. Resolve the issue where wallet balance was not reflecting, ensure a client can pay if they have enough balance in their Muncheez wallet, verify how money moves from M-Pesa to customer wallet, and from wallet to store (merchant)/rider/platform without breaking existing STK push flow.
+
+### Root Cause Analysis
+1. **Top-Up Rate Limiter Key Collision (pi/mpesa/stkpush.js)**:
+   - The STK push route implemented an order rate limit using `order-`. Because wallet top-ups do not have an order ID, all top-ups shared the same `order-` or `order-undefined` key. After 2 top-ups across the entire platform in 15 minutes, all subsequent top-up STK pushes were rejected with HTTP 429 ("Rate limit exceeded").
+2. **Missing Wallet Balance & Validation in Checkout (CheckoutView.tsx)**:
+   - CheckoutView.tsx had a radio option for Muncheez Wallet with hardcoded text "Pay instantly from your balance", but it never queried the user's wallet balance or displayed it.
+   - Users could select the option with 0 balance, only failing at submission.
+3. **Wallet Order Fulfillment & Revenue Routing Gap (CheckoutView.tsx)**:
+   - When a customer checked out with wallet, walletService.debitWallet debited their balance, but the order record was left in payment_status = 'PENDING' and status = 'PAYMENT_PENDING' because it bypassed M-Pesa STK push.
+   - Consequently, the enforce_payment_before_fulfilment database trigger blocked merchants from accepting or fulfilling the order, and the stale-order cleanup cron would eventually mark it as EXPIRED / FAILED.
+   - Money was debited from customer wallet, but never routed to merchant or courier wallets.
+4. **STK Push Reference Crash on Missing orderId (mpesaService.ts)**:
+   - In mpesaService.initiateSTKPush, ccountReference defaulted to `MUNCHEEZ-`. If orderId was omitted or undefined for top-ups, calling .slice() threw a TypeError.
+5. **Bare-bones Top-Up UI & Strict Design Rule Non-Compliance (ProfileModal.tsx)**:
+   - Top-up modal had raw card padding and box styling, minimal status text ("Status: pending"), and didn't auto-refresh the modal balance when background events fired.
+
+### Actions Taken
+1. **[api/mpesa/stkpush.js](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/api/mpesa/stkpush.js)**:
+   - Differentiated rate limiting for top-ups vs. order payments. For top-ups, uses `topup-` with a higher retry threshold (6 requests per 15 min), completely removing the global collision bug.
+2. **[src/lib/mpesaService.ts](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/lib/mpesaService.ts)**:
+   - Made account reference fallback safe: `params.orderId ? MUNCHEEZ- : 'MUNCHEEZ-TOPUP'`.
+3. **[src/pages/customer/CheckoutView.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/customer/CheckoutView.tsx)**:
+   - Added walletBalance and isLoadingWallet state, loading wallet on mount and subscribing to the muncheez_wallet_updated window event.
+   - Rendered live wallet balance directly on the payment option with clear validation: shows available balance, checks against inalTotal, and disables selection if balance is insufficient with a clear warning (e.g. "Insufficient funds · Need KES 450").
+   - In handlePlaceOrder, when paid with wallet:
+     - Debits customer wallet via walletService.debitWallet.
+     - Immediately marks order in database as payment_status: 'PAID' and status: 'PAYMENT_CONFIRMED' with receipt number WLT-{orderId}.
+     - Calls walletService.allocateOrderRevenue to split and deposit funds into Merchant Wallet (gross minus 15% platform fee), Courier Wallet (delivery fee), and Platform Wallet (commission).
+     - Clears cart and navigates directly to order confirmation/tracking.
+4. **[src/components/ui/shared/ProfileModal.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/components/ui/shared/ProfileModal.tsx)**:
+   - Unboxed the wallet balance section using edge-to-edge section dividers (order-t border-b border-gray-200) and editorial typography per the strict design rules.
+   - Rebuilt the top-up dialog into an editorial, unboxed, multi-state M-Pesa top-up interface featuring:
+     - Verified phone number confirmation.
+     - Transparent bottom-line input with KES prefix.
+     - Quick amount selector chips (100, 250, 500, 1000 KES).
+     - Active animated waiting state with pulse effect for M-Pesa PIN prompt.
+     - Confirmation state upon completion and detailed error recovery.
+     - Event listener on muncheez_wallet_updated for real-time balance updates.
+5. **Verification**:
+   - Ran 
+px tsc --noEmit which completed with 0 errors.
+   - Verified end-to-end money flow: M-Pesa STK -> Customer Wallet -> Checkout Debit -> Order Confirmed -> Merchant/Rider/Platform Wallet allocation.
+
+## [2026-10-26] Admin & Merchant Delivery Fees & Commissions Control + Mobile Initials Avatar
+
+### Prompt
+I want to hope that admind and merchants can change delivery fees and commissions from their dahsboards...also, the profile modal in mobile resposiv version should chanfed if a user is logged in and it should show the initals.. Simple..
+
+### Failures & Root Causes Encountered
+1. **Hardcoded Financial Calculations**:
+   - walletService.allocateOrderRevenue hardcoded commissionRate = 0.15 and deliveryFee = 150, ignoring custom rates agreed with merchants or configured per store.
+   - customerApi.createOrder in src/lib/api.ts always computed total using hardcoded itemsSubtotal + 150.
+   - CheckoutView.tsx calculated totals using fixed 150 delivery fee regardless of merchant configuration.
+2. **Missing UI in Dashboards**:
+   - Merchant Dashboard (src/pages/merchant/Dashboard.tsx) lacked editable inputs for delivery_fee and commission_rate, and Finances tab hardcoded 10% commission.
+   - Admin Merchants view (src/pages/admin/Merchants.tsx) had no mechanism for super-admins to view or adjust a merchant's commission rate or delivery fee in the drawer or add modal.
+3. **Mobile Profile Modal & Nav Trigger Icon**:
+   - In StorefrontNav.tsx, the mobile profile button always displayed a generic User icon regardless of whether the user was authenticated.
+   - In ProfileModal.tsx, the header did not display an avatar with the user's initials when logged in.
+
+### Actions Taken
+1. **[src/components/layout/StorefrontNav.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/components/layout/StorefrontNav.tsx)**:
+   - Added user initials helper userInitials derived from user.user_metadata?.full_name, 
+ame, or email.
+   - Updated mobile header profile button to conditionally render a circular badge with initials (#D4AF37 gold background, black bold text) when authenticated, preserving <User size={18} /> for guests.
+2. **[src/components/ui/shared/ProfileModal.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/components/ui/shared/ProfileModal.tsx)**:
+   - Updated modal top header in mobile responsive view to display user initials circular avatar badge alongside display name and email when logged in.
+3. **[src/pages/merchant/Dashboard.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/merchant/Dashboard.tsx)**:
+   - Added deliveryFee (default 150) and commissionRate (default 10) state hooks.
+   - Synced values from Supabase merchants record on load.
+   - Saved delivery_fee and commission_rate in handleSaveStoreSettings.
+   - Added Section 04: Delivery Fee & Commission Terms in Settings using unboxed editorial typography and transparent bottom-line inputs adhering to the strict NO BOXES design rule.
+   - Dynamically calculated Finances tab commission deductions using the merchant's exact commissionRate.
+4. **[src/pages/admin/Merchants.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/admin/Merchants.tsx)**:
+   - In ApplicationDetailDrawer: Added deliveryFee and commissionRate states, handleSaveFinancials updating merchants table via dminSupabase, and an unboxed Delivery Fee & Commission Terms (Admin Controls) section with instant save button.
+   - In MerchantFormModal & onSave: Added delivery fee and commission rate inputs and persisted them on merchant insertion.
+5. **[src/lib/api.ts](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/lib/api.ts)** & **[src/pages/customer/CheckoutView.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/customer/CheckoutView.tsx)**:
+   - Updated createOrder to accept dynamic deliveryFee parameter and compute order total accurately.
+   - Updated CheckoutView to fetch and apply merchant.delivery_fee ?? merchant.deliveryFee ?? 150 for total order cost calculation and pass it to order placement.
+6. **[src/lib/walletService.ts](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/lib/walletService.ts)**:
+   - Updated llocateOrderRevenue to fetch delivery_fee and commission_rate dynamically from the database for the given merchant, compute exact platform commission (orderSubtotal * (commissionRate / 100)), and deposit the precise net payout to merchant wallet, delivery fee to rider wallet, and fee to platform wallet.
+7. **Verification**:
+   - Ran 
+px tsc --noEmit which completed with code 0 (zero errors).

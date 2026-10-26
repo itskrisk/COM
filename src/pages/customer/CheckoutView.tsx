@@ -55,6 +55,8 @@ export default function CheckoutView() {
     const [phoneNumber, setPhoneNumber] = useState(profile?.phone || '');
     const [wantsCutlery, setWantsCutlery] = useState(false);
     const [isLocating, setIsLocating] = useState(false);
+    const [walletBalance, setWalletBalance] = useState<number | null>(null);
+    const [isLoadingWallet, setIsLoadingWallet] = useState(false);
 
     // Real M-Pesa STK Push Express States (No simulation)
     const [isStkModalOpen, setIsStkModalOpen] = useState(false);
@@ -78,6 +80,30 @@ export default function CheckoutView() {
             }
         }
     }, [profile]);
+
+    // Load customer wallet balance
+    const loadWallet = async () => {
+        if (!user?.id) {
+            setWalletBalance(null);
+            return;
+        }
+        setIsLoadingWallet(true);
+        try {
+            const w = await walletService.getOrCreateWallet(user.id, 'CUSTOMER');
+            if (w) setWalletBalance(Number(w.balance || 0));
+        } catch (e) {
+            console.error('Failed to load wallet in checkout:', e);
+        } finally {
+            setIsLoadingWallet(false);
+        }
+    };
+
+    useEffect(() => {
+        loadWallet();
+        const handleWalletUpdate = () => { loadWallet(); };
+        window.addEventListener('muncheez_wallet_updated', handleWalletUpdate);
+        return () => window.removeEventListener('muncheez_wallet_updated', handleWalletUpdate);
+    }, [user?.id]);
 
     // Load merchant data
     useEffect(() => {
@@ -194,7 +220,7 @@ export default function CheckoutView() {
         );
     }
 
-    const deliveryFee = merchant?.deliveryFee || 150;
+    const deliveryFee = Number(merchant?.delivery_fee ?? merchant?.deliveryFee ?? 150);
     const finalTotal = total + deliveryFee;
 
     // Countdown timer derived from server-set payment_expires_at
@@ -365,7 +391,8 @@ export default function CheckoutView() {
                 deliveryInstructions: deliveryInstructions.trim(),
                 paymentMethod: paymentMethod.toUpperCase(),
                 wantsCutlery: wantsCutlery,
-                phoneNumber: phoneNumber.trim()
+                phoneNumber: phoneNumber.trim(),
+                deliveryFee: deliveryFee
             });
 
             if (orderResult.error) {
@@ -384,7 +411,7 @@ export default function CheckoutView() {
             // Store last order for immediate retrieval
             localStorage.setItem('muncheez_last_order', createdOrderId);
 
-            // If wallet payment, debit customer wallet
+            // If wallet payment, debit customer wallet, confirm order & allocate revenue
             if (paymentMethod === 'wallet') {
                 const ok = await walletService.debitWallet(user!.id, finalTotal, createdOrderId, `WLT-${Date.now()}`);
                 if (!ok) {
@@ -392,6 +419,34 @@ export default function CheckoutView() {
                     setIsProcessing(false);
                     return;
                 }
+
+                const receiptNo = `WLT-${createdOrderId.slice(0, 8).toUpperCase()}`;
+
+                // Mark order as PAID & PAYMENT_CONFIRMED immediately
+                await supabase
+                    .from('orders')
+                    .update({
+                        payment_status: 'PAID',
+                        status: 'PAYMENT_CONFIRMED',
+                        amount_paid: finalTotal,
+                        mpesa_code: receiptNo,
+                        mpesa_receipt: receiptNo,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', createdOrderId);
+
+                // Allocate revenue to merchant, rider, and platform
+                await walletService.allocateOrderRevenue({
+                    orderId: createdOrderId,
+                    totalAmount: finalTotal,
+                    merchantId: effectiveMerchantId,
+                    receiptNumber: receiptNo
+                });
+
+                setIsProcessing(false);
+                clearCart();
+                navigate(`/order/${createdOrderId}`);
+                return;
             }
 
             // If M-Pesa, dispatch STK Push via Daraja API and open modal
@@ -841,27 +896,55 @@ export default function CheckoutView() {
                                 </label>
 
                                 {/* Wallet Option */}
-                                <label className="py-3.5 sm:py-4 flex items-center justify-between cursor-pointer group gap-3">
-                                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <Wallet size={18} className={`shrink-0 ${paymentMethod === 'wallet' ? 'text-[#4A90E2]' : 'text-neutral-400'}`} />
-                                        <div className="min-w-0 flex-1">
-                                            <span className="text-xs sm:text-sm font-medium text-black block truncate">
-                                                Muncheez Wallet
-                                            </span>
-                                            <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate">
-                                                Pay instantly from your balance
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <input
-                                        type="radio"
-                                        name="payment_method"
-                                        value="wallet"
-                                        checked={paymentMethod === 'wallet'}
-                                        onChange={() => setPaymentMethod('wallet')}
-                                        className="w-4 h-4 accent-black cursor-pointer shrink-0"
-                                    />
-                                </label>
+                                {(() => {
+                                    const hasEnough = walletBalance !== null && walletBalance >= finalTotal;
+                                    const isSelected = paymentMethod === 'wallet';
+                                    return (
+                                        <label className={`py-3.5 sm:py-4 flex items-center justify-between cursor-pointer group gap-3 ${!user ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                                            <div className="flex items-center gap-3 min-w-0 flex-1">
+                                                <Wallet size={18} className={`shrink-0 ${isSelected ? 'text-black' : 'text-neutral-400'}`} />
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="text-xs sm:text-sm font-medium text-black block truncate">
+                                                            Muncheez Wallet
+                                                        </span>
+                                                        {walletBalance !== null && (
+                                                            <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.5 border ${hasEnough ? 'border-neutral-200 text-neutral-800' : 'border-red-200 text-red-600 font-bold'}`}>
+                                                                KES {walletBalance.toLocaleString()}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <span className="text-[10px] sm:text-[11px] font-mono text-neutral-400 block truncate mt-0.5">
+                                                        {!user ? (
+                                                            'Sign in to pay with your wallet'
+                                                        ) : isLoadingWallet ? (
+                                                            'Verifying balance...'
+                                                        ) : walletBalance === null ? (
+                                                            'Pay instantly from your wallet balance'
+                                                        ) : hasEnough ? (
+                                                            'Instant settlement · No M-Pesa prompt needed'
+                                                        ) : (
+                                                            `Insufficient funds · Need KES ${finalTotal.toLocaleString()}`
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <input
+                                                type="radio"
+                                                name="payment_method"
+                                                value="wallet"
+                                                checked={isSelected}
+                                                disabled={!user || (walletBalance !== null && !hasEnough)}
+                                                onChange={() => {
+                                                    if (user && hasEnough) {
+                                                        setPaymentMethod('wallet');
+                                                    }
+                                                }}
+                                                className="w-4 h-4 accent-black cursor-pointer shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                                            />
+                                        </label>
+                                    );
+                                })()}
                             </div>
 
                             {/* Summary Breakdown */}

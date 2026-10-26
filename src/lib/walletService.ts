@@ -90,17 +90,44 @@ export const walletService = {
         merchantId?: string;
         riderId?: string;
         receiptNumber: string;
+        deliveryFee?: number;
+        commissionRate?: number;
     }) {
         const client = adminSupabase || supabase;
-        const deliveryFee = 150;
-        const total = Number(params.totalAmount) || 0;
-        const productSubtotal = Math.max(0, total - deliveryFee);
-        const commissionRate = 0.15; // 15% Muncheez take
-        const platformCommission = Math.round(productSubtotal * commissionRate);
-        const merchantNet = productSubtotal - platformCommission;
-
         const effectiveMerchantId = params.merchantId || '11949575-b1f4-43e1-a256-8561eaf234b4';
         const effectiveRiderId = params.riderId || '00000000-0000-0000-0000-000000000002';
+
+        let deliveryFee = params.deliveryFee != null ? Number(params.deliveryFee) : 150;
+        let commissionRate = params.commissionRate != null ? Number(params.commissionRate) : 0.15;
+
+        // Dynamic lookup from merchant profile
+        try {
+            if (params.deliveryFee == null || params.commissionRate == null) {
+                const { data: mData } = await client
+                    .from('merchants')
+                    .select('delivery_fee, commission_rate')
+                    .eq('id', effectiveMerchantId)
+                    .maybeSingle();
+
+                if (mData) {
+                    if (params.deliveryFee == null && mData.delivery_fee != null) {
+                        deliveryFee = Number(mData.delivery_fee);
+                    }
+                    if (params.commissionRate == null && mData.commission_rate != null) {
+                        const rateNum = Number(mData.commission_rate);
+                        commissionRate = rateNum > 1 ? rateNum / 100 : rateNum;
+                    }
+                }
+            }
+        } catch (fetchErr) {
+            console.warn('Could not query custom merchant rate, using defaults:', fetchErr);
+        }
+
+        const total = Number(params.totalAmount) || 0;
+        const productSubtotal = Math.max(0, total - deliveryFee);
+        const platformCommission = Math.round(productSubtotal * commissionRate);
+        const merchantNet = productSubtotal - platformCommission;
+        const commissionPercentStr = Math.round(commissionRate * 100);
 
         try {
             // 1. Credit Merchant Wallet
@@ -125,7 +152,7 @@ export const walletService = {
                     amount: merchantNet,
                     fee: platformCommission,
                     reference: params.receiptNumber,
-                    description: `Order #${params.orderId.slice(0, 8).toUpperCase()} Settlement (Gross KES ${productSubtotal.toLocaleString()} - 15% fee KES ${platformCommission.toLocaleString()})`,
+                    description: `Order #${params.orderId.slice(0, 8).toUpperCase()} Settlement (Gross KES ${productSubtotal.toLocaleString()} - ${commissionPercentStr}% fee KES ${platformCommission.toLocaleString()})`,
                     status: 'COMPLETED'
                 });
             }
@@ -179,7 +206,7 @@ export const walletService = {
                     amount: platformCommission,
                     fee: 0,
                     reference: params.receiptNumber,
-                    description: `15% commission on order #${params.orderId.slice(0, 8).toUpperCase()}`,
+                    description: `${commissionPercentStr}% commission on order #${params.orderId.slice(0, 8).toUpperCase()}`,
                     status: 'COMPLETED'
                 });
             }

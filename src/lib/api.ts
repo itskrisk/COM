@@ -214,10 +214,11 @@ export const customerApi = {
     paymentMethod?: string;
     wantsCutlery?: boolean;
     phoneNumber?: string;
+    deliveryFee?: number;
   }) => {
     // Calculate totals server-side
     const subtotal = data.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const deliveryFee = 150;
+    const deliveryFee = data.deliveryFee != null ? Number(data.deliveryFee) : 150;
     const serviceFee = 0;
     const total = subtotal + deliveryFee + serviceFee;
 

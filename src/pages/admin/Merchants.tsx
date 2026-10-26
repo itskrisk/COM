@@ -5,7 +5,7 @@ import {
     Download, Calendar, ChevronDown, RefreshCw,
     ArrowLeft, Info, MapPin, Printer, Building,
     Shield, MessageSquare, Send, FileText, Phone,
-    Mail, Hash, FileCheck, Star, Edit
+    Mail, Hash, FileCheck, Star, Edit, Save, Scale
 } from 'lucide-react';
 import { Merchant, MerchantType, MerchantStatus } from '../../types/schema';
 import { supabase } from '../../lib/supabaseClient';
@@ -508,7 +508,9 @@ export default function Merchants() {
                                 mpesa_till: m.mpesaShortcode || null,
                                 is_active: true,
                                 created_at: new Date().toISOString(),
-                                logo_url: m.logoUrl || null
+                                logo_url: m.logoUrl || null,
+                                delivery_fee: (m as any).deliveryFee !== undefined ? Number((m as any).deliveryFee) : 150,
+                                commission_rate: (m as any).commissionRate !== undefined ? Number((m as any).commissionRate) : 10
                             };
 
                             const { error } = await supabase.from('merchants').insert(newRecord);
@@ -548,6 +550,35 @@ export default function Merchants() {
 // ─── Full Application Drawer ────────────────────────────────────────────────
 function ApplicationDetailDrawer({ merchant, tab, onTabChange, onClose, onApprove, onSuspend, onReview, onDelete }: any) {
     const printRef = useRef<HTMLDivElement>(null);
+    const [deliveryFee, setDeliveryFee] = useState<string>(String(merchant.deliveryFee ?? (merchant as any).delivery_fee ?? 150));
+    const [commissionRate, setCommissionRate] = useState<string>(String(merchant.commissionRate ?? (merchant as any).commission_rate ?? 10));
+    const [isSavingFinancials, setIsSavingFinancials] = useState(false);
+    const [financialsSaved, setFinancialsSaved] = useState(false);
+
+    const handleSaveFinancials = async () => {
+        setIsSavingFinancials(true);
+        try {
+            const { error } = await adminSupabase
+                .from('merchants')
+                .update({
+                    delivery_fee: Number(deliveryFee) || 150,
+                    commission_rate: Number(commissionRate) || 10
+                })
+                .eq('id', merchant.id);
+            if (!error) {
+                merchant.deliveryFee = Number(deliveryFee) || 150;
+                (merchant as any).delivery_fee = Number(deliveryFee) || 150;
+                merchant.commissionRate = Number(commissionRate) || 10;
+                (merchant as any).commission_rate = Number(commissionRate) || 10;
+                setFinancialsSaved(true);
+                setTimeout(() => setFinancialsSaved(false), 2500);
+            }
+        } catch (err) {
+            console.error('Failed to save merchant financials:', err);
+        } finally {
+            setIsSavingFinancials(false);
+        }
+    };
 
     const handlePrint = () => {
         const content = printRef.current?.innerHTML;
@@ -744,6 +775,49 @@ function ApplicationDetailDrawer({ merchant, tab, onTabChange, onClose, onApprov
                                         { label: 'Operating Hours', value: merchant.operatingHours || '08:00 AM - 10:00 PM' },
                                         { label: 'M-Pesa Shortcode', value: merchant.mpesaShortcode || '—', full: true },
                                     ]} />
+                                </Section>
+
+                                {/* Delivery Fee & Commission Controls */}
+                                <Section title="Delivery Fee & Commission Terms (Admin Controls)" icon={<Scale size={16} />}>
+                                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-700 mb-1">Store Delivery Fee (KES)</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    step="10"
+                                                    value={deliveryFee}
+                                                    onChange={(e) => setDeliveryFee(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
+                                                />
+                                                <span className="text-[10px] text-gray-400 mt-1 block">Courier delivery fee charged to customers at checkout.</span>
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-bold text-gray-700 mb-1">Platform Commission Rate (%)</label>
+                                                <input
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.5"
+                                                    value={commissionRate}
+                                                    onChange={(e) => setCommissionRate(e.target.value)}
+                                                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-bold bg-white focus:outline-none focus:ring-2 focus:ring-black/10"
+                                                />
+                                                <span className="text-[10px] text-gray-400 mt-1 block">Muncheez take percentage on order items.</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex justify-end pt-2 border-t border-gray-200">
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveFinancials}
+                                                disabled={isSavingFinancials}
+                                                className="px-5 py-2 bg-black text-white rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-neutral-800 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+                                            >
+                                                {financialsSaved ? <><CheckCircle size={14} className="text-green-400" /> Saved</> : isSavingFinancials ? 'Saving...' : <><Save size={14} /> Update Financial Rates</>}
+                                            </button>
+                                        </div>
+                                    </div>
                                 </Section>
 
                                 {/* Owner Info */}
@@ -1013,7 +1087,9 @@ function MerchantFormModal({ merchant, onClose, onSave }: any) {
         description: '', address: '', mpesaShortcode: '',
         isActive: true, createdAt: new Date(),
         logoUrl: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=400&fit=crop',
-    });
+        deliveryFee: 150,
+        commissionRate: 10,
+    } as any);
 
     const f = (field: keyof Merchant, val: any) => setFormData(prev => ({ ...prev, [field]: val }));
 
@@ -1055,6 +1131,14 @@ function MerchantFormModal({ merchant, onClose, onSave }: any) {
                         <div>
                             <label className="block text-xs font-bold text-gray-700 mb-1">M-Pesa Shortcode</label>
                             <input value={formData.mpesaShortcode || ''} onChange={e => f('mpesaShortcode', e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Delivery Fee (KES)</label>
+                            <input type="number" min="0" value={(formData as any).deliveryFee ?? 150} onChange={e => f('deliveryFee' as any, Number(e.target.value))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
+                        </div>
+                        <div className="col-span-2">
+                            <label className="block text-xs font-bold text-gray-700 mb-1">Commission Rate (%)</label>
+                            <input type="number" step="0.1" min="0" max="100" value={(formData as any).commissionRate ?? 10} onChange={e => f('commissionRate' as any, Number(e.target.value))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none" />
                         </div>
                     </div>
                     <div className="flex gap-3 pt-2">

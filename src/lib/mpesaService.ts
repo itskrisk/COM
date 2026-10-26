@@ -97,8 +97,7 @@ export const mpesaService = {
      */
     async initiateSTKPush(params: STKPushParams): Promise<STKPushResponse> {
         const formattedPhone = formatPhoneNumber(params.phoneNumber);
-        const roundAmount = Math.max(1, Math.round(params.amount));
-        const ref = params.accountReference || `MUNCHEEZ-${params.orderId.slice(0, 6).toUpperCase()}`;
+        const ref = params.accountReference || (params.orderId ? `MUNCHEEZ-${params.orderId.slice(0, 6).toUpperCase()}` : 'MUNCHEEZ-TOPUP');
 
         try {
             const { data: sessionData } = await supabase.auth.getSession();
