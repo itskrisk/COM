@@ -5248,3 +5248,24 @@ User requested: "phone number doesnt have to mandatory and the same phone number
 3. **Verification & Build:**
    - Ran `npm run build` (`tsc -b && vite build`) with 0 errors.
    - Staged, committed, and pushed changes to `origin/main`.
+
+
+---
+
+## [2026-10-26] Revert: Remove PWA Triggers & App Installation Prompts
+
+### Prompt
+User requested to audit and disable/undo the Progressive Web App (PWA) installation triggers ("undo the progressive web app without ruining our code") after observing that Android browsers were offering to install the application as a standalone PWA.
+
+### Root Cause
+Android Chrome automatically prompts to install websites as Progressive Web Apps when:
+1. `index.html` links to a web manifest (`<link rel="manifest" href="/site.webmanifest" />`).
+2. The manifest contains icons, `start_url`, and `"display": "standalone"`.
+3. `index.html` contains `<meta name="apple-mobile-web-app-capable" content="yes" />`.
+There were no background service workers or offline caching libraries (like Workbox/vite-plugin-pwa) installed, meaning the PWA behavior was solely driven by the manifest and HTML meta tags.
+
+### Actions Taken
+1. **[index.html](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/index.html):** Removed `<link rel="manifest" href="/site.webmanifest" />`, `<meta name="apple-mobile-web-app-capable" content="yes" />`, `<meta name="apple-mobile-web-app-title" content="Muncheez" />`, and `<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />`.
+2. **`public/`:** Removed `site.webmanifest` and `manifest.json`.
+3. **Preserved Assets:** Retained all standard browser favicons (`favicon.svg`, `favicon-32x32.png`, `apple-touch-icon.png`), OpenGraph social cards, and Twitter tags for standard browser bookmarking and social link previews.
+4. **Build Verification:** Ran `npm run build` with 0 errors.
