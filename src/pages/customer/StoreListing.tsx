@@ -156,7 +156,7 @@ export default function StoreListing() {
             className="group cursor-pointer"
         >
             {/* Glass Container */}
-            <div className="relative aspect-[16/10] rounded-[2rem] overflow-hidden mb-4 shadow-2xl group-hover:shadow-black/20 transition-all duration-700">
+            <div className="relative aspect-[4/3] sm:aspect-[16/10] rounded-2xl sm:rounded-[2rem] overflow-hidden mb-2 sm:mb-4 shadow-xl group-hover:shadow-black/20 transition-all duration-700">
                 <img
                     src={store.image}
                     alt={store.name}
@@ -201,13 +201,13 @@ export default function StoreListing() {
                         {store.isTopRated && (
                             <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37] shrink-0">Top Selection</span>
                         )}
-                        <h3 className="text-xl font-heading font-black tracking-tighter leading-tight transition-colors truncate">
+                        <h3 className="text-sm sm:text-xl font-heading font-black tracking-tighter leading-tight transition-colors truncate">
                             {store.name}
                         </h3>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-[11px] font-bold text-gray-700 flex-wrap">
+                <div className="flex items-center gap-1.5 sm:gap-3 text-[10px] sm:text-[11px] font-bold text-gray-700 flex-wrap">
                     <span className={`${store.status.includes('Closed') ? 'text-amber-700' : 'text-green-600'}`}>
                         {store.status}
                     </span>
@@ -338,7 +338,7 @@ export default function StoreListing() {
                     </div>
 
                     {/* Store Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+                    <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 md:gap-8 lg:gap-12">
                         <AnimatePresence mode='popLayout'>
                             {filteredMarketStores.map((store: any, idx: number) => (
                                 <StoreCard key={store.id} store={store} idx={idx} />

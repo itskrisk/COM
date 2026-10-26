@@ -145,8 +145,8 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
         const oldPrice = hasDiscount ? product.price + 100 : null;
 
         // Image-First Glass V5: Reference match
-        const cardWidth = isCarousel ? 'w-[140px] md:w-[160px]' : 'w-full';
-        const cardHeight = 'h-[240px] md:h-[260px]';
+        const cardWidth = isCarousel ? 'w-[160px] sm:w-[200px] md:w-[240px]' : 'w-full';
+        const cardHeight = 'h-[200px] sm:h-[240px] md:h-[260px]';
 
         return (
             <motion.div key={product.id} className={`group ${cardWidth} snap-start`} layout>
@@ -353,7 +353,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                     className="lg:hidden sticky top-0 z-30 border-b border-black/[0.1] shadow-lg px-6"
                     style={{ backgroundColor: merchant.branding?.secondaryColor || '#D4AF37' }}
                 >
-                    <div className="flex items-center gap-10 overflow-x-auto no-scrollbar py-6">
+                    <div className="flex items-center gap-6 sm:gap-10 overflow-x-auto no-scrollbar py-3 sm:py-4">
                         {categories.map((cat) => (
                             <button
                                 key={cat}
@@ -422,7 +422,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                                             <h2 className="text-3xl font-heading font-black tracking-tighter uppercase">{viewingCategoryDeepDive === 'Almost anything, delivered' ? (merchant.customSettings?.specialsTitle || 'Market Specials') : viewingCategoryDeepDive}</h2>
                                             <button onClick={() => setViewingCategoryDeepDive(null)} className="w-12 h-12 rounded-full bg-black text-white flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all"><X size={24} /></button>
                                         </div>
-                                        <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4 md:gap-6">
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3 md:gap-6">
                                             {products
                                                 .filter(p => viewingCategoryDeepDive === 'Almost anything, delivered'
                                                     ? (p.categoryId === 'Featured items' || p.isFeatured)
@@ -463,7 +463,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
 
                                                         <div className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory pb-8 flex-nowrap -mx-2 px-2">
                                                             {featuredItems.map((product) => (
-                                                                <div key={product.id} className="shrink-0 w-[240px] md:w-[280px] snap-start">
+                                                                <div key={product.id} className="shrink-0 w-[160px] sm:w-[220px] md:w-[280px] snap-start">
                                                                     {renderProductCard(product, true)}
                                                                 </div>
                                                             ))}
@@ -496,7 +496,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                                                                         </button>
                                                                     </div>
                                                                 </div>
-                                                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                                                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6">
                                                                     {itemsToDisplay.map(product => renderProductCard(product, false))}
                                                                 </div>
                                                             </motion.div>
