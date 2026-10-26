@@ -43,8 +43,6 @@ export const STATIC_PAGES = [
     { path: '/stores', source: 'src/pages/customer/StoreListing.tsx', changefreq: 'daily', priority: '0.9', image: '/logos/urlimage.jpg' },
     { path: '/company/story', source: 'src/pages/common/OurStory.tsx', changefreq: 'monthly', priority: '0.6' },
     { path: '/company/team', source: 'src/pages/common/OurTeam.tsx', changefreq: 'monthly', priority: '0.5' },
-    { path: '/company/careers', source: 'src/pages/common/Careers.tsx', changefreq: 'weekly', priority: '0.8' },
-    { path: '/company/careers/apply', source: 'src/pages/common/JobApplicationPage.tsx', changefreq: 'monthly', priority: '0.6' },
     { path: '/company/news', source: 'src/pages/common/Newsroom.tsx', changefreq: 'weekly', priority: '0.7' },
     { path: '/company/news/press-releases', source: 'src/pages/common/PressReleases.tsx', changefreq: 'weekly', priority: '0.6' },
     { path: '/company/news/media-kit', source: 'src/pages/common/MediaKit.tsx', changefreq: 'monthly', priority: '0.5' },

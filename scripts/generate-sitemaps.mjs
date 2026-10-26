@@ -120,32 +120,53 @@ async function buildStoreEntries() {
 
 // ── Jobs ────────────────────────────────────────────────────────────────────
 async function buildJobEntries() {
+    const baseEntries = [
+        {
+            loc: absolute('/company/careers'),
+            lastmod: gitLastmod('src/pages/common/Careers.tsx') || GENERATED_AT,
+            changefreq: 'weekly',
+            priority: '0.8',
+            images: [],
+            alternates: true,
+        },
+        {
+            loc: absolute('/company/careers/apply'),
+            lastmod: gitLastmod('src/pages/common/JobApplicationPage.tsx') || GENERATED_AT,
+            changefreq: 'monthly',
+            priority: '0.6',
+            images: [],
+            alternates: true,
+        }
+    ];
+
     const rows = await supabaseRest(
         'job_positions',
         'select=id,title,department,location,type,created_at,is_active&is_active=eq.true&order=created_at.desc'
     );
 
+    let positionEntries = [];
     if (!rows.length) {
         const cached = readCache();
         if (cached?.jobs?.length) {
-            console.log(`  · jobs: using cached snapshot (${cached.jobs.length})`);
-            return cached.jobs;
+            positionEntries = cached.jobs.filter(
+                (j) => j.loc && !j.loc.endsWith('/company/careers') && !j.loc.endsWith('/company/careers/apply')
+            );
         }
-        return [];
+    } else {
+        positionEntries = rows.map((job) => ({
+            loc: absolute(`/company/careers/apply/${job.id}`),
+            lastmod: toIsoDate(job.created_at) || GENERATED_AT,
+            changefreq: 'weekly',
+            priority: '0.6',
+            images: [],
+            alternates: true,
+        }));
     }
 
-    const entries = rows.map((job) => ({
-        loc: absolute(`/company/careers/apply/${job.id}`),
-        lastmod: toIsoDate(job.created_at) || GENERATED_AT,
-        changefreq: 'weekly',
-        priority: '0.6',
-        images: [],
-        alternates: true,
-    }));
-
+    const allJobs = [...baseEntries, ...positionEntries];
     const cached = readCache() || {};
-    writeCache({ ...cached, jobs: entries, generatedAt: GENERATED_AT });
-    return entries;
+    writeCache({ ...cached, jobs: allJobs, generatedAt: GENERATED_AT });
+    return allJobs;
 }
 
 async function main() {
@@ -185,19 +206,15 @@ async function main() {
     }
 
     writeFile('public/sitemap-jobs.xml', renderUrlSet(jobEntries.map(renderUrlEntry)));
-    if (jobEntries.length) {
-        children.push(
-            renderIndexChild({
-                loc: `${SITE_URL}/sitemap-jobs.xml`,
-                lastmod: GENERATED_AT,
-                changefreq: 'weekly',
-                priority: '0.7',
-            })
-        );
-        console.log(`  ✓ sitemap-jobs.xml    ${jobEntries.length} URLs`);
-    } else {
-        console.log('  · sitemap-jobs.xml    0 open roles — written empty, omitted from index');
-    }
+    children.push(
+        renderIndexChild({
+            loc: `${SITE_URL}/sitemap-jobs.xml`,
+            lastmod: GENERATED_AT,
+            changefreq: 'weekly',
+            priority: '0.8',
+        })
+    );
+    console.log(`  ✓ sitemap-jobs.xml    ${jobEntries.length} URLs`);
 
     writeFile('public/sitemap.xml', renderSitemapIndex(children));
     console.log(`  ✓ sitemap.xml          index → ${children.length} child sitemaps`);

@@ -5269,3 +5269,25 @@ There were no background service workers or offline caching libraries (like Work
 2. **`public/`:** Removed `site.webmanifest` and `manifest.json`.
 3. **Preserved Assets:** Retained all standard browser favicons (`favicon.svg`, `favicon-32x32.png`, `apple-touch-icon.png`), OpenGraph social cards, and Twitter tags for standard browser bookmarking and social link previews.
 4. **Build Verification:** Ran `npm run build` with 0 errors.
+
+
+---
+
+## [2026-10-26] Fix: Google Search Console 'Missing XML tag' on sitemap-jobs.xml
+
+### Prompt
+User reported Google Search Console error for `https://muncheez.co.ke/sitemap-jobs.xml`: "Missing XML tag", "Discovered pages 0", "Sitemap can be read, but has errors".
+
+### Root Cause
+1. `sitemap-jobs.xml` previously rendered an empty `<urlset>` with 0 `<url>` child tags whenever there were no open position listings in the database.
+2. Google Search Console rejects empty sitemaps with the error "Missing XML tag" because Google requires at least one `<url>` element inside `<urlset>`.
+3. Meanwhile, `/company/careers` and `/company/careers/apply` were previously rendered under `sitemap-pages.xml`.
+
+### Actions Taken
+1. **[scripts/sitemap.config.mjs](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/scripts/sitemap.config.mjs):** Removed `/company/careers` and `/company/careers/apply` from `STATIC_PAGES` so they belong exclusively to the dedicated jobs/careers sitemap without duplicate entries.
+2. **[scripts/generate-sitemaps.mjs](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/scripts/generate-sitemaps.mjs):** Updated `buildJobEntries()` to include `/company/careers` and `/company/careers/apply` as the foundational entries in `sitemap-jobs.xml`, plus any active positions from the database. Added `sitemap-jobs.xml` permanently to the `sitemap.xml` index.
+3. **Verification:**
+   - Ran `npm run sitemap` and `npm run sitemap:validate`.
+   - `sitemap-jobs.xml` now has valid, well-formed entries (`/company/careers` and `/company/careers/apply`).
+   - Ran `npm run build` (`tsc -b && vite build`) with 0 errors.
+   - Staged, committed, and pushed changes to `origin/main`.
