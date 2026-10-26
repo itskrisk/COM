@@ -5296,3 +5296,31 @@ User reported Google Search Console error for `https://muncheez.co.ke/sitemap-jo
 ### Google Search Console Verification Confirmed
 - Google Search Console re-indexed `https://muncheez.co.ke/sitemap-jobs.xml` successfully with 0 errors and 2 discovered pages.
 - All 4 sitemap endpoints (`sitemap.xml`, `sitemap-pages.xml`, `sitemap-stores.xml`, `sitemap-jobs.xml`) now report **Status: Success** in Google Search Console.
+
+---
+
+## [2026-10-26] Fix: Storefront Mobile Profile Modal Overlapped by Category Strip ("Bio & Organic Food")
+
+### Prompt
+User reported a mobile responsive storefront bug: when tapping the profile modal while in a store, the sticky category strip (containing "Bio & Organic Food") overlaps and renders on top of the profile modal, blocking contents and buttons.
+
+### Root Cause
+1. **Z-Index Inversion**:
+   - In `SupermarketStore.tsx`, the mobile category scroller dock (`/* MOBILE nav scroller (Sticky Dock) */`) was assigned an arbitrary `z-[150]`.
+   - In `ProfileModal.tsx`, the modal overlay wrapper was configured with `z-[60]`.
+   - Because `150 > 60`, the sticky category dock remained rendered in a stacking layer in front of the `ProfileModal` dialog and backdrop on mobile screens.
+2. **Body Scroll Passthrough**:
+   - On touch devices, opening `ProfileModal` did not lock background body scrolling, allowing underlying store docks to shift during touch interactions.
+
+### Actions Taken
+1. **[SupermarketStore.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/customer/store-types/SupermarketStore.tsx)**:
+   - Changed the mobile sticky category dock z-index from `z-[150]` to standard `z-30`. This ensures it smoothly floats above in-page product cards (`z-10` / `z-20`) while staying strictly beneath the navigation header (`z-40`), account dropdown (`z-50`), and full-page overlays.
+2. **[ProfileModal.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/components/ui/shared/ProfileModal.tsx)**:
+   - Elevated the outer modal container from `z-[60]` to `z-[1000]`.
+   - Updated the wallet top-up sub-modal from `z-[70]` to `z-[1010]`.
+   - Added automatic body scroll lock (`document.body.style.overflow = 'hidden'`) upon opening and cleanup on close, preventing mobile background scrolling beneath the modal.
+   - Enhanced modal container padding to `p-3 sm:px-6` for improved viewport boundaries on narrow mobile devices.
+3. **[CookieModal.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/components/ui/shared/CookieModal.tsx)**:
+   - Elevated `CookieModal` to `z-[1020]` so when triggered from the profile modal, it reliably stacks on top of the parent modal.
+4. **Validation**:
+   - Ran `npm run build` (`tsc -b && vite build`) with 0 errors across 2,246 modules.

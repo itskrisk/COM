@@ -350,7 +350,7 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                 <div className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
                 {/* MOBILE nav scroller (Sticky Dock) */}
                 <div
-                    className="lg:hidden sticky top-0 z-[150] border-b border-black/[0.1] shadow-lg px-6"
+                    className="lg:hidden sticky top-0 z-30 border-b border-black/[0.1] shadow-lg px-6"
                     style={{ backgroundColor: merchant.branding?.secondaryColor || '#D4AF37' }}
                 >
                     <div className="flex items-center gap-10 overflow-x-auto no-scrollbar py-6">

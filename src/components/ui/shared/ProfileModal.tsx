@@ -48,7 +48,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialVie
     useEffect(() => {
         if (isOpen) {
             setView(initialView || 'main');
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
         }
+        return () => {
+            document.body.style.overflow = '';
+        };
     }, [isOpen, initialView]);
     const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
 
@@ -410,7 +416,7 @@ const [topUpError, setTopUpError] = useState('');
         <>
             <AnimatePresence>
                 {isOpen && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center px-4 sm:px-6 text-black font-sans">
+                    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-3 sm:px-6 text-black font-sans">
                         {/* Backdrop */}
                         <motion.div
                             initial={{ opacity: 0 }}
@@ -1297,7 +1303,7 @@ const [topUpError, setTopUpError] = useState('');
             </AnimatePresence>
 
             {topUpOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
+                <div className="fixed inset-0 z-[1010] flex items-center justify-center px-4">
                     <div className="absolute inset-0 bg-black/70" onClick={() => setTopUpOpen(false)} />
                     <div className="relative bg-white p-6 w-full max-w-sm space-y-4 text-black">
                         <h3 className="text-lg font-bold">Top Up Wallet</h3>

@@ -78,7 +78,7 @@ export default function CookieModal({ isOpen, onClose }: CookieModalProps) {
     return (
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 text-black">
+                <div className="fixed inset-0 z-[1020] flex items-center justify-center p-4 text-black">
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
