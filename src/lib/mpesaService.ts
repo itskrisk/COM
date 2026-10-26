@@ -118,7 +118,7 @@ export const mpesaService = {
                 },
                 body: JSON.stringify({
                     phoneNumber: formattedPhone,
-                    amount: roundAmount,
+                    amount: Math.round(params.amount),
                     orderId: params.orderId,
                     accountReference: ref,
                     transactionDesc: params.transactionDesc || 'Muncheez Order Payment',
