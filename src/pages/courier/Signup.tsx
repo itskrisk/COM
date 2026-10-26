@@ -51,12 +51,12 @@ export default function CourierSignup() {
             return;
         }
 
-        if (!fullName.trim() || !email.trim() || !phone.trim() || !password) {
-            setError('Please fill in all required fields.');
+        if (!fullName.trim() || !email.trim() || !password) {
+            setError('Please fill in all required fields (Name, Email, Password).');
             return;
         }
 
-        if (!isValidKenyanPhone(phone)) {
+        if (phone.trim() && !isValidKenyanPhone(phone)) {
             setError('Please enter a valid Kenyan phone number (e.g. 0712 345 678 or +254 712 345 678).');
             return;
         }
@@ -73,31 +73,7 @@ export default function CourierSignup() {
 
         setLoading(true);
 
-        const normalizedPhone = normalizeKenyanPhone(phone);
-
-        // Pre-check: Ensure phone number is not already associated with another profile
-        if (normalizedPhone) {
-            try {
-                const { data: existingProfile } = await supabase
-                    .from('profiles')
-                    .select('id')
-                    .eq('phone', normalizedPhone)
-                    .maybeSingle();
-
-                if (existingProfile) {
-                    setError('This phone number is already registered to an existing account. Please sign in or use a different phone number.');
-                    setPortalHint({
-                        message: 'This phone number is already registered.',
-                        link: '/rider/login',
-                        label: 'Proceed to Fleet Terminal Login'
-                    });
-                    setLoading(false);
-                    return;
-                }
-            } catch (checkErr) {
-                console.warn('Phone pre-check notice:', checkErr);
-            }
-        }
+        const normalizedPhone = phone.trim() ? normalizeKenyanPhone(phone) : undefined;
 
         try {
             const signupResult = await authApi.signupCourier({
@@ -350,17 +326,16 @@ export default function CourierSignup() {
 
                         <div>
                             <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">
-                                Phone Number <span className="text-red-500">*</span>
+                                Phone Number <span className="text-gray-400 font-normal lowercase">(optional)</span>
                             </label>
                             <input
                                 id="courier-signup-phone"
                                 type="tel"
-                                required
                                 disabled={Boolean(user)}
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
                                 className="block w-full px-0 py-3 border-b border-gray-100 bg-transparent text-gray-900 placeholder-gray-300 focus:outline-none focus:border-[#4A90E2] sm:text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                                placeholder="0712 345 678 or +254 712 345 678"
+                                placeholder="0712 345 678 or +254 712 345 678 (optional)"
                             />
                         </div>
 

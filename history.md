@@ -5224,3 +5224,27 @@ User reported that following recent commits to fix the email verification issue,
 - Ran full production `npm run build` (`tsc -b && vite build`) with 0 errors.
 - Staged all 33 files covering Auth signup resilience, M-Pesa STK push integrity, sitemap automation suite, and mobile UI adjustments.
 - Committed (`9fced0f`) and successfully pushed to `origin/main`.
+
+
+---
+
+## [2026-10-25] Requirement Update: Optional Phone Numbers & Multi-Account Sharing
+
+### Prompt
+User requested: "phone number doesnt have to mandatory and the same phone number can be used for multiple accounts".
+
+### Root Cause & Requirements
+- Phone numbers in `public.profiles` previously had a `profiles_phone_key` UNIQUE constraint, and signup forms had strict phone validation and blocking checks.
+- Users can have multiple roles or accounts using the same phone number (e.g. personal customer account and merchant owner account).
+- Phone numbers should be purely optional during registration.
+
+### Actions Taken
+1. **Frontend Signup Forms:**
+   - [Signup.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/customer/Signup.tsx) (Customer): Made phone optional, removed required asterisk, updated placeholder to `0712 345 678 or +254 712 345 678 (optional)`, and removed phone collision pre-check.
+   - [PartnerSignup.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/merchant/PartnerSignup.tsx) (Merchant): Made phone optional, removed required asterisk, and removed phone collision pre-check.
+   - [CourierSignup.tsx](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/src/pages/courier/Signup.tsx) (Courier): Made phone optional, removed required asterisk, and removed phone collision pre-check.
+2. **Database Migration Update:**
+   - [020_resilient_handle_new_user.sql](file:///c:/Users/Administrator/OneDrive/Desktop/Muncheez/supabase/migrations/020_resilient_handle_new_user.sql): Added explicit DDL to drop `profiles_phone_key` and `profiles_phone_unique` constraints, allowing multiple accounts to share the same phone number and permitting NULLs. Added non-unique `idx_profiles_phone` index for lookups.
+3. **Verification & Build:**
+   - Ran `npm run build` (`tsc -b && vite build`) with 0 errors.
+   - Staged, committed, and pushed changes to `origin/main`.

@@ -1,21 +1,24 @@
 -- ============================================================
--- MUNCHEEZ MIGRATION 020: RESILIENT HANDLE_NEW_USER TRIGGER
--- Prevents "Database error saving new user" (HTTP 500) on signup
+-- MUNCHEEZ MIGRATION 020: OPTIONAL & MULTI-ACCOUNT PHONE NUMBERS
+-- + RESILIENT HANDLE_NEW_USER TRIGGER
 --
--- Root Cause:
--- When a user signs up with a phone number that already exists in
--- public.profiles (due to prior testing, previous accounts, or collisions),
--- public.profiles_phone_key unique constraint is violated.
--- In migration 018 / earlier versions, handle_new_user lacked an
--- EXCEPTION handler for unique_violation, which caused PostgreSQL
--- to abort the entire auth.users transaction with "Database error saving new user".
---
--- Solution:
--- 1. Catch unique_violation: if phone is taken, insert profile with phone = NULL
---    so auth registration completes successfully and without errors.
--- 2. Catch WHEN OTHERS: log warning, never abort auth.users INSERT.
+-- Requirements:
+-- 1. Phone number is NOT mandatory.
+-- 2. The SAME phone number can be used across multiple accounts.
+-- 3. Drops the UNIQUE constraint (profiles_phone_key) on public.profiles.
+-- 4. Guarantees handle_new_user trigger never fails auth signup.
 -- ============================================================
 
+-- 1. Allow multiple accounts to share the same phone number & allow NULLs
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_phone_key;
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_phone_unique;
+DROP INDEX IF EXISTS public.profiles_phone_key;
+DROP INDEX IF EXISTS public.idx_profiles_phone_unique;
+
+-- 2. Fast non-unique index for phone lookups
+CREATE INDEX IF NOT EXISTS idx_profiles_phone ON public.profiles(phone);
+
+-- 3. Resilient trigger function
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -28,7 +31,7 @@ DECLARE
     user_phone text;
     m_type text;
 BEGIN
-    -- 1. Extract role safely (ONE EMAIL = ONE ROLE)
+    -- Extract role safely (ONE EMAIL = ONE ROLE)
     IF NEW.raw_user_meta_data IS NOT NULL AND NEW.raw_user_meta_data->>'role' IS NOT NULL THEN
         user_roles_arr := ARRAY[NEW.raw_user_meta_data->>'role'];
     ELSIF NEW.raw_user_meta_data IS NOT NULL AND NEW.raw_user_meta_data->'roles' IS NOT NULL THEN
@@ -48,7 +51,7 @@ BEGIN
     user_full_name := COALESCE(NEW.raw_user_meta_data->>'full_name', SPLIT_PART(NEW.email, '@', 1));
     user_phone := NULLIF(TRIM(NEW.raw_user_meta_data->>'phone'), '');
 
-    -- 2. Upsert profile with resilience against phone unique collisions
+    -- Upsert profile (phone is optional and non-unique)
     BEGIN
         INSERT INTO public.profiles (
             id, full_name, email, phone, roles, account_status, status
@@ -68,7 +71,7 @@ BEGIN
             roles     = EXCLUDED.roles;
     EXCEPTION
         WHEN unique_violation THEN
-            -- Phone already in use by another profile: insert profile WITHOUT phone so signup succeeds
+            -- Fallback in case constraint still exists in DB
             INSERT INTO public.profiles (
                 id, full_name, email, phone, roles, account_status, status
             ) VALUES (
@@ -86,7 +89,7 @@ BEGIN
                 roles     = EXCLUDED.roles;
     END;
 
-    -- 3. If Merchant: provision merchant row
+    -- If Merchant: provision merchant row
     IF 'merchant' = ANY(user_roles_arr) OR primary_role = 'merchant' THEN
         m_type := COALESCE(NEW.raw_user_meta_data->>'merchant_type', NEW.raw_user_meta_data->>'business_type', 'Restaurant');
         BEGIN
@@ -107,7 +110,7 @@ BEGIN
         END;
     END IF;
 
-    -- 4. If Courier: provision rider row
+    -- If Courier: provision rider row
     IF 'courier' = ANY(user_roles_arr) OR primary_role = 'courier' THEN
         BEGIN
             INSERT INTO public.riders (
