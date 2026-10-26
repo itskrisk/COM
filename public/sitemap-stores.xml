@@ -11,4 +11,15 @@
       <image:caption>BEE HONEY — Restaurant delivery in Nairobi</image:caption>
     </image:image>
   </url>
+  <url>
+    <loc>https://muncheez.co.ke/stores/5d91a3a1-5543-43df-a840-1b1c2ad17153</loc>
+    <lastmod>2026-10-26T17:15:04Z</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+    <image:image>
+      <image:loc>https://xvnvyrddhgmxqynypboa.supabase.co/storage/v1/object/public/documents/stores/5d91a3a1-5543-43df-a840-1b1c2ad17153/1793036470894_images__19_.jpg</image:loc>
+      <image:title>Mama Mboga</image:title>
+      <image:caption>Mama Mboga — Grocery delivery in Nairobi</image:caption>
+    </image:image>
+  </url>
 </urlset>

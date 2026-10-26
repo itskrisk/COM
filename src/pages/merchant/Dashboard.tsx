@@ -216,6 +216,21 @@ export default function MerchantDashboard() {
         }
     };
 
+    // Live store availability toggle that immediately persists to Supabase
+    const handleToggleStoreOpen = async () => {
+        const nextState = !isStoreOpen;
+        setIsStoreOpen(nextState);
+        try {
+            if (merchantId) {
+                await merchantService.updateMerchant(merchantId, { is_active: nextState } as any);
+            }
+            const currentSettings = JSON.parse(localStorage.getItem('muncheez_merchant_settings') || '{}');
+            localStorage.setItem('muncheez_merchant_settings', JSON.stringify({ ...currentSettings, is_active: nextState }));
+        } catch (err) {
+            console.error('Failed to sync store status with Supabase:', err);
+        }
+    };
+
     // Products State (Load from localStorage immediately for zero-latency UX, then sync from Supabase)
     const [products, setProducts] = useState<SupermarketProduct[]>([]);
     const [orders, setOrders] = useState<SupermarketOrder[]>([]);
@@ -774,7 +789,7 @@ export default function MerchantDashboard() {
                             Store Status:
                         </span>
                         <button
-                            onClick={() => setIsStoreOpen(!isStoreOpen)}
+                            onClick={handleToggleStoreOpen}
                             className={`flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider font-semibold transition-colors ${
                                 isStoreOpen ? 'text-emerald-700' : 'text-neutral-400'
                             }`}
@@ -1740,7 +1755,12 @@ export default function MerchantDashboard() {
                                                     setIsUploadingCover(true);
                                                     try {
                                                         const res = await uploadFile('documents', `stores/${merchantId || 'temp'}`, file);
-                                                        if (res.url) setStoreCoverUrl(res.url);
+                                                        if (res.url) {
+                                                            setStoreCoverUrl(res.url);
+                                                            if (merchantId) {
+                                                                await merchantService.updateMerchant(merchantId, { cover_url: res.url, logo_url: res.url } as any);
+                                                            }
+                                                        }
                                                     } catch (err) {
                                                         console.error('Cover upload failed:', err);
                                                     } finally {
@@ -1761,6 +1781,11 @@ export default function MerchantDashboard() {
                                                 placeholder="https://images.unsplash.com/..."
                                                 value={storeCoverUrl}
                                                 onChange={(e) => setStoreCoverUrl(e.target.value)}
+                                                onBlur={async () => {
+                                                    if (merchantId && storeCoverUrl.trim()) {
+                                                        await merchantService.updateMerchant(merchantId, { cover_url: storeCoverUrl.trim(), logo_url: storeCoverUrl.trim() } as any);
+                                                    }
+                                                }}
                                                 className="w-full py-1.5 bg-transparent border-b border-neutral-300 focus:border-black text-xs text-black outline-none font-mono"
                                             />
                                         </div>
@@ -1926,7 +1951,7 @@ export default function MerchantDashboard() {
                             <div className="flex items-center gap-3">
                                 <span className="text-[10px] font-mono uppercase tracking-widest text-neutral-500">Live Availability:</span>
                                 <button
-                                    onClick={() => setIsStoreOpen(!isStoreOpen)}
+                                    onClick={handleToggleStoreOpen}
                                     className={`px-3 py-1 font-mono text-xs uppercase font-bold border transition-colors ${
                                         isStoreOpen ? 'border-emerald-500 text-emerald-700 bg-emerald-50' : 'border-neutral-300 text-neutral-500'
                                     }`}

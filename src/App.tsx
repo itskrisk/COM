@@ -1,4 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import Navbar from "./components/layout/Navbar";
 import AdminLayout from "./layouts/AdminLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
@@ -87,11 +89,43 @@ import ScrollToTop from "./routes/ScrollToTop";
  *   8. Legacy redirects             old pre-restructure URLs → canonical (query-preserving)
  *   9. 404                          unknown URLs render NotFound (never redirect home)
  */
-export default function App() {
+// Subtle Apple/Linear-inspired top route indicator that seamlessly glides during navigation
+function TopRouteProgress() {
+    const location = useLocation();
+    const [visible, setVisible] = useState(false);
+
+    useEffect(() => {
+        setVisible(true);
+        const timer = setTimeout(() => setVisible(false), 320);
+        return () => clearTimeout(timer);
+    }, [location.pathname, location.search]);
+
+    if (!visible) return null;
+
     return (
-        <BrowserRouter>
-            <ScrollToTop />
-            <Routes>
+        <div className="fixed top-0 left-0 right-0 z-[99999] h-[2px] pointer-events-none overflow-hidden bg-transparent">
+            <motion.div
+                initial={{ x: '-100%' }}
+                animate={{ x: '100%' }}
+                transition={{ duration: 0.3, ease: [0.32, 0.72, 0, 1] }}
+                className="h-full w-full bg-gradient-to-r from-transparent via-[#D4AF37] to-white shadow-[0_0_8px_rgba(212,175,55,0.8)]"
+            />
+        </div>
+    );
+}
+
+// Seamless zero-split route transition with guaranteed black backdrop (eliminates white flash)
+function AnimatedRoutes() {
+    const location = useLocation();
+    return (
+        <motion.div
+            key={location.pathname}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.15, ease: 'easeOut' }}
+            style={{ minHeight: '100vh', backgroundColor: '#000000' }}
+        >
+            <Routes location={location}>
                 {/* ═══ 1. CUSTOMER / PUBLIC SHOPPING ═══ */}
                 <Route element={<CustomerLayout />}>
                     <Route path="/" element={<><Navbar /><Home /></>} />
@@ -251,7 +285,17 @@ export default function App() {
 
                 {/* ═══ 9. 404 — unknown URLs render NotFound ═══ */}
                 <Route path="*" element={<NotFound />} />
-            </Routes>
+                </Routes>
+            </motion.div>
+    );
+}
+
+export default function App() {
+    return (
+        <BrowserRouter>
+            <ScrollToTop />
+            <TopRouteProgress />
+            <AnimatedRoutes />
         </BrowserRouter>
     );
 }

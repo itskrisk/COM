@@ -14,6 +14,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 
+export interface StorefrontNavItem {
+    label: string;
+    onClick: () => void;
+    isActive?: boolean;
+    icon?: React.ReactNode;
+    isHighlight?: boolean;
+}
+
 interface StorefrontNavProps {
     searchQuery: string;
     onSearchChange: (query: string) => void;
@@ -25,6 +33,7 @@ interface StorefrontNavProps {
     onOffersClick?: () => void;
     activeCategory?: string;
     currentTab?: 'home' | 'categories' | 'orders' | 'account' | 'offers';
+    customNavItems?: StorefrontNavItem[];
 }
 
 export default function StorefrontNav({
@@ -37,7 +46,8 @@ export default function StorefrontNav({
     onCategoriesClick,
     onOffersClick,
     activeCategory,
-    currentTab = 'home'
+    currentTab = 'home',
+    customNavItems
 }: StorefrontNavProps) {
     const navigate = useNavigate();
     const location = useLocation();
@@ -214,29 +224,50 @@ export default function StorefrontNav({
 
                         {/* Main Navigation Links (Desktop) */}
                         <nav className="flex items-center gap-6 shrink-0 text-[11px] font-bold tracking-widest uppercase">
-                            <button
-                                onClick={handleHomeClick}
-                                className={`transition-colors hover:text-[#D4AF37] border-b pb-0.5 ${
-                                    currentTab === 'home' && !activeCategory ? 'border-[#D4AF37] text-white' : 'border-transparent text-white/70'
-                                }`}
-                            >
-                                Home
-                            </button>
-                            <button
-                                onClick={handleCategoriesClick}
-                                className={`transition-colors hover:text-[#D4AF37] border-b pb-0.5 ${
-                                    activeCategory ? 'border-[#D4AF37] text-white' : 'border-transparent text-white/70'
-                                }`}
-                            >
-                                Categories
-                            </button>
-                            <button
-                                onClick={handleOffersClick}
-                                className="transition-colors text-[#D4AF37] hover:text-white flex items-center gap-1 border-b border-transparent pb-0.5"
-                            >
-                                <Tag size={11} />
-                                Offers
-                            </button>
+                            {customNavItems && customNavItems.length > 0 ? (
+                                customNavItems.map((item, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={item.onClick}
+                                        className={`transition-colors flex items-center gap-1.5 border-b pb-0.5 cursor-pointer ${
+                                            item.isActive
+                                                ? 'border-[#D4AF37] text-white'
+                                                : item.isHighlight
+                                                ? 'border-transparent text-[#D4AF37] hover:text-white'
+                                                : 'border-transparent text-white/70 hover:text-[#D4AF37]'
+                                        }`}
+                                    >
+                                        {item.icon}
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={handleHomeClick}
+                                        className={`transition-colors hover:text-[#D4AF37] border-b pb-0.5 ${
+                                            currentTab === 'home' && !activeCategory ? 'border-[#D4AF37] text-white' : 'border-transparent text-white/70'
+                                        }`}
+                                    >
+                                        Home
+                                    </button>
+                                    <button
+                                        onClick={handleCategoriesClick}
+                                        className={`transition-colors hover:text-[#D4AF37] border-b pb-0.5 ${
+                                            activeCategory ? 'border-[#D4AF37] text-white' : 'border-transparent text-white/70'
+                                        }`}
+                                    >
+                                        Categories
+                                    </button>
+                                    <button
+                                        onClick={handleOffersClick}
+                                        className="transition-colors text-[#D4AF37] hover:text-white flex items-center gap-1 border-b border-transparent pb-0.5"
+                                    >
+                                        <Tag size={11} />
+                                        Offers
+                                    </button>
+                                </>
+                            )}
                         </nav>
                     </div>
 
@@ -367,34 +398,55 @@ export default function StorefrontNav({
                     )}
                 </AnimatePresence>
 
-                {/* ═══ MOBILE RESPONSIVE NAVIGATION ROW (Home, Categories, Offers) ═══ */}
+                {/* ═══ MOBILE RESPONSIVE NAVIGATION ROW ═══ */}
                 <nav
                     className="lg:hidden border-t border-white/10 py-2.5 flex items-center justify-center gap-8 text-[11px] font-bold tracking-widest uppercase"
                     aria-label="Storefront Mobile Navigation"
                 >
-                    <button
-                        onClick={handleHomeClick}
-                        className={`transition-colors whitespace-nowrap pb-0.5 border-b ${
-                            currentTab === 'home' && !activeCategory ? 'border-[#D4AF37] text-[#D4AF37]' : 'border-transparent text-white/70 hover:text-white'
-                        }`}
-                    >
-                        Home
-                    </button>
-                    <button
-                        onClick={handleCategoriesClick}
-                        className={`transition-colors whitespace-nowrap pb-0.5 border-b ${
-                            activeCategory ? 'border-[#D4AF37] text-[#D4AF37]' : 'border-transparent text-white/70 hover:text-white'
-                        }`}
-                    >
-                        Categories
-                    </button>
-                    <button
-                        onClick={handleOffersClick}
-                        className="transition-colors whitespace-nowrap pb-0.5 text-[#D4AF37] hover:text-white flex items-center gap-1 border-b border-transparent"
-                    >
-                        <Tag size={11} />
-                        Offers
-                    </button>
+                    {customNavItems && customNavItems.length > 0 ? (
+                        customNavItems.map((item, idx) => (
+                            <button
+                                key={idx}
+                                onClick={item.onClick}
+                                className={`transition-colors whitespace-nowrap pb-0.5 border-b flex items-center gap-1.5 cursor-pointer ${
+                                    item.isActive
+                                        ? 'border-[#D4AF37] text-[#D4AF37]'
+                                        : item.isHighlight
+                                        ? 'border-transparent text-[#D4AF37] hover:text-white'
+                                        : 'border-transparent text-white/70 hover:text-white'
+                                }`}
+                            >
+                                {item.icon}
+                                <span>{item.label}</span>
+                            </button>
+                        ))
+                    ) : (
+                        <>
+                            <button
+                                onClick={handleHomeClick}
+                                className={`transition-colors whitespace-nowrap pb-0.5 border-b ${
+                                    currentTab === 'home' && !activeCategory ? 'border-[#D4AF37] text-[#D4AF37]' : 'border-transparent text-white/70 hover:text-white'
+                                }`}
+                            >
+                                Home
+                            </button>
+                            <button
+                                onClick={handleCategoriesClick}
+                                className={`transition-colors whitespace-nowrap pb-0.5 border-b ${
+                                    activeCategory ? 'border-[#D4AF37] text-[#D4AF37]' : 'border-transparent text-white/70 hover:text-white'
+                                }`}
+                            >
+                                Categories
+                            </button>
+                            <button
+                                onClick={handleOffersClick}
+                                className="transition-colors whitespace-nowrap pb-0.5 text-[#D4AF37] hover:text-white flex items-center gap-1 border-b border-transparent"
+                            >
+                                <Tag size={11} />
+                                Offers
+                            </button>
+                        </>
+                    )}
                 </nav>
 
             </div>

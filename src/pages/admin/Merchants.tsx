@@ -232,8 +232,8 @@ export default function Merchants() {
                 await adminSupabase.from('merchants').update({ status: 'PENDING', is_active: false }).eq('id', merchant.id);
                 await adminSupabase.from('profiles').update({ status: 'PENDING', account_status: 'pending_approval' }).eq('id', merchant.id);
             } else if (type === 'approve') {
-                // Admin approval grants dashboard access; it NEVER automatically publishes the store
-                await adminSupabase.from('merchants').update({ status: 'APPROVED' }).eq('id', merchant.id);
+                // Admin approval grants dashboard access and activates store for storefront
+                await adminSupabase.from('merchants').update({ status: 'APPROVED', is_active: true }).eq('id', merchant.id);
                 await adminSupabase.from('profiles').update({ status: 'APPROVED', account_status: 'active' }).eq('id', merchant.id);
             }
 

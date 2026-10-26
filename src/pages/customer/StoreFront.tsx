@@ -3,67 +3,133 @@ import { useEffect, useState } from 'react';
 import SupermarketStore from './store-types/SupermarketStore';
 import { publicApi } from '../../lib/api';
 import PageSEO from '../../components/SEO';
+import { storeCache } from '../../context/StoreCache';
+
+// Normalise raw DB product → camelCase shape SupermarketStore expects
+function normaliseProduct(p: any, fallbackMerchantId: string) {
+    const resolvedCategory =
+        p.category?.name ||
+        p.category ||
+        (Array.isArray(p.tags) && p.tags[0]) ||
+        (p.metadata?.tags && p.metadata.tags[0]) ||
+        'Food Cupboard';
+    return {
+        id: p.id,
+        merchantId: p.merchant_id || fallbackMerchantId,
+        name: p.name,
+        description: p.description || '',
+        categoryId: resolvedCategory,
+        category: resolvedCategory,
+        price: Number(p.price) || 0,
+        oldPrice: p.compare_price ? Number(p.compare_price) : null,
+        promo: Boolean(p.is_featured),
+        isFeatured: Boolean(p.is_featured),
+        stockLevel: p.stock_level ?? 50,
+        isAvailable: p.is_available === false ? false : true,
+        imageUrl: p.image_url || p.imageUrl || '',
+        unit: p.unit || p.metadata?.unit || 'unit',
+        sku: p.sku || `SKU-${p.id?.slice(-4)?.toUpperCase() || '0000'}`,
+    };
+}
 
 export default function StoreFront() {
     const { id } = useParams();
     const navigate = useNavigate();
-    const [merchant, setMerchant] = useState<any>(null);
-    const [merchantProducts, setMerchantProducts] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
 
-    // Load store data from Supabase
+    // Seed from cache immediately — no blank screen on revisit
+    const [merchant, setMerchant] = useState<any>(() => (id ? storeCache.getStore(id) : null));
+    const [merchantProducts, setMerchantProducts] = useState<any[]>(() =>
+        id ? storeCache.getProducts(id) ?? [] : []
+    );
+    const [loading, setLoading] = useState<boolean>(() => {
+        // If we have cached store + products, we don't need to show a loader
+        if (!id) return true;
+        return storeCache.isStoreStale(id) || storeCache.isProductsStale(id);
+    });
+
     useEffect(() => {
-        loadStore();
+        if (!id) return;
+
+        const cachedStore = storeCache.getStore(id);
+        const cachedProducts = storeCache.getProducts(id);
+        const storeStale = storeCache.isStoreStale(id);
+        const productsStale = storeCache.isProductsStale(id);
+
+        // If both are cached and fresh — render immediately, nothing to do
+        if (cachedStore && cachedProducts && !storeStale && !productsStale) {
+            setMerchant(cachedStore);
+            setMerchantProducts(cachedProducts);
+            setLoading(false);
+            return;
+        }
+
+        // Fire both requests in parallel
+        const fetchAll = async () => {
+            try {
+                const [storeResult, productsResult] = await Promise.all([
+                    storeStale ? publicApi.getStore(id) : Promise.resolve({ data: cachedStore, error: null }),
+                    productsStale ? publicApi.getStoreProducts(id) : Promise.resolve({ data: cachedProducts, error: null }),
+                ]);
+
+                if (storeResult.data) {
+                    storeCache.setStore(id, storeResult.data);
+                    setMerchant(storeResult.data);
+                }
+
+                if (productsResult.data && productsResult.data.length > 0) {
+                    const normalised = productsResult.data.map((p: any) => normaliseProduct(p, id));
+                    storeCache.setProducts(id, normalised);
+                    setMerchantProducts(normalised);
+                } else if (!cachedProducts) {
+                    setMerchantProducts([]);
+                }
+            } catch (err) {
+                console.error('Error loading store:', err);
+                if (!cachedStore) setMerchantProducts([]);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchAll();
     }, [id]);
 
-    const loadStore = async () => {
-        if (!id) return;
-        setLoading(true);
-        try {
-            const storeResult = await publicApi.getStore(id);
-            if (storeResult.data) {
-                setMerchant(storeResult.data);
-            }
-            // No fallback mock — if store not found, merchant stays null and we show error state
 
-            const productsResult = await publicApi.getStoreProducts(id);
-            if (productsResult.data && productsResult.data.length > 0) {
-                // Normalize snake_case DB fields → camelCase expected by SupermarketStore.tsx
-                setMerchantProducts(productsResult.data.map((p: any) => {
-                    const resolvedCategory = p.category?.name || p.category || (Array.isArray(p.tags) && p.tags[0]) || (p.metadata?.tags && p.metadata.tags[0]) || 'Food Cupboard';
-                    return {
-                        id: p.id,
-                        merchantId: p.merchant_id || id,
-                        name: p.name,
-                        description: p.description || '',
-                        categoryId: resolvedCategory,
-                        category: resolvedCategory,
-                        price: Number(p.price) || 0,
-                        oldPrice: p.compare_price ? Number(p.compare_price) : null,
-                        promo: Boolean(p.is_featured),
-                        isFeatured: Boolean(p.is_featured),
-                        stockLevel: p.stock_level ?? 50,
-                        isAvailable: p.is_available === false ? false : true,
-                        imageUrl: p.image_url || p.imageUrl || '',
-                        unit: p.unit || p.metadata?.unit || 'unit',
-                        sku: p.sku || `SKU-${p.id?.slice(-4)?.toUpperCase() || '0000'}`,
-                    };
-                }));
-            } else {
-                setMerchantProducts([]);
-            }
-        } catch (err) {
-            console.error('Error loading store:', err);
-            setMerchantProducts([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    if (loading) {
+    // Only show full-screen skeleton when we have absolutely nothing cached
+    if (loading && !merchant) {
         return (
-            <div className="min-h-screen bg-[#0A0A0A] flex items-center justify-center">
-                <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen bg-black animate-pulse">
+                {/* Skeleton Header */}
+                <div className="bg-[#4A90E2] pt-6 pb-24 px-6 lg:px-12 relative overflow-hidden">
+                    {/* Nav bar skeleton */}
+                    <div className="flex items-center justify-between mb-10">
+                        <div className="h-6 w-28 bg-white/20 rounded" />
+                        <div className="h-6 w-48 bg-white/10 rounded hidden md:block" />
+                        <div className="h-6 w-20 bg-white/20 rounded" />
+                    </div>
+                    {/* Title skeleton */}
+                    <div className="space-y-3 mt-6">
+                        <div className="h-3 w-24 bg-white/20 rounded" />
+                        <div className="h-14 w-72 bg-white/20 rounded" />
+                    </div>
+                </div>
+                {/* Skeleton Products */}
+                <div className="bg-[#D4AF37] px-6 py-16">
+                    <div className="max-w-7xl mx-auto">
+                        <div className="h-6 w-40 bg-black/10 rounded mb-8" />
+                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {Array.from({ length: 8 }).map((_, i) => (
+                                <div key={i} className="bg-black/10 rounded-2xl overflow-hidden">
+                                    <div className="h-40 bg-black/10" />
+                                    <div className="p-3 space-y-2">
+                                        <div className="h-4 w-16 bg-black/10 rounded" />
+                                        <div className="h-3 w-24 bg-black/10 rounded" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
             </div>
         );
     }

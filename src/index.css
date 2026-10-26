@@ -52,7 +52,8 @@
   }
 
   body {
-    @apply bg-surface-page text-ink-800 antialiased;
+    background-color: #000000;
+    @apply text-ink-800 antialiased;
     font-family: var(--font-body);
     letter-spacing: -0.005em;
     font-weight: 400;

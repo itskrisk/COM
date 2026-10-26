@@ -13,13 +13,14 @@ import StorefrontNav from '../../components/layout/StorefrontNav';
 import LocationModal from '../../components/marketing/LocationModal';
 import ProfileModal from '../../components/ui/shared/ProfileModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../context/AuthContext';
 import { useProfileGuard } from '../../hooks/useProfileGuard';
 import { publicApi } from '../../lib/api';
 import PageSEO from '../../components/SEO';
 import { supabase } from '../../lib/supabaseClient';
+import { storeCache } from '../../context/StoreCache';
 
 // 1. BRAND PILLARS (Functional FOUNDATIONS)
 const SEGMENT_MAP: Record<string, { title: string; subtitle: string; description: string; categories: string[] }> = {
@@ -135,7 +136,9 @@ export default function StoreListing() {
             ? true
             : activeCategory === 'Promotions'
                 ? !!store.promo
-                : (store.type && store.type.toLowerCase() === activeCategory.toLowerCase());
+                : activeCategory.toLowerCase() === 'mama mboga'
+                    ? (store.type?.toLowerCase() === 'grocery' || store.type?.toLowerCase() === 'mama mboga' || store.name?.toLowerCase().includes('mama mboga'))
+                    : (store.type && store.type.toLowerCase() === activeCategory.toLowerCase());
 
         // 2. Check search query
         const lowerCaseSearchQuery = searchQuery.toLowerCase();
@@ -145,7 +148,31 @@ export default function StoreListing() {
         return matchesCategory && matchesSearch;
     });
 
-    // --- Sub-Component: StoreCard ---
+    // --- Sub-Component: StoreCard (with hover prefetch) ---
+    const prefetchStore = useCallback((storeId: string) => {
+        storeCache.prefetch(storeId, async () => {
+            const [storeRes, productsRes] = await Promise.all([
+                publicApi.getStore(storeId),
+                publicApi.getStoreProducts(storeId),
+            ]);
+            if (storeRes.data) storeCache.setStore(storeId, storeRes.data);
+            if (productsRes.data && productsRes.data.length > 0) {
+                storeCache.setProducts(storeId, productsRes.data);
+            }
+        });
+    }, []);
+
+    const hoverTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+    const handleMouseEnter = useCallback((storeId: string) => {
+        // Wait 200ms before prefetching — avoids wasted calls on quick pass-throughs
+        hoverTimers.current[storeId] = setTimeout(() => prefetchStore(storeId), 200);
+    }, [prefetchStore]);
+
+    const handleMouseLeave = useCallback((storeId: string) => {
+        clearTimeout(hoverTimers.current[storeId]);
+    }, []);
+
     const StoreCard = ({ store, idx }: { store: any, idx: number }) => (
         <motion.div
             layout
@@ -153,6 +180,9 @@ export default function StoreListing() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.05 }}
             onClick={() => navigate(`/stores/${store.id}`)}
+            onMouseEnter={() => handleMouseEnter(store.id)}
+            onMouseLeave={() => handleMouseLeave(store.id)}
+            onTouchStart={() => prefetchStore(store.id)}
             className="group cursor-pointer"
         >
             {/* Glass Container */}

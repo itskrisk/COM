@@ -1,10 +1,10 @@
 import Footer from '../../../components/layout/Footer';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Minus, Search, ShoppingBag, Menu, X, User, Zap, Clock, Star, ArrowLeft, ArrowRight, MapPin } from 'lucide-react';
+import { Plus, Minus, Search, ShoppingBag, Menu, X, User, Zap, Clock, Star, ArrowLeft, ArrowRight, MapPin, Tag, LayoutGrid } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../../../context/CartContext';
-import StorefrontNav from '../../../components/layout/StorefrontNav';
+import StorefrontNav, { StorefrontNavItem } from '../../../components/layout/StorefrontNav';
 import LocationModal from '../../../components/marketing/LocationModal';
 import ProfileModal from '../../../components/ui/shared/ProfileModal';
 import GlassCart from '../../../components/ui/shared/GlassCart';
@@ -47,7 +47,6 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
     const { addItem, updateQuantity, itemCount, items = [] } = useCart();
     const [selectedCategory, setSelectedCategory] = useState('Featured items');
     const [searchTerm, setSearchTerm] = useState('');
-    const [activeTab, setActiveTab] = useState('Shop');
     const [viewingCategoryDeepDive, setViewingCategoryDeepDive] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState('');
 
@@ -137,6 +136,39 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     }, [viewingCategoryDeepDive]);
+
+    // Streamlined Storefront Navigation items: All Stores, Aisles, and Deals
+    const storeNavItems: StorefrontNavItem[] = [
+        {
+            label: 'All Stores',
+            icon: <ArrowLeft size={11} />,
+            onClick: () => navigate('/stores'),
+            isActive: false,
+        },
+        {
+            label: 'Aisles',
+            icon: <LayoutGrid size={11} />,
+            onClick: () => {
+                setViewingCategoryDeepDive(null);
+                const el = document.getElementById('store-taxonomy-categories') || document.getElementById('section-' + (categories[0] || 'Featured items')) || document.getElementById('mobile-nav-' + (categories[0] || 'Featured items'));
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth' });
+                } else {
+                    window.scrollTo({ top: 380, behavior: 'smooth' });
+                }
+            },
+            isActive: !viewingCategoryDeepDive,
+        },
+        {
+            label: 'Deals',
+            icon: <Tag size={11} />,
+            isHighlight: true,
+            onClick: () => {
+                setViewingCategoryDeepDive('Almost anything, delivered');
+            },
+            isActive: viewingCategoryDeepDive === 'Almost anything, delivered',
+        },
+    ];
 
     const renderProductCard = (product: any, isCarousel: boolean = false) => {
         const cartItem = items.find(i => i.id === product.id);
@@ -269,36 +301,18 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
                     userLocation={userLocation}
                     onOpenLocation={() => setIsLocationModalOpen(true)}
                     onOpenProfile={(view) => openProfile(view)}
-                    onCategoriesClick={() => {
-                        setViewingCategoryDeepDive(null);
-                        setActiveTab('Shop');
-                        const el = document.getElementById('store-taxonomy-categories');
-                        if (el) el.scrollIntoView({ behavior: 'smooth' });
-                    }}
-                    onOffersClick={() => setActiveTab('Deals')}
-                    activeCategory={viewingCategoryDeepDive || (activeTab === 'Deals' ? 'Deals' : undefined)}
-                    currentTab={activeTab === 'Deals' ? 'offers' : 'home'}
+                    customNavItems={storeNavItems}
                 />
 
-                {/* NAVIGATION TABS (PORTED TO HEADER V17) */}
-                <div className="max-w-7xl mx-auto relative z-30 mb-8 border-b border-white/5 flex items-center justify-between">
-                    <div className="flex gap-10">
-                        {['Shop', 'Deals', 'Shop your list'].map(tab => (
-                            <button key={tab} onClick={() => setActiveTab(tab)} className={`pb-4 text-[11px] font-black uppercase tracking-[0.2em] relative ${activeTab === tab ? 'text-white' : 'text-white/40'}`}>
-                                {tab}{activeTab === tab && <motion.div layoutId="headerTabLine" className="absolute bottom-0 left-0 w-full h-[2px] bg-[#D4AF37]" />}
-                            </button>
-                        ))}
-                    </div>
+                <div className="max-w-7xl mx-auto relative z-20 mb-8 mt-6">
                     {viewingCategoryDeepDive && (
-                        <button onClick={() => setViewingCategoryDeepDive(null)} className="pb-4 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:text-white transition-colors">
-                            <ArrowLeft size={16} /> <span className="hidden sm:inline">Back to Store</span>
+                        <button
+                            onClick={() => setViewingCategoryDeepDive(null)}
+                            className="mb-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-[#D4AF37] hover:text-white transition-colors cursor-pointer"
+                        >
+                            <ArrowLeft size={14} /> Back to All Aisles
                         </button>
                     )}
-                </div>
-
-
-
-                <div className="max-w-7xl mx-auto relative z-20 mb-8">
                     <motion.h1 key={viewingCategoryDeepDive || 'main'} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="text-5xl md:text-8xl font-heading font-light tracking-tighter text-white leading-[0.85]">
                         {viewingCategoryDeepDive === 'Almost anything, delivered' ? 'Specials' : (viewingCategoryDeepDive || merchant.name || merchant.business_name || 'Market')}<span className="text-[#D4AF37]">,</span><br />
                         {viewingCategoryDeepDive ? 'Selection' : (merchant.address?.split(' - ')[0]?.split(',')[0] || 'Nairobi')}<span className="text-[#D4AF37]">.</span>

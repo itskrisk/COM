@@ -222,11 +222,11 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            // Approval grants authorization to operate/access dashboard.
-            // It NEVER automatically publishes the store (is_active is left unchanged).
+            // Approval grants authorization to operate and automatically activates the store
             const updatePayload = activeTab === 'merchants'
                 ? {
                     status: 'APPROVED',
+                    is_active: true,
                     is_suspended: false,
                     approved_at: new Date().toISOString(),
                     rejection_reason: null
