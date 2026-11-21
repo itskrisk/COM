@@ -109,24 +109,28 @@ export default function StoreListing() {
 
     // Unified Market Data (Wired to Supabase)
     const MARKET_STORES = useMemo(() => {
-        return stores.map((m: any) => ({
-            id: m.id,
-            name: m.business_name || 'Supermarket',
-            promo: m.branding?.promo || '',
-            status: m.is_active ? 'Open' : 'Closed',
-            rating: m.rating ? `${m.rating}` : '--',
-            count: m.review_count ? `(${m.review_count})` : '(0)',
-            type: m.type || 'Supermarket',
-            departments: m.branding?.departments || ['market'],
-            tags: m.branding?.tags || [],
-            actionText: 'Order Now',
-            image: m.cover_url || m.logo_url || m.branding?.bannerUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800',
-            isTopRated: m.rating >= 4.5,
-            operatingHours: m.operating_hours?.hours || '08:00 AM - 10:00 PM',
-            deliverySpeed: `${m.pack_time_min ? m.pack_time_min + 15 : 35} mins`,
-            deliveryFee: m.delivery_fee ? `KES ${m.delivery_fee}` : 'KES 150',
-            address: m.address || 'Nairobi'
-        }));
+        return stores.map((m: any) => {
+            const hasReviews = Number(m.review_count) > 0;
+            const numericRating = Number(m.rating);
+            return {
+                id: m.id,
+                name: m.business_name || 'Supermarket',
+                promo: m.branding?.promo || '',
+                status: m.is_active ? 'Open' : 'Closed',
+                rating: hasReviews && numericRating > 0 ? numericRating.toFixed(1) : '--',
+                count: hasReviews ? `(${m.review_count})` : '',
+                type: m.type || 'Supermarket',
+                departments: m.branding?.departments || ['market'],
+                tags: m.branding?.tags || [],
+                actionText: 'Order Now',
+                image: m.cover_url || m.logo_url || m.branding?.bannerUrl || 'https://images.unsplash.com/photo-1542838132-92c53300491e?q=80&w=800',
+                isTopRated: hasReviews && numericRating >= 4.5,
+                operatingHours: m.operating_hours?.hours || '08:00 AM - 10:00 PM',
+                deliverySpeed: `${m.pack_time_min ? m.pack_time_min + 15 : 35} mins`,
+                deliveryFee: m.delivery_fee ? `KES ${m.delivery_fee}` : 'KES 150',
+                address: m.address || 'Nairobi'
+            };
+        });
     }, [stores]);
 
     // Filter logic
@@ -202,6 +206,15 @@ export default function StoreListing() {
                     </div>
                 )}
 
+                {/* Top Selection Floating Overlay - Anchored to Image Top-Right */}
+                {store.isTopRated && (
+                    <div className="absolute top-4 right-4 z-10">
+                        <span className="text-[9px] font-black tracking-widest text-[#D4AF37] uppercase bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-full border border-[#D4AF37]/30">
+                            ★ Top Selection
+                        </span>
+                    </div>
+                )}
+
                 {/* Speed / Delivery Badge */}
                 <div className="absolute bottom-4 left-4 z-10 flex items-center gap-2">
                     <span className="text-[9px] font-black tracking-wider text-white uppercase bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-full">
@@ -224,19 +237,14 @@ export default function StoreListing() {
                 </div>
             </div>
 
-            {/* Meta Content */}
+            {/* Meta Content - Strictly unboxed editorial typography, perfectly aligned across cards */}
             <div className="px-1 space-y-1">
-                <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                        {store.isTopRated && (
-                            <span className="text-[9px] font-black uppercase tracking-widest text-[#D4AF37] shrink-0">Top Selection</span>
-                        )}
-                        <h3 className="text-sm sm:text-xl font-heading font-black tracking-tighter leading-tight transition-colors truncate">
-                            {store.name}
-                        </h3>
-                    </div>
-                </div>
+                {/* Store Name: Dedicated flush-left row for every single card */}
+                <h3 className="text-sm sm:text-xl font-heading font-black tracking-tighter leading-tight transition-colors truncate">
+                    {store.name}
+                </h3>
 
+                {/* Secondary Meta: Status, Hours, Rating */}
                 <div className="flex items-center gap-1.5 sm:gap-3 text-[10px] sm:text-[11px] font-bold text-gray-700 flex-wrap">
                     <span className={`${store.status.includes('Closed') ? 'text-amber-700' : 'text-green-600'}`}>
                         {store.status}
@@ -252,7 +260,7 @@ export default function StoreListing() {
                             <span className="w-1 h-1 bg-gray-300 rounded-full" />
                             <div className="flex items-center gap-1.5 font-black text-gray-900">
                                 <span>★ {store.rating}</span>
-                                <span className="text-gray-400 font-medium">{store.count}</span>
+                                {store.count && <span className="text-gray-400 font-medium">{store.count}</span>}
                             </div>
                         </>
                     )}

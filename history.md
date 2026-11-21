@@ -5537,3 +5537,24 @@ User noticed that each store has its own image for the store card, but the newly
 ### Verification
 - Queried `merchants` table: confirmed both `cover_url` and `logo_url` now contain the uploaded image.
 - Ran `npx tsc --noEmit`: exited with code 0 (zero errors).
+
+## [2026-11-21T14:49:18.756Z] Store Card Layout Standardization & Database Rating Reset
+
+### Summary of Prompt & Issue
+- **Issue**: In the storefront discovery grid (`/stores`), the store name on the second store card ("Mama Mboga") had an awkward placement that appeared shifted towards the center compared to the first store card ("BEE HONEY"), which was cleanly flush left.
+- **Inquiry**: User asked why Mama Mboga had a 5-star rating despite no customer review system being actively in use, requested removing any artificial rating, and demanded strict, consistent placement of the store name and all other store card components across every card.
+
+### Root Cause Analysis
+1. **Artificial Rating in Supabase**: The database contained 0 customer reviews. Mama Mboga had a seeded/mock default rating of `5` while BEE HONEY had `0`.
+2. **Horizontal Flex Displacement**: In `StoreListing.tsx`, the condition `store.isTopRated` rendered a `<span>Top Selection</span>` tag directly inside the `flex items-center gap-2` row alongside `<h3>{store.name}</h3>`. This physically pushed the store name to the center on any store rated 4.5+, causing jagged, misaligned headlines across the storefront grid.
+
+### Actions Taken & Final Solution
+1. **Database Rating Reset**:
+   - Used the Supabase service role key to update all merchant rows to `rating: 0` and `review_count: 0`, eliminating fictitious ratings until authentic user reviews are submitted.
+2. **Storefront StoreCard Layout Standardization (`src/pages/customer/StoreListing.tsx`)**:
+   - **Dedicated Store Name Row**: Placed `{store.name}` on its own dedicated flush-left line (`text-sm sm:text-xl font-heading font-black tracking-tighter truncate`) without any sibling inline tags.
+   - **Image Overlay for Awards**: Relocated the `Top Selection` badge to the top-right corner overlay of the card's media container (`top-4 right-4`), ensuring visual prominence without compromising editorial typographic alignment.
+   - **Consistent Metadata Rhythm**: Structured the secondary info row consistently across all cards (Status dot/text, separator dot, Operating Hours, and conditional star rating only when `review_count > 0`).
+   - Complied strictly with design rules (unboxed editorial typography, zero container card padding/backgrounds).
+3. **Verification**:
+   - Successfully executed `npm run build` (`tsc -b && vite build`) with zero TypeScript or styling errors.
