@@ -5791,3 +5791,27 @@ Keep contractual acceptance separate from privacy consent, marketing consent, co
 
 ### Result
 Centralized, legally robust, and server-verifiable Terms & Conditions acceptance architecture fully implemented across Customer, Merchant, and Rider portals in compliance with Kenya DPA 2019 and KICA 2009.
+
+
+---
+
+## Task: Round Favicon Implementation & PWA / Open Graph Optimization
+- **Date**: 2026-11-22
+- **Goal**: Replace square/boxed tab favicon with perfectly circular/round icons with true alpha transparency in the corners, eliminate pixelated SVG tab render, and configure PWA manifest and crisp Open Graph social sharing assets.
+
+### Key Changes
+1. **True-Round Favicon Architecture**:
+   - Inspected new circular assets in `src/assets/logos/faviconnn/`.
+   - Discovered that the generator left solid white background corners (#FFFFFF, alpha = 255) around the circular logo, causing browsers to show a white box in tabs.
+   - Applied mathematical alpha-masking across all favicon sizes (`favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`, `android-chrome-192x192.png`, `android-chrome-512x512.png`) making every corner pixel outside the circular boundary fully transparent (alpha = 0) with sub-pixel antialiasing.
+   - Generated a multi-resolution round `public/favicon.ico` containing both 16x16 and 32x32 circular PNGs.
+2. **PWA Manifest & HTML Head Optimization**:
+   - Generated `public/site.webmanifest` with Muncheez branding (#000000 theme color, round maskable app icons).
+   - Updated `index.html` to link `site.webmanifest`, `shortcut icon`, `favicon.ico`, 32x32/16x16 PNGs, and `apple-touch-icon.png`.
+   - Removed old blurry raster SVG wrapper.
+3. **Open Graph Asset Resolution**:
+   - Copied high-resolution original `urlimage-hq.jpg` (1408x768) into `public/logos/` to eliminate low-res compression on social share cards.
+
+### Verification
+- Pixel inspection verified corner pixels have alpha = 0 and center circle has alpha = 255.
+- `npm run build` completed with exit code 0 across 2,254 modules.
