@@ -21,6 +21,7 @@ import { publicApi } from '../../lib/api';
 import PageSEO from '../../components/SEO';
 import { supabase } from '../../lib/supabaseClient';
 import { storeCache } from '../../context/StoreCache';
+import { cookieService } from '../../lib/cookieService';
 
 // 1. BRAND PILLARS (Functional FOUNDATIONS)
 const SEGMENT_MAP: Record<string, { title: string; subtitle: string; description: string; categories: string[] }> = {
@@ -50,10 +51,10 @@ export default function StoreListing() {
     const [userLocation, setUserLocation] = useState('');
     const { isOpen: isProfileOpen, open: openProfile, close: closeProfile, initialView } = useProfileGuard();
 
-    // Sync location from profile or localStorage on mount/profile change
+    // Sync location from profile or storage on mount/profile change
     useEffect(() => {
         const profileLocation = profile?.location_preferences?.neighborhood;
-        const storageLocation = localStorage.getItem('muncheez_delivery_address');
+        const storageLocation = cookieService.getDeliveryAddress();
         const fallback = profileLocation || storageLocation || '';
         setUserLocation(fallback);
     }, [profile]);
@@ -84,10 +85,10 @@ export default function StoreListing() {
         }
     }, [activeTag]);
 
-    // Unified location handler - saves to both localStorage and Supabase profile
+    // Unified location handler - saves to storage (respecting consent) and Supabase profile
     const handleLocationSelect = async (loc: string) => {
         setUserLocation(loc);
-        localStorage.setItem('muncheez_delivery_address', loc);
+        cookieService.setDeliveryAddress(loc);
         
         if (user?.id) {
             try {

@@ -1,78 +1,65 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Check, X, Lock } from 'lucide-react';
+import { useCookieConsent } from '../../../hooks/useCookieConsent';
+import { CookieConsentPreferences } from '../../../lib/cookieService';
+
+export type CookiePreferences = CookieConsentPreferences;
 
 interface CookieModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
-export interface CookiePreferences {
-    essential: boolean;
-    analytics: boolean;
-    marketing: boolean;
-    personalization: boolean;
-    updatedAt?: string;
-}
-
-const DEFAULT_PREFERENCES: CookiePreferences = {
-    essential: true,
-    analytics: true,
-    marketing: false,
-    personalization: true,
-};
-
 export default function CookieModal({ isOpen, onClose }: CookieModalProps) {
-    const [preferences, setPreferences] = useState<CookiePreferences>(DEFAULT_PREFERENCES);
+    const { preferences, savePreferences, acceptAll, rejectOptional } = useCookieConsent();
+    const [localState, setLocalState] = useState({
+        analytics: preferences.analytics,
+        personalization: preferences.personalization,
+        marketing: preferences.marketing,
+    });
     const [savedSuccess, setSavedSuccess] = useState(false);
 
+    // Sync with global preferences whenever opened
     useEffect(() => {
-        const stored = localStorage.getItem('muncheez_cookie_preferences');
-        if (stored) {
-            try {
-                setPreferences(JSON.parse(stored));
-            } catch (err) {
-                console.error('Failed to parse cookie preferences:', err);
-            }
+        if (isOpen) {
+            setLocalState({
+                analytics: preferences.analytics,
+                personalization: preferences.personalization,
+                marketing: preferences.marketing,
+            });
         }
-    }, [isOpen]);
+    }, [isOpen, preferences]);
 
-    const handleSave = (customPrefs?: CookiePreferences) => {
-        const toSave = customPrefs || {
-            ...preferences,
-            updatedAt: new Date().toISOString(),
-        };
-        localStorage.setItem('muncheez_cookie_preferences', JSON.stringify(toSave));
-
-        const maxAge = 31536000; // 1 year
-        document.cookie = `muncheez_essential=true; path=/; max-age=${maxAge}; SameSite=Lax`;
-        document.cookie = `muncheez_analytics=${toSave.analytics}; path=/; max-age=${maxAge}; SameSite=Lax`;
-        document.cookie = `muncheez_marketing=${toSave.marketing}; path=/; max-age=${maxAge}; SameSite=Lax`;
-        document.cookie = `muncheez_personalization=${toSave.personalization}; path=/; max-age=${maxAge}; SameSite=Lax`;
-
-        window.dispatchEvent(new CustomEvent('muncheez_cookies_updated', { detail: toSave }));
-
-        setPreferences(toSave);
+    const handleSave = () => {
+        savePreferences(localState);
         setSavedSuccess(true);
         setTimeout(() => {
             setSavedSuccess(false);
             onClose();
-        }, 700);
+        }, 600);
     };
 
     const handleAcceptAll = () => {
-        handleSave({
-            essential: true,
-            analytics: true,
-            marketing: true,
-            personalization: true,
-            updatedAt: new Date().toISOString(),
-        });
+        acceptAll();
+        setSavedSuccess(true);
+        setTimeout(() => {
+            setSavedSuccess(false);
+            onClose();
+        }, 600);
     };
 
-    const toggle = (key: keyof CookiePreferences) => {
-        if (key === 'essential') return;
-        setPreferences(prev => ({ ...prev, [key]: !prev[key] }));
+    const handleRejectOptional = () => {
+        rejectOptional();
+        setSavedSuccess(true);
+        setTimeout(() => {
+            setSavedSuccess(false);
+            onClose();
+        }, 600);
+    };
+
+    const toggle = (key: 'analytics' | 'personalization' | 'marketing') => {
+        setLocalState(prev => ({ ...prev, [key]: !prev[key] }));
     };
 
     return (
@@ -98,18 +85,19 @@ export default function CookieModal({ isOpen, onClose }: CookieModalProps) {
                         <div className="px-8 pt-8 pb-6 border-b border-neutral-100 flex items-start justify-between">
                             <div>
                                 <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-400 block mb-1">
-                                    Privacy Settings
+                                    Privacy Settings · Compliance
                                 </span>
                                 <h3 className="text-xl font-heading font-light tracking-tight text-neutral-900">
                                     Cookie Preferences
                                 </h3>
                                 <p className="text-xs text-neutral-500 mt-1">
-                                    Manage how Muncheez stores session data on your device.
+                                    Manage data storage preferences under Kenya DPA 2019 &amp; GDPR.
                                 </p>
                             </div>
                             <button
                                 onClick={onClose}
                                 className="text-neutral-400 hover:text-neutral-900 transition-colors pt-1"
+                                aria-label="Close"
                             >
                                 <X size={18} />
                             </button>
@@ -130,16 +118,16 @@ export default function CookieModal({ isOpen, onClose }: CookieModalProps) {
                             ) : (
                                 <>
                                     <div className="divide-y divide-neutral-100 mb-8">
-                                        {/* Essential */}
+                                        {/* Strictly Necessary */}
                                         <div className="py-4 flex items-center justify-between gap-4">
                                             <div className="flex items-start gap-3">
                                                 <Lock size={14} className="text-neutral-400 mt-0.5 shrink-0" />
                                                 <div>
                                                     <span className="text-xs font-semibold text-neutral-900 block">
-                                                        Strictly Necessary
+                                                        Strictly Necessary (Essential)
                                                     </span>
                                                     <p className="text-[11px] text-neutral-500 leading-relaxed mt-0.5">
-                                                        Authentication, security, and cart preservation. Always active.
+                                                        Authentication sessions, cart checkout, and payment security. Always active.
                                                     </p>
                                                 </div>
                                             </div>
@@ -148,73 +136,79 @@ export default function CookieModal({ isOpen, onClose }: CookieModalProps) {
                                             </span>
                                         </div>
 
-                                        {/* Analytics */}
+                                        {/* Performance & Analytics */}
                                         <div className="py-4 flex items-center justify-between gap-4">
                                             <div>
                                                 <span className="text-xs font-semibold text-neutral-900 block">
-                                                    Performance & Analytics
+                                                    Performance &amp; Analytics
                                                 </span>
                                                 <p className="text-[11px] text-neutral-500 leading-relaxed mt-0.5">
-                                                    Anonymized telemetry to measure supermarket page load speeds.
+                                                    Anonymized telemetry to measure supermarket page load speeds and service reliability.
                                                 </p>
                                             </div>
                                             <button
+                                                type="button"
                                                 onClick={() => toggle('analytics')}
                                                 className={`w-11 h-6 transition-colors border ${
-                                                    preferences.analytics ? 'bg-neutral-900 border-neutral-900' : 'bg-neutral-100 border-neutral-300'
+                                                    localState.analytics ? 'bg-neutral-900 border-neutral-900' : 'bg-neutral-100 border-neutral-300'
                                                 } relative shrink-0`}
+                                                aria-label="Toggle analytics cookies"
                                             >
                                                 <span
                                                     className={`block w-4 h-4 bg-white transition-transform ${
-                                                        preferences.analytics ? 'translate-x-5' : 'translate-x-1'
+                                                        localState.analytics ? 'translate-x-5' : 'translate-x-1'
                                                     }`}
                                                 />
                                             </button>
                                         </div>
 
-                                        {/* Personalization */}
+                                        {/* Neighborhood & Personalization */}
                                         <div className="py-4 flex items-center justify-between gap-4">
                                             <div>
                                                 <span className="text-xs font-semibold text-neutral-900 block">
-                                                    Neighborhood & Personalization
+                                                    Neighborhood &amp; Personalization
                                                 </span>
                                                 <p className="text-[11px] text-neutral-500 leading-relaxed mt-0.5">
-                                                    Remembers your selected Nairobi delivery sector and aisle filters.
+                                                    Saves your selected Nairobi delivery sector across visits instead of resetting.
                                                 </p>
                                             </div>
                                             <button
+                                                type="button"
                                                 onClick={() => toggle('personalization')}
                                                 className={`w-11 h-6 transition-colors border ${
-                                                    preferences.personalization ? 'bg-neutral-900 border-neutral-900' : 'bg-neutral-100 border-neutral-300'
+                                                    localState.personalization ? 'bg-neutral-900 border-neutral-900' : 'bg-neutral-100 border-neutral-300'
                                                 } relative shrink-0`}
+                                                aria-label="Toggle personalization cookies"
                                             >
                                                 <span
                                                     className={`block w-4 h-4 bg-white transition-transform ${
-                                                        preferences.personalization ? 'translate-x-5' : 'translate-x-1'
+                                                        localState.personalization ? 'translate-x-5' : 'translate-x-1'
                                                     }`}
                                                 />
                                             </button>
                                         </div>
 
-                                        {/* Marketing */}
+                                        {/* Marketing & Promotions */}
                                         <div className="py-4 flex items-center justify-between gap-4">
                                             <div>
                                                 <span className="text-xs font-semibold text-neutral-900 block">
-                                                    Promotions & Vouchers
+                                                    Promotions &amp; Vouchers
                                                 </span>
                                                 <p className="text-[11px] text-neutral-500 leading-relaxed mt-0.5">
-                                                    Curated deals and supermarket partner notifications.
+                                                    Curated supermarket promotions and voucher notifications.
                                                 </p>
                                             </div>
                                             <button
+                                                type="button"
                                                 onClick={() => toggle('marketing')}
                                                 className={`w-11 h-6 transition-colors border ${
-                                                    preferences.marketing ? 'bg-neutral-900 border-neutral-900' : 'bg-neutral-100 border-neutral-300'
+                                                    localState.marketing ? 'bg-neutral-900 border-neutral-900' : 'bg-neutral-100 border-neutral-300'
                                                 } relative shrink-0`}
+                                                aria-label="Toggle marketing cookies"
                                             >
                                                 <span
                                                     className={`block w-4 h-4 bg-white transition-transform ${
-                                                        preferences.marketing ? 'translate-x-5' : 'translate-x-1'
+                                                        localState.marketing ? 'translate-x-5' : 'translate-x-1'
                                                     }`}
                                                 />
                                             </button>
@@ -222,19 +216,30 @@ export default function CookieModal({ isOpen, onClose }: CookieModalProps) {
                                     </div>
 
                                     {/* Action Buttons */}
-                                    <div className="flex items-center justify-end gap-3 pt-4 border-t border-neutral-100 font-mono text-[11px] uppercase tracking-wider">
+                                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-neutral-100 font-mono text-[11px] uppercase tracking-wider">
                                         <button
-                                            onClick={() => handleSave()}
-                                            className="px-4 py-2 border border-neutral-300 text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-colors"
+                                            type="button"
+                                            onClick={handleRejectOptional}
+                                            className="px-3 py-2 text-neutral-500 hover:text-neutral-900 text-left sm:text-center transition-colors"
                                         >
-                                            Save Current
+                                            Reject Optional
                                         </button>
-                                        <button
-                                            onClick={handleAcceptAll}
-                                            className="px-5 py-2 bg-neutral-900 text-white hover:bg-neutral-800 transition-colors"
-                                        >
-                                            Accept All
-                                        </button>
+                                        <div className="flex items-center gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={handleSave}
+                                                className="flex-1 sm:flex-none px-4 py-2 border border-neutral-300 text-neutral-700 hover:border-neutral-900 hover:text-neutral-900 transition-colors"
+                                            >
+                                                Save Current
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleAcceptAll}
+                                                className="flex-1 sm:flex-none px-5 py-2 bg-neutral-900 text-white hover:bg-neutral-800 transition-colors"
+                                            >
+                                                Accept All
+                                            </button>
+                                        </div>
                                     </div>
                                 </>
                             )}

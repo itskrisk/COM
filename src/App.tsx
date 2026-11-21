@@ -74,6 +74,7 @@ import AdminSupport from "./pages/admin/Support";
 // ── Legacy Redirects ────────────────────────────────────────────────────────
 import LegacyRedirect from "./routes/LegacyRedirect";
 import ScrollToTop from "./routes/ScrollToTop";
+import CookieBanner from "./components/ui/shared/CookieBanner";
 
 /**
  * Muncheez route architecture (canonical domain: https://muncheez.co.ke)
@@ -296,6 +297,7 @@ export default function App() {
             <ScrollToTop />
             <TopRouteProgress />
             <AnimatedRoutes />
+            <CookieBanner />
         </BrowserRouter>
     );
 }

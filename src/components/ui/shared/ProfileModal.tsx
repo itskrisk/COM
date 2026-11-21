@@ -14,6 +14,8 @@ import { orderService, profileService, complaintService } from '../../../lib/sup
 import { walletService } from '../../../lib/walletService';
 import { mpesaService } from '../../../lib/mpesaService';
 import CookieModal from './CookieModal';
+import { useCookieConsent } from '../../../hooks/useCookieConsent';
+import { cookieService } from '../../../lib/cookieService';
 
 type ModalView =
     | 'main'
@@ -57,6 +59,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose, initialVie
         };
     }, [isOpen, initialView]);
     const [isCookieModalOpen, setIsCookieModalOpen] = useState(false);
+    const cookieConsent = useCookieConsent();
 
     // Profile Form State
     const [fullName, setFullName] = useState(profile?.full_name || '');
@@ -356,8 +359,8 @@ const [topUpError, setTopUpError] = useState('');
         if (error) {
             setFeedback({ type: 'error', text: 'Failed to save location preferences' });
         } else {
-            // Also update localStorage so navbar reflects immediately
-            localStorage.setItem('muncheez_delivery_address', neighborhood);
+            // Also update delivery address store so navbar/checkout reflects immediately
+            cookieService.setDeliveryAddress(neighborhood);
             setFeedback({ type: 'success', text: 'Location preferences saved!' });
         }
     };
@@ -678,9 +681,17 @@ const [topUpError, setTopUpError] = useState('');
                                                         <button onClick={() => setIsCookieModalOpen(true)} className="w-full flex items-center justify-between p-3.5 hover:bg-gray-50 transition-colors text-left group">
                                                             <div className="flex items-center gap-3">
                                                                 <Cookie size={16} className="text-gray-400 group-hover:text-[#4A90E2]" />
-                                                                <span className="text-xs font-bold text-gray-800">Cookie Settings</span>
+                                                                <div>
+                                                                    <span className="text-xs font-bold text-gray-800 block">Cookie &amp; Privacy Preferences</span>
+                                                                    <span className="text-[10px] text-gray-400 font-medium">Kenya DPA 2019 &amp; GDPR</span>
+                                                                </div>
                                                             </div>
-                                                            <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-0.5 transition-transform" />
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 border border-neutral-200 text-neutral-600 bg-neutral-50">
+                                                                    {cookieConsent.statusLabel}
+                                                                </span>
+                                                                <ChevronRight size={16} className="text-gray-300 group-hover:translate-x-0.5 transition-transform" />
+                                                            </div>
                                                         </button>
                                                     </div>
                                                 </div>

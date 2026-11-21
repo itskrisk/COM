@@ -19,15 +19,17 @@ const NAIROBI_ZONES = [
     'Upper Hill & Community'
 ];
 
+import { cookieService } from '../../lib/cookieService';
+
 export default function LocationModal({ isOpen, onClose, onSelectLocation }: LocationModalProps) {
     const [addressText, setAddressText] = useState(
-        () => localStorage.getItem('muncheez_delivery_address') || ''
+        () => cookieService.getDeliveryAddress()
     );
 
     const handleConfirm = (location: string) => {
         const trimmed = location.trim();
         if (!trimmed) return;
-        localStorage.setItem('muncheez_delivery_address', trimmed);
+        cookieService.setDeliveryAddress(trimmed);
         onSelectLocation(trimmed);
         onClose();
     };

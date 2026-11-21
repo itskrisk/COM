@@ -11,6 +11,7 @@ import GlassCart from '../../../components/ui/shared/GlassCart';
 import { useAuth } from '../../../context/AuthContext';
 import { useProfileGuard } from '../../../hooks/useProfileGuard';
 import { supabase } from '../../../lib/supabaseClient';
+import { cookieService } from '../../../lib/cookieService';
 
 interface SupermarketStoreProps {
     merchant: any;
@@ -50,10 +51,10 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
     const [viewingCategoryDeepDive, setViewingCategoryDeepDive] = useState<string | null>(null);
     const [userLocation, setUserLocation] = useState('');
 
-    // Sync location from profile or localStorage on mount/profile change
+    // Sync location from profile or storage on mount/profile change
     useEffect(() => {
         const profileLocation = profile?.location_preferences?.neighborhood;
-        const storageLocation = localStorage.getItem('muncheez_delivery_address');
+        const storageLocation = cookieService.getDeliveryAddress();
         const fallback = profileLocation || storageLocation || '';
         setUserLocation(fallback);
     }, [profile]);
@@ -62,10 +63,10 @@ export default function SupermarketStore({ merchant = {}, products = [] }: Super
     const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
     const { isOpen: isProfileOpen, open: openProfile, close: closeProfile, initialView } = useProfileGuard();
 
-    // Unified location handler - saves to both localStorage and Supabase profile
+    // Unified location handler - saves to storage (respecting consent) and Supabase profile
     const handleLocationSelect = async (loc: string) => {
         setUserLocation(loc);
-        localStorage.setItem('muncheez_delivery_address', loc);
+        cookieService.setDeliveryAddress(loc);
         
         if (user?.id) {
             try {

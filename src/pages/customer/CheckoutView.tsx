@@ -26,6 +26,7 @@ import { supabase } from '../../lib/supabaseClient';
 import { customerApi } from '../../lib/api';
 import { mpesaService } from '../../lib/mpesaService';
 import { walletService } from '../../lib/walletService';
+import { cookieService } from '../../lib/cookieService';
 
 export default function CheckoutView() {
     const navigate = useNavigate();
@@ -49,7 +50,7 @@ export default function CheckoutView() {
         '11949575-b1f4-43e1-a256-8561eaf234b4';
 
     // Form States
-    const [deliveryAddress, setDeliveryAddress] = useState(() => localStorage.getItem('muncheez_delivery_address') || '');
+    const [deliveryAddress, setDeliveryAddress] = useState(() => cookieService.getDeliveryAddress());
     const [deliveryInstructions, setDeliveryInstructions] = useState('');
     const [paymentMethod, setPaymentMethod] = useState<'mpesa' | 'cash' | 'card' | 'wallet'>('mpesa');
     const [phoneNumber, setPhoneNumber] = useState(profile?.phone || '');
@@ -142,16 +143,16 @@ export default function CheckoutView() {
                     const data = await res.json();
                     if (data && data.display_name) {
                         setDeliveryAddress(data.display_name);
-                        localStorage.setItem('muncheez_delivery_address', data.display_name);
+                        cookieService.setDeliveryAddress(data.display_name);
                     } else {
                         const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
                         setDeliveryAddress(fallback);
-                        localStorage.setItem('muncheez_delivery_address', fallback);
+                        cookieService.setDeliveryAddress(fallback);
                     }
                 } catch {
                     const fallback = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
                     setDeliveryAddress(fallback);
-                    localStorage.setItem('muncheez_delivery_address', fallback);
+                    cookieService.setDeliveryAddress(fallback);
                 } finally {
                     setIsLocating(false);
                 }
@@ -734,7 +735,7 @@ export default function CheckoutView() {
                                         value={deliveryAddress}
                                         onChange={(e) => {
                                             setDeliveryAddress(e.target.value);
-                                            localStorage.setItem('muncheez_delivery_address', e.target.value);
+                                            cookieService.setDeliveryAddress(e.target.value);
                                         }}
                                         placeholder="e.g. Westlands, Mpaka Road, The Mirage, Tower 2, Apt 4B"
                                         className="w-full py-2.5 bg-transparent border-b border-neutral-300 focus:border-black text-base sm:text-sm text-black outline-none font-sans"
