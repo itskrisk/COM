@@ -1263,8 +1263,22 @@ const [topUpError, setTopUpError] = useState('');
                                                 ))}
                                             </div>
                                             <div className="py-4 border-t border-b border-gray-100 text-xs text-gray-600 space-y-2 leading-relaxed max-h-60 overflow-y-auto">
-                                                {policyTab === 'terms' && <p>By using Muncheez, you agree to comply with our delivery network rules and fair use customer policies across Nairobi.</p>}
-                                                {policyTab === 'privacy' && <p>We safeguard your location and personal contact data in compliance with Kenya Data Protection Act regulations.</p>}
+                                                {policyTab === 'terms' && (
+                                                    <div className="space-y-2">
+                                                        <p>By using Muncheez, you agree to comply with our Customer Terms of Service governing orders, M-Pesa payments, and delivery fulfillment across Nairobi.</p>
+                                                        <a href="/terms?doc=customer" target="_blank" rel="noopener noreferrer" className="text-black font-semibold underline block text-[11px]">
+                                                            View Full Customer Terms of Service &rarr;
+                                                        </a>
+                                                    </div>
+                                                )}
+                                                {policyTab === 'privacy' && (
+                                                    <div className="space-y-2">
+                                                        <p>We safeguard your location and personal contact data in compliance with Kenya Data Protection Act regulations.</p>
+                                                        <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-black font-semibold underline block text-[11px]">
+                                                            View Full Privacy Policy &rarr;
+                                                        </a>
+                                                    </div>
+                                                )}
                                                 {policyTab === 'refund' && <p>Orders cancelled prior to kitchen preparation are refunded instantly to your original payment method within 2 hours.</p>}
                                                 {policyTab === 'delivery' && <p>Deliveries are fulfilled within 25–45 minutes depending on traffic and driver availability in your zone.</p>}
                                             </div>

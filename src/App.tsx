@@ -75,6 +75,7 @@ import AdminSupport from "./pages/admin/Support";
 import LegacyRedirect from "./routes/LegacyRedirect";
 import ScrollToTop from "./routes/ScrollToTop";
 import CookieBanner from "./components/ui/shared/CookieBanner";
+import TermsAcceptanceGate from "./components/legal/TermsAcceptanceGate";
 
 /**
  * Muncheez route architecture (canonical domain: https://muncheez.co.ke)
@@ -298,6 +299,7 @@ export default function App() {
             <TopRouteProgress />
             <AnimatedRoutes />
             <CookieBanner />
+            <TermsAcceptanceGate />
         </BrowserRouter>
     );
 }

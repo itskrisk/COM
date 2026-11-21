@@ -1,11 +1,14 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut, Eye, EyeOff, Check, FileText } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../lib/supabaseClient';
 import { isValidKenyanPhone, normalizeKenyanPhone } from '../../utils/phone';
 import customerLoginImg from '../../assets/images/customerloginpic.jpg';
+import { termsService } from '../../lib/termsService';
+import { AGREEMENT_REGISTRY } from '../../lib/agreements';
+import AgreementViewerModal from '../../components/legal/AgreementViewerModal';
 
 export default function Signup() {
     const navigate = useNavigate();
@@ -21,6 +24,8 @@ export default function Signup() {
     const [loggingOut, setLoggingOut] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
     const currentRole = profile?.roles?.[0] || user?.profile?.roles?.[0] || 'customer';
     const isOtherRoleActive = Boolean(user && currentRole !== 'customer');
@@ -69,18 +74,34 @@ export default function Signup() {
             return;
         }
 
+        if (!agreedToTerms) {
+            setError('You must read and agree to the Customer Terms of Service to create an account.');
+            return;
+        }
+
         setLoading(true);
 
         const normalizedPhone = phone.trim() ? normalizeKenyanPhone(phone) : undefined;
 
         try {
-            const { error: signupError } = await signUp(email, password, {
+            const { user: signedUpUser, error: signupError } = await signUp(email, password, {
                 name: fullName.trim(),
                 phone: normalizedPhone,
                 role: 'customer',
             });
 
             if (signupError) throw new Error(signupError);
+
+            if (signedUpUser) {
+                // Record explicit terms acceptance audit log
+                termsService.recordAcceptance({
+                    userId: signedUpUser.id,
+                    role: 'customer',
+                    agreementId: 'customer_tos',
+                    source: 'signup',
+                    metadata: { email: email.trim().toLowerCase(), phone: normalizedPhone }
+                }).catch(() => {});
+            }
 
             // Trigger sync in background to guarantee Supabase Auth & public.profiles are aligned
             fetch('/api/auth/sync-user', {
@@ -333,14 +354,41 @@ export default function Signup() {
                             </div>
                         </div>
 
-                        <p className="text-[10px] text-gray-400 leading-relaxed">
-                            By signing up, you agree to our <Link to="/terms" className="underline hover:text-[#4A90E2]">Terms</Link> and <Link to="/privacy" className="underline hover:text-[#4A90E2]">Privacy Policy</Link>.
-                        </p>
+                        {/* Explicit Unchecked Terms & Conditions Acceptance Control */}
+                        <div className="space-y-2 pt-2 border-t border-gray-100">
+                            <label className="flex items-start gap-3 cursor-pointer select-none group">
+                                <div className="relative flex items-center justify-center mt-0.5">
+                                    <input
+                                        type="checkbox"
+                                        checked={agreedToTerms}
+                                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                        className="w-4 h-4 border border-gray-300 rounded-none checked:bg-gray-900 checked:border-gray-900 transition-colors cursor-pointer appearance-none"
+                                    />
+                                    {agreedToTerms && (
+                                        <Check size={11} className="text-white absolute pointer-events-none" />
+                                    )}
+                                </div>
+                                <span className="text-[11px] text-gray-600 leading-relaxed">
+                                    I confirm I am 18+ and agree to the{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAgreementModalOpen(true)}
+                                        className="underline text-gray-900 font-medium hover:text-[#4A90E2] transition-colors"
+                                    >
+                                        Customer Terms of Service
+                                    </button>
+                                    {' '}and acknowledge the{' '}
+                                    <Link to="/privacy" className="underline text-gray-900 hover:text-[#4A90E2]">
+                                        Privacy Policy
+                                    </Link>.
+                                </span>
+                            </label>
+                        </div>
 
                         <button
                             type="submit"
-                            disabled={loading || Boolean(user)}
-                            className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
+                            disabled={loading || Boolean(user) || !agreedToTerms}
+                            className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-gray-900 hover:bg-[#4A90E2] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
                         >
                             {loading ? (
                                 <>
@@ -357,6 +405,12 @@ export default function Signup() {
                     </form>
                 </motion.div>
             </div>
+
+            <AgreementViewerModal
+                isOpen={isAgreementModalOpen}
+                onClose={() => setIsAgreementModalOpen(false)}
+                agreement={AGREEMENT_REGISTRY.customer_tos}
+            />
         </div>
     );
 }

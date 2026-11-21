@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, ArrowLeft, Loader2, AlertCircle, LogOut, Eye, EyeOff, Check } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { authApi } from '../../lib/api';
@@ -8,6 +8,9 @@ import { adminSupabase } from '../../lib/adminSupabase';
 import { useAuth } from '../../context/AuthContext';
 import { isValidKenyanPhone, normalizeKenyanPhone } from '../../utils/phone';
 import merchantSignupImg from '../../assets/images/merchantsignup.jpg';
+import { termsService } from '../../lib/termsService';
+import { AGREEMENT_REGISTRY } from '../../lib/agreements';
+import AgreementViewerModal from '../../components/legal/AgreementViewerModal';
 
 export default function PartnerSignup() {
     const navigate = useNavigate();
@@ -25,6 +28,8 @@ export default function PartnerSignup() {
     const [loggingOut, setLoggingOut] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [agreedToTerms, setAgreedToTerms] = useState(false);
+    const [isAgreementModalOpen, setIsAgreementModalOpen] = useState(false);
 
     const currentRole = profile?.roles?.[0] || user?.profile?.roles?.[0] || 'merchant';
     const isOtherRoleActive = Boolean(user && currentRole !== 'merchant');
@@ -70,6 +75,11 @@ export default function PartnerSignup() {
 
         if (password !== confirmPassword) {
             setError('Passwords do not match.');
+            return;
+        }
+
+        if (!agreedToTerms) {
+            setError('You must read and agree to the Merchant Marketplace Agreement & Vendor SLA.');
             return;
         }
 
@@ -127,6 +137,15 @@ export default function PartnerSignup() {
                 if (upsertError) {
                     console.warn('Merchant record upsert notice:', upsertError);
                 }
+
+                // Record explicit terms acceptance audit log
+                termsService.recordAcceptance({
+                    userId: signupResult.user.id,
+                    role: 'merchant',
+                    agreementId: 'merchant_sla',
+                    source: 'signup',
+                    metadata: { businessName: businessName.trim(), businessType, email: email.trim() }
+                }).catch(() => {});
 
                 // Sync phone and merchant info to Supabase Auth & public.profiles
                 fetch('/api/auth/sync-user', {
@@ -425,14 +444,41 @@ export default function PartnerSignup() {
                             </div>
                         </div>
 
-                        <p className="text-[10px] text-gray-400 leading-relaxed">
-                            By submitting, you agree to our <Link to="/terms" className="underline hover:text-[#4A90E2]">Partner Terms</Link> and <Link to="/privacy" className="underline hover:text-[#4A90E2]">Privacy Policy</Link>.
-                        </p>
+                        {/* Explicit Unchecked Merchant Agreement Acceptance Control */}
+                        <div className="space-y-2 pt-2 border-t border-gray-100">
+                            <label className="flex items-start gap-3 cursor-pointer select-none group">
+                                <div className="relative flex items-center justify-center mt-0.5">
+                                    <input
+                                        type="checkbox"
+                                        checked={agreedToTerms}
+                                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                                        className="w-4 h-4 border border-gray-300 rounded-none checked:bg-black checked:border-black transition-colors cursor-pointer appearance-none"
+                                    />
+                                    {agreedToTerms && (
+                                        <Check size={11} className="text-white absolute pointer-events-none" />
+                                    )}
+                                </div>
+                                <span className="text-[11px] text-gray-600 leading-relaxed">
+                                    I confirm I am an authorized representative and agree to the{' '}
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsAgreementModalOpen(true)}
+                                        className="underline text-gray-900 font-medium hover:text-[#4A90E2] transition-colors"
+                                    >
+                                        Merchant Marketplace &amp; Vendor SLA
+                                    </button>
+                                    {' '}and acknowledge the{' '}
+                                    <Link to="/privacy" className="underline text-gray-900 hover:text-[#4A90E2]">
+                                        Privacy Policy
+                                    </Link>.
+                                </span>
+                            </label>
+                        </div>
 
                         <button
                             type="submit"
-                            disabled={loading || Boolean(user)}
-                            className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-black hover:bg-[#4A90E2] disabled:bg-gray-400 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
+                            disabled={loading || Boolean(user) || !agreedToTerms}
+                            className="group w-full flex justify-between items-center py-5 px-8 text-sm font-bold text-white bg-black hover:bg-[#4A90E2] disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-300 uppercase tracking-widest"
                         >
                             {loading ? (
                                 <>
@@ -449,6 +495,12 @@ export default function PartnerSignup() {
                     </form>
                 </motion.div>
             </div>
+
+            <AgreementViewerModal
+                isOpen={isAgreementModalOpen}
+                onClose={() => setIsAgreementModalOpen(false)}
+                agreement={AGREEMENT_REGISTRY.merchant_sla}
+            />
         </div>
     );
 }

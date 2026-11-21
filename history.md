@@ -5731,3 +5731,63 @@ None.
 
 ### Result
 Changes deployed and verified on GitHub repository `itskrisk/COM`.
+
+---
+
+## [2026-11-22] Centralized Terms & Conditions Acceptance Architecture
+
+### Prompt
+Proceed with implementing Muncheez's centralized Terms & Conditions acceptance architecture:
+1. Separate Customer, Merchant and Rider agreements.
+2. A centralized Supabase terms_acceptance registry.
+3. Explicit, unchecked acceptance controls during registration.
+4. A mandatory Terms Acceptance Gate for existing users whenever their applicable agreement version changes.
+5. Version tracking so users are only prompted to accept agreements they have not accepted.
+6. Server-verifiable acceptance records with timestamps, agreement versions and document hashes.
+7. A clean, responsive agreement viewer with links to full documents.
+8. Proper integration with existing authentication and role-based routing.
+Keep contractual acceptance separate from privacy consent, marketing consent, cookie preferences and GPS permissions. Do not push or deploy.
+
+### Actions Taken
+
+1. **Agreement Documents & Role Isolation (`src/lib/agreements.ts`, `src/types/agreements.ts`):**
+   - Created three distinct, structured contracts ready for review by Kenyan legal counsel:
+     - **Customer Terms of Service (`customer_tos`, v1.0.0)**: Ordering rules, M-Pesa billing, delivery windows, cancellations, dispute compensation, and zero-tolerance conduct.
+     - **Merchant Marketplace & Vendor SLA (`merchant_sla`, v1.0.0)**: 15% platform commission cut, payout settlements, food safety/hygiene obligations (Public Health Cap 242), menu parity, and strict customer data confidentiality.
+     - **Independent Courier & Logistics Agreement (`courier_agreement`, v1.0.0)**: Independent contractor status (Contract for Services), schedule autonomy, NTSA licensing/vehicle maintenance, statutory tax responsibilities (KRA iTax/SHIF/NSSF), and express consent for continuous live GPS geolocation tracking while on duty.
+   - Generated immutable SHA-256 document fingerprints for verifiable audit parity.
+
+2. **Supabase Terms Acceptance Registry Migration (`supabase/migrations/021_terms_acceptance_registry.sql`):**
+   - Created `terms_acceptance` table with compound index `(user_id, agreement_id, agreement_version)`, audit index, and strict Row Level Security (RLS) policies allowing users to read and insert their own records while permitting service role administrative oversight.
+
+3. **Centralized Acceptance Service (`src/lib/termsService.ts`):**
+   - Built singleton `termsService` with:
+     - `checkAcceptance(userId, role)`: Verifies whether user has accepted the latest version of their role-specific agreement via Supabase registry with resilient fallback to profile settings and local cache.
+     - `recordAcceptance({ userId, role, agreementId, source, metadata })`: Records immutable acceptance record with `accepted_at` UTC timestamp, `agreement_version`, `document_hash`, and client `user_agent`.
+     - In-app custom event dispatch (`TERMS_ACCEPTED_EVENT`) for reactive cross-component gate dismissal.
+
+4. **Explicit, Unchecked Registration Controls:**
+   - **Customer Signup (`src/pages/customer/Signup.tsx`)**: Replaced passive browsewrap with an explicit unchecked checkbox. Enforces affirmative agreement before submission and records acceptance on user creation.
+   - **Merchant Signup (`src/pages/merchant/PartnerSignup.tsx`)**: Added explicit unchecked checkbox binding to the Merchant Marketplace SLA.
+   - **Rider Signup (`src/pages/courier/Signup.tsx`)**: Added explicit unchecked checkbox binding to the Independent Courier Agreement.
+   - All three registration pages include inline preview modal triggers so applicants can review the exact contract without leaving or losing their filled-in form.
+
+5. **Mandatory Terms Acceptance Gate (`src/components/legal/TermsAcceptanceGate.tsx`):**
+   - Built clean, unboxed interceptor dialog mounted globally in `src/App.tsx` for all authenticated routes.
+   - Automatically inspects the current user's role and accepted version; if unaccepted or if the agreement version was bumped, prompts the user with plain-English summary, full document preview, and required checkbox.
+   - Provides "Accept & Continue" and "Decline & Sign Out" actions.
+
+6. **In-App Agreement Viewer & Legal Hub Updates:**
+   - Built `src/components/legal/AgreementViewerModal.tsx` for responsive preview with SHA-256 fingerprint display.
+   - Updated `src/pages/common/LegalPage.tsx` with role-based navigation tabs on `/terms` (`?doc=customer`, `?doc=merchant`, `?doc=courier`) and integrated into `ProfileModal.tsx`.
+
+### Failures & Fixes
+- Initial TypeScript check caught a property mismatch in `Signup.tsx` (`authData.user` vs `signedUpUser`); corrected immediately.
+
+### Verification
+- Ran `tsc -b --noEmit` -> Passed with exit code 0.
+- Ran `npm run build` -> Passed with exit code 0 (2254 modules transformed in 23.15s).
+- All changes kept local; no commits pushed or deployed per instructions.
+
+### Result
+Centralized, legally robust, and server-verifiable Terms & Conditions acceptance architecture fully implemented across Customer, Merchant, and Rider portals in compliance with Kenya DPA 2019 and KICA 2009.

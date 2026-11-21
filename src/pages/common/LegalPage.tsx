@@ -1,11 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ChevronDown, CheckCircle2, HelpCircle } from 'lucide-react';
+import { useNavigate, useParams, Link, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, ChevronDown, CheckCircle2, HelpCircle, ShieldCheck } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabaseClient';
 import Navbar from '../../components/layout/Navbar';
 import Footer from '../../components/layout/Footer';
 import PageSEO from '../../components/SEO';
+import { AGREEMENT_REGISTRY } from '../../lib/agreements';
 
 // --- Types ---
 type PageType = 'legal' | 'contact' | 'faq' | 'help';
@@ -24,22 +25,29 @@ interface PageData {
 const pages: Record<string, PageData> = {
     'terms-of-service': {
         type: 'legal',
-        title: 'Terms of Service',
-        subtitle: 'Legal Governance & Operating Contract',
-        lastUpdated: '01.01.2026',
-        content: "Detailed protocols governing the use of the Muncheez platform in the Republic of Kenya. By engaging with our app or website, you agree to these legally binding terms.",
-        sections: [
-            { title: "1. Binding Agreement", body: "By accessing or using Muncheez (operated by Muncheez Technologies Ltd.), you explicitly agree to be bound by these Terms of Service and our Privacy Policy. If you do not agree, you must cease use immediately." },
-            { title: "2. Eligibility & Account Security", body: "You must be at least 18 years of age to establish an active account. You are responsible for safeguarding your credentials and for all transactions conducted under your phone number or account." },
-            { title: "3. Platform Intermediary Scope", body: "Muncheez acts as a high-technology intermediary connecting consumers with independent restaurant partners ('Merchants') and independent fleet riders. Merchants retain full responsibility for food preparation, hygiene, and order compliance." },
-            { title: "4. Pricing, Currency & Payments", body: "All prices are listed in Kenya Shillings (KES). Transactions are processed via Safaricom M-Pesa and authorized payment gateways. You authorize Muncheez to charge food costs, delivery fees, and applicable taxes upon order submission." },
-            { title: "5. Cancellation & Refund Policy", body: "Orders may be cancelled with a full refund ONLY prior to Merchant acceptance. Once kitchen preparation begins, cancellations are non-refundable. Verified complaints regarding incorrect or damaged items will be credited to your Muncheez Wallet." },
-            { title: "6. Zero Tolerance Conduct Code", body: "We enforce a strict zero-tolerance policy against physical, verbal, or written abuse towards our riders, partner staff, or support agents. Violators will face immediate permanent account termination." },
-            { title: "7. Intellectual Property Rights", body: "All software, logos, trademarks, brand identity, and design assets are the exclusive property of Muncheez Technologies Ltd. Unauthorized reproduction or scraping is strictly prohibited." },
-            { title: "8. Limitation of Liability", body: "To the maximum extent permitted under Kenyan law, Muncheez Technologies Ltd. shall not be liable for indirect, incidental, or consequential damages resulting from service interruptions or third-party partner performance." },
-            { title: "9. Kenya Data Protection Act Compliance", body: "Your personal data is processed strictly in accordance with the Kenya Data Protection Act, 2019 and our Privacy Policy." },
-            { title: "10. Jurisdiction & Dispute Resolution", body: "These Terms are governed by the laws of the Republic of Kenya. Any legal disputes shall be submitted exclusively to courts sitting in Nairobi, Kenya." }
-        ]
+        title: AGREEMENT_REGISTRY.customer_tos.title,
+        subtitle: AGREEMENT_REGISTRY.customer_tos.subtitle,
+        lastUpdated: AGREEMENT_REGISTRY.customer_tos.lastUpdated,
+        content: "Detailed protocols governing consumer orders, M-Pesa payments, and deliveries on the Muncheez platform in the Republic of Kenya.",
+        sections: AGREEMENT_REGISTRY.customer_tos.sections
+    },
+
+    'merchant-terms': {
+        type: 'legal',
+        title: AGREEMENT_REGISTRY.merchant_sla.title,
+        subtitle: AGREEMENT_REGISTRY.merchant_sla.subtitle,
+        lastUpdated: AGREEMENT_REGISTRY.merchant_sla.lastUpdated,
+        content: "Commercial terms, 15% marketplace commission structure, vendor fulfillment standards, and payout protocols for Muncheez partners.",
+        sections: AGREEMENT_REGISTRY.merchant_sla.sections
+    },
+
+    'courier-terms': {
+        type: 'legal',
+        title: AGREEMENT_REGISTRY.courier_agreement.title,
+        subtitle: AGREEMENT_REGISTRY.courier_agreement.subtitle,
+        lastUpdated: AGREEMENT_REGISTRY.courier_agreement.lastUpdated,
+        content: "Independent contractor agreement, background GPS location tracking consent, and safety standards for the Muncheez courier fleet.",
+        sections: AGREEMENT_REGISTRY.courier_agreement.sections
     },
 
     'privacy-policy': {
@@ -117,13 +125,14 @@ const pages: Record<string, PageData> = {
 };
 
 // --- LAYOUT 1: LEGAL ARCHIVES (Terms, Privacy, Cookie Policy) ---
-function LegalLayout({ page }: { page: PageData }) {
+function LegalLayout({ page, docKey }: { page: PageData; docKey?: string }) {
     const [activeSection, setActiveSection] = useState(0);
     const navigate = useNavigate();
+    const isTermsFamily = docKey === 'terms-of-service' || docKey === 'merchant-terms' || docKey === 'courier-terms';
 
     return (
         <div className="max-w-7xl mx-auto px-6 md:px-8 pt-32 pb-32">
-            <div className="mb-12">
+            <div className="mb-8 flex items-center justify-between">
                 <button
                     onClick={() => navigate(-1)}
                     className="inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.4em] text-white/70 hover:text-white transition-all group cursor-pointer"
@@ -132,6 +141,42 @@ function LegalLayout({ page }: { page: PageData }) {
                     Back
                 </button>
             </div>
+
+            {/* Agreement Selector Tabs for Terms Family */}
+            {isTermsFamily && (
+                <div className="mb-12 border-b border-white/20 pb-3 flex flex-wrap gap-6 sm:gap-8 text-[11px] font-mono uppercase tracking-wider">
+                    <Link
+                        to="/terms?doc=customer"
+                        className={`transition-colors pb-2 border-b-2 ${
+                            docKey === 'terms-of-service'
+                                ? 'border-[#D4AF37] text-white font-bold'
+                                : 'border-transparent text-white/50 hover:text-white'
+                        }`}
+                    >
+                        Customer Terms
+                    </Link>
+                    <Link
+                        to="/terms?doc=merchant"
+                        className={`transition-colors pb-2 border-b-2 ${
+                            docKey === 'merchant-terms'
+                                ? 'border-[#D4AF37] text-white font-bold'
+                                : 'border-transparent text-white/50 hover:text-white'
+                        }`}
+                    >
+                        Merchant Agreement &amp; SLA
+                    </Link>
+                    <Link
+                        to="/terms?doc=courier"
+                        className={`transition-colors pb-2 border-b-2 ${
+                            docKey === 'courier-terms'
+                                ? 'border-[#D4AF37] text-white font-bold'
+                                : 'border-transparent text-white/50 hover:text-white'
+                        }`}
+                    >
+                        Courier Logistics Agreement
+                    </Link>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-start">
                 {/* Left Column: Title & Table of Contents */}
@@ -523,8 +568,23 @@ const CANONICAL_PATHS: Record<string, string> = {
 
 // --- MAIN LEGAL PAGE CONTAINER ---
 export default function LegalPage({ forceType }: { forceType?: string } = {}) {
+    const [searchParams] = useSearchParams();
     const { type, slug } = useParams<{ type?: string; slug?: string }>();
-    const pageKey = forceType || type || slug || '';
+    let rawKey = forceType || type || slug || '';
+
+    // Route query parameters for role-specific agreements on /terms
+    if (rawKey === 'terms-of-service' || rawKey === 'terms') {
+        const docParam = searchParams.get('doc')?.toLowerCase();
+        if (docParam === 'merchant') {
+            rawKey = 'merchant-terms';
+        } else if (docParam === 'courier' || docParam === 'rider') {
+            rawKey = 'courier-terms';
+        } else {
+            rawKey = 'terms-of-service';
+        }
+    }
+
+    const pageKey = rawKey;
     const page = pageKey ? pages[pageKey] : null;
     const canonicalPath = CANONICAL_PATHS[pageKey] || '/help';
 
@@ -557,7 +617,7 @@ export default function LegalPage({ forceType }: { forceType?: string } = {}) {
             <div className="absolute inset-0 z-[1] opacity-[0.05] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat fixed" />
 
             <div className="relative z-10 text-white">
-                {page.type === 'legal' && <LegalLayout page={page} />}
+                {page.type === 'legal' && <LegalLayout page={page} docKey={pageKey} />}
                 {page.type === 'contact' && <ContactLayout page={page} />}
                 {page.type === 'faq' && <FAQLayout page={page} />}
                 {page.type === 'help' && <HelpLayout page={page} />}
