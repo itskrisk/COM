@@ -5558,3 +5558,24 @@ User noticed that each store has its own image for the store card, but the newly
    - Complied strictly with design rules (unboxed editorial typography, zero container card padding/backgrounds).
 3. **Verification**:
    - Successfully executed `npm run build` (`tsc -b && vite build`) with zero TypeScript or styling errors.
+
+## [2026-11-21T15:26:24.107Z] Admin Courier Approvals & Status Fix
+
+### Summary of Prompt & Issue
+- **Issue 1**: In the Muncheez Admin Console (/admin/approvals), merchants could be approved without issue, but approving courier/rider applicants failed with an alert: "Failed to approve application. Please try again."
+- **Issue 2**: In the courier approvals list, rider cards displayed confusing subheadings like "Motorbike Rider • Offline • PENDING" instead of the applicant's real name and courier details.
+
+### Root Cause Analysis
+1. **Schema Mismatch on Rider Updates**: In `src/pages/admin/Approvals.tsx`, the `handleApprove`, `handleSuspend`, and `handleUnsuspend` functions applied a shared merchant payload to the `riders` table. The payload included `approved_at`, `suspended_at`, and `is_suspended`. Because the `riders` PostgreSQL table does not have those columns, Supabase returned error `PGRST204` ("Could not find the 'approved_at' column of 'riders' in the schema cache"), causing the promise to reject.
+2. **Card Heading Render Logic**: In `Approvals.tsx`, the rider card title was hardcoded to `{rider.vehicle_type} Rider` rather than `rider.name || rider.profile?.full_name`, and the subline printed live shift status (`is_online ? 'Online' : 'Offline'`), which was always `false` for pending applicants.
+
+### Actions Taken & Final Solution
+1. **Payload Schema Alignment (`src/pages/admin/Approvals.tsx`)**:
+   - Updated `handleApprove` to submit only valid rider columns: `{ status: 'APPROVED', inspection_status: 'Verified' }` on the `riders` table, and synced `{ status: 'APPROVED', account_status: 'active' }` to the applicant's `profiles` row.
+   - Updated `handleReject`, `handleSuspend`, and `handleUnsuspend` to only update existing columns (`status`, `is_online`, `inspection_status`).
+2. **Card Information Redesign**:
+   - Enhanced headline to display the applicant's full name (`rider.name || rider.profile?.full_name || 'Courier Applicant'`).
+   - Cleaned subtext to show courier modality and contact (`{rider.transport_mode || rider.vehicle_type} Courier • {rider.phone}`), only displaying shift status for approved active couriers.
+3. **Verification**:
+   - Verified update schema against PostgreSQL/Supabase database.
+   - Built production client with `npm run build` (`tsc -b && vite build`) with zero compilation errors.

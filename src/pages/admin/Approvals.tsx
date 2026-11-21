@@ -55,6 +55,7 @@ interface Rider {
     email?: string;
     national_id?: string;
     mpesa_phone?: string;
+    transport_mode?: string;
     vehicle_type: string;
     status: string;
     is_online: boolean;
@@ -222,7 +223,7 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            // Approval grants authorization to operate and automatically activates the store
+            // Approval grants authorization to operate and automatically activates the store / verifies courier
             const updatePayload = activeTab === 'merchants'
                 ? {
                     status: 'APPROVED',
@@ -233,8 +234,7 @@ export default function Approvals() {
                   }
                 : {
                     status: 'APPROVED',
-                    is_suspended: false,
-                    approved_at: new Date().toISOString()
+                    inspection_status: 'Verified'
                   };
 
             const { error } = await adminSupabase
@@ -273,7 +273,8 @@ export default function Approvals() {
                   }
                 : {
                     status: 'REJECTED',
-                    is_online: false
+                    is_online: false,
+                    inspection_status: 'Rejected'
                   };
 
             const { error } = await adminSupabase
@@ -302,7 +303,7 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            // Suspending takes store offline immediately and revokes operational status
+            // Suspending takes store/courier offline immediately and revokes operational status
             const updatePayload = activeTab === 'merchants'
                 ? {
                     status: 'SUSPENDED',
@@ -312,9 +313,7 @@ export default function Approvals() {
                   }
                 : {
                     status: 'SUSPENDED',
-                    is_suspended: true,
-                    is_online: false,
-                    suspended_at: new Date().toISOString()
+                    is_online: false
                   };
 
             const { error } = await adminSupabase
@@ -343,8 +342,7 @@ export default function Approvals() {
         setProcessing(id);
         try {
             const table = activeTab === 'merchants' ? 'merchants' : 'riders';
-            // Unsuspending restores eligibility for publication (status: APPROVED).
-            // It NEVER automatically forces an Offline store online (is_active is left unchanged).
+            // Unsuspending restores eligibility for operation (status: APPROVED).
             const updatePayload = activeTab === 'merchants'
                 ? {
                     status: 'APPROVED',
@@ -352,9 +350,7 @@ export default function Approvals() {
                     suspended_at: null
                   }
                 : {
-                    status: 'APPROVED',
-                    is_suspended: false,
-                    suspended_at: null
+                    status: 'APPROVED'
                   };
 
             const { error } = await adminSupabase
@@ -799,9 +795,13 @@ export default function Approvals() {
                                                     </span>
                                             </div>
                                             <div className="min-w-0">
-                                                <h3 className="font-bold text-base sm:text-lg truncate">{rider.vehicle_type} Rider</h3>
+                                                <h3 className="font-bold text-base sm:text-lg truncate">
+                                                    {rider.name || rider.profile?.full_name || `${rider.vehicle_type || 'Courier'} Applicant`}
+                                                </h3>
                                                 <p className="text-xs sm:text-sm text-gray-500">
-                                                    {rider.is_online ? 'Online' : 'Offline'} • {rider.status}
+                                                    {rider.transport_mode || rider.vehicle_type || 'Courier'} Courier
+                                                    {rider.phone ? ` • ${rider.phone}` : ''}
+                                                    {rider.status === 'APPROVED' ? ` • ${rider.is_online ? '🟢 On Shift' : '⚪ Off Shift'}` : ''}
                                                 </p>
                                                 {rider.vehicle_plate && (
                                                     <p className="text-xs text-gray-400 mt-1">Plate: {rider.vehicle_plate}</p>
