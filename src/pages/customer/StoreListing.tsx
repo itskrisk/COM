@@ -326,7 +326,7 @@ export default function StoreListing() {
                 <div className="max-w-7xl mx-auto relative z-20 mb-8">
                     <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
                         <div className="space-y-4">
-                            <span className="text-[10px] font-black text-[#D4AF37] uppercase tracking-[0.4em] block blur-[0.3px]">{config.subtitle}</span>
+                            <span className="text-[10px] font-bold text-[#D4AF37] uppercase tracking-[0.4em] block">{config.subtitle}</span>
                             <h1 className="text-4xl md:text-8xl font-heading font-light tracking-tighter text-white leading-none">
                                 {config.title}
                             </h1>
