@@ -24,6 +24,7 @@ export default function PendingApproval() {
             const isApprovedLocally = localStorage.getItem('muncheez_merchant_approved_' + user.id) === 'true';
 
             if (merchant?.status === 'APPROVED' || isApprovedLocally) {
+                if (user?.id) localStorage.setItem('muncheez_merchant_approved_' + user.id, 'true');
                 navigate('/merchant/dashboard', { replace: true });
                 return;
             }
@@ -38,6 +39,7 @@ export default function PendingApproval() {
             const isRiderApprovedLocally = localStorage.getItem('muncheez_rider_approved_' + user.id) === 'true';
 
             if (rider?.status === 'APPROVED' || isRiderApprovedLocally) {
+                if (user?.id) localStorage.setItem('muncheez_rider_approved_' + user.id, 'true');
                 navigate('/rider/dashboard', { replace: true });
                 return;
             }

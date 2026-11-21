@@ -145,10 +145,15 @@ export default function MerchantDashboard() {
         if (!profile?.id) return;
         const isApprovedLocally = localStorage.getItem('muncheez_merchant_approved_' + profile.id) === 'true';
 
+        if (profile.status === 'APPROVED' || profile.account_status === 'active' || isApprovedLocally) {
+            localStorage.setItem('muncheez_merchant_approved_' + profile.id, 'true');
+            return;
+        }
+
         merchantService.getMerchant(profile.id).then(({ data }) => {
             const status = data?.status || profile.status;
             if (status === 'APPROVED' || isApprovedLocally) {
-                // Approved: merchant has full dashboard access to configure store
+                localStorage.setItem('muncheez_merchant_approved_' + profile.id, 'true');
                 return;
             }
             if (status === 'REJECTED') {
@@ -171,7 +176,7 @@ export default function MerchantDashboard() {
                 navigate('/rejected', { replace: true });
             }
         });
-    }, [profile?.id, profile?.status, navigate]);
+    }, [profile?.id, profile?.status, profile?.account_status, navigate]);
 
     const handleLogout = async () => {
         try {
@@ -671,18 +676,38 @@ export default function MerchantDashboard() {
 
     // ── APPROVAL GATE ──────────────────────────────────────────────
     // No dashboard access until the Admin Console approves the merchant.
-    // Pending merchants see a waiting screen; rejected merchants see a notice.
-    const [approvalGate, setApprovalGate] = useState<'checking' | 'approved' | 'pending' | 'rejected'>('checking');
+    // Uses synchronous profile/localStorage evaluation to eliminate any screen flash.
+    const isInitiallyApproved =
+        profile?.status === 'APPROVED' ||
+        profile?.account_status === 'active' ||
+        (Boolean(profile?.id) && localStorage.getItem('muncheez_merchant_approved_' + profile?.id) === 'true');
+
+    const [approvalGate, setApprovalGate] = useState<'checking' | 'approved' | 'pending' | 'rejected'>(() => {
+        if (isInitiallyApproved) return 'approved';
+        return 'checking';
+    });
 
     const runApprovalCheck = useCallback(() => {
         if (!profile?.id) {
-            setApprovalGate('pending');
+            // Keep existing gate while profile is hydrating; never prematurely drop to pending
             return;
         }
+        const isApproved =
+            profile.status === 'APPROVED' ||
+            profile.account_status === 'active' ||
+            localStorage.getItem('muncheez_merchant_approved_' + profile.id) === 'true';
+
+        if (isApproved) {
+            setApprovalGate('approved');
+            localStorage.setItem('muncheez_merchant_approved_' + profile.id, 'true');
+            return;
+        }
+
         merchantService.getMerchant(profile.id)
             .then(({ data }) => {
                 if (data?.status === 'APPROVED') {
                     setApprovalGate('approved');
+                    localStorage.setItem('muncheez_merchant_approved_' + profile.id, 'true');
                 } else if (data?.status === 'REJECTED') {
                     setApprovalGate('rejected');
                 } else {
@@ -690,7 +715,7 @@ export default function MerchantDashboard() {
                 }
             })
             .catch(() => setApprovalGate('pending'));
-    }, [profile?.id]);
+    }, [profile?.id, profile?.status, profile?.account_status]);
 
     useEffect(() => {
         runApprovalCheck();

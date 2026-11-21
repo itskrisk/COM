@@ -5579,3 +5579,27 @@ User noticed that each store has its own image for the store card, but the newly
 3. **Verification**:
    - Verified update schema against PostgreSQL/Supabase database.
    - Built production client with `npm run build` (`tsc -b && vite build`) with zero compilation errors.
+
+## [2026-11-21T16:53:42.016Z] Elimination of "Waiting for Approval" Screen Flash on Approved Accounts
+
+### Summary of Prompt & Issue
+- **Issue**: After being approved in the Admin Console, when navigating or reloading the merchant or rider dashboard, the app briefly flashed the "waiting for approval" / "application in review" holding screen for a split second before displaying the dashboard.
+- **Goal**: Analyze the root cause and implement a persistent, zero-latency fix so approved accounts immediately render their dashboard without any holding screen flash.
+
+### Root Cause Analysis
+1. **Asynchronous Auth Hydration Gap**: In `src/context/AuthContext.tsx`, session restoration on mount immediately invoked `buildMinimalUser` and marked `loading: false` before database records (profiles, merchants, riders) had hydrated. In `buildMinimalUser`, partner accounts defaulted to `accountStatus = 'pending_onboarding'`, causing initial renders to evaluate partners as unapproved for the ~300ms network fetch duration.
+2. **Premature Gate Fallback in Dashboards**:
+   - In `src/pages/merchant/Dashboard.tsx`, `runApprovalCheck` had a fallback: `if (!profile?.id) setApprovalGate('pending')`. This immediately flipped the state from `checking` to `pending` on initial mount while `profile` was still undefined, rendering the full "Awaiting Admin Approval" screen before the merchant check completed.
+   - In both `MerchantDashboard.tsx` and `CourierDashboard.tsx`, the gate state variable started as `checking` and always waited for an asynchronous backend request rather than synchronously reading existing approved profile state or cached approval flags.
+
+### Actions Taken & Final Solution
+1. **Synchronous Local Approval Hydration in AuthContext (`src/context/AuthContext.tsx`)**:
+   - In `buildMinimalUser`, checked local storage flags (`muncheez_merchant_approved_<id>` and `muncheez_rider_approved_<id>`). If already marked approved, initialized `accountStatus = 'active'` and `status = 'APPROVED'` synchronously, preventing initial render collisions.
+2. **Synchronous Gate Initialization in Dashboards (`src/pages/merchant/Dashboard.tsx` & `src/pages/courier/Dashboard.tsx`)**:
+   - Synchronously initialized `approvalGate` / `accessGate` to `approved` / `open` on first render if `profile.status === 'APPROVED'`, `profile.account_status === 'active'`, or the local storage key is present.
+   - Prevented `runApprovalCheck` from prematurely setting `pending` while `profile?.id` is still hydrating.
+   - Cached approval status to `localStorage` on verified status checks to ensure zero-latency subsequent loads.
+3. **PendingApproval Optimization (`src/pages/PendingApproval.tsx`)**:
+   - Ensured successful redirects cache the approval token locally so users navigating back never flash the holding page.
+4. **Verification**:
+   - Ran `npm run build` (`tsc -b && vite build`) with zero compilation errors.

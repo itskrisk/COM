@@ -88,23 +88,37 @@ export default function CourierDashboard() {
 
     // ── APPROVAL GATE ──────────────────────────────────────────────
     // Full terminal access is granted only after Fleet Dispatch approval.
-    // Pending riders see a waiting screen; rejected riders see a notice.
-    const [accessGate, setAccessGate] = useState<'checking' | 'open' | 'pending' | 'rejected'>('checking');
+    // Uses synchronous profile/localStorage evaluation to eliminate any screen flash.
+    const isInitiallyApproved =
+        profile?.status === 'APPROVED' ||
+        profile?.account_status === 'active' ||
+        (Boolean(profile?.id) && localStorage.getItem('muncheez_rider_approved_' + profile?.id) === 'true');
+
+    const [accessGate, setAccessGate] = useState<'checking' | 'open' | 'pending' | 'rejected'>(() => {
+        if (isInitiallyApproved) return 'open';
+        return 'checking';
+    });
 
     const runAccessCheck = useCallback(() => {
         if (!profile?.id) {
-            setAccessGate('open');
+            // Keep current gate while auth is hydrating; never prematurely drop to pending
             return;
         }
-        const isApprovedLocally = localStorage.getItem('muncheez_rider_approved_' + profile.id) === 'true';
-        if (profile.status === 'APPROVED' || isApprovedLocally) {
+        const isApproved =
+            profile.status === 'APPROVED' ||
+            profile.account_status === 'active' ||
+            localStorage.getItem('muncheez_rider_approved_' + profile.id) === 'true';
+
+        if (isApproved) {
             setAccessGate('open');
+            localStorage.setItem('muncheez_rider_approved_' + profile.id, 'true');
             return;
         }
         riderService.getRider(profile.id)
             .then(({ data }) => {
                 if (data && data.status === 'APPROVED') {
                     setAccessGate('open');
+                    localStorage.setItem('muncheez_rider_approved_' + profile.id, 'true');
                     if (data.vehicle_type) setRiderVehicleType(data.vehicle_type);
                     if (data.vehicle_plate) setRiderPlate(data.vehicle_plate);
                 } else if (data && data.status === 'REJECTED') {
@@ -114,7 +128,7 @@ export default function CourierDashboard() {
                 }
             })
             .catch(() => setAccessGate('pending'));
-    }, [profile?.id, profile?.status]);
+    }, [profile?.id, profile?.status, profile?.account_status]);
 
     useEffect(() => {
         runAccessCheck();

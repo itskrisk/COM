@@ -173,8 +173,15 @@ const buildMinimalUser = (authUser: SupabaseUser): User => {
   const role = resolveRole(rawRole);
   const isPartner = role === 'merchant' || role === 'courier';
 
-  // Customers are ALWAYS active once verified. Only partners are pending_onboarding.
-  const accountStatus = isPartner ? 'pending_onboarding' : 'active';
+  const isCachedApproved =
+    typeof window !== 'undefined' &&
+    (localStorage.getItem('muncheez_merchant_approved_' + authUser.id) === 'true' ||
+     localStorage.getItem('muncheez_rider_approved_' + authUser.id) === 'true');
+
+  // Customers are ALWAYS active once verified. Partners use cached approval to eliminate screen flash.
+  const accountStatus = isPartner
+    ? (isCachedApproved ? 'active' : 'pending_onboarding')
+    : 'active';
   const phone = authUser.phone || authUser.user_metadata?.phone;
   const fullName = authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User';
 
@@ -194,7 +201,7 @@ const buildMinimalUser = (authUser: SupabaseUser): User => {
       phone,
       email: authUser.email,
       roles: [role],
-      status: 'ACTIVE',
+      status: isCachedApproved ? 'APPROVED' : 'ACTIVE',
       account_status: accountStatus,
     }
   };
